@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Health Screening | Sanjeevani Clinic
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial, sans-serif;
+
+            background: #f4f7fb;
+
+            color: #1f2937;
+
+        }
+
+
+        /* =====================================================
+           NAVBAR
+        ===================================================== */
+
+        .navbar {
+
+            background: #0f766e;
+
+            color: white;
+
+            padding: 18px 40px;
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+        }
+
+
+        .navbar h2 {
+
+            margin: 0;
+
+        }
+
+
+        .navbar a {
+
+            color: white;
+
+            text-decoration: none;
+
+            margin-left: 20px;
+
+        }
+
+
+        .navbar a:hover {
+
+            text-decoration: underline;
+
+        }
+
+
+        /* =====================================================
+           CONTAINER
+        ===================================================== */
+
+        .container {
+
+            max-width: 1100px;
+
+            margin: 40px auto;
+
+            padding: 0 20px;
+
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .header {
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .header h1 {
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .header p {
+
+            color: #6b7280;
+
+        }
+
+
+        /* =====================================================
+           CARD
+        ===================================================== */
+
+        .card {
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 14px;
+
+            margin-bottom: 25px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0, 0, 0, 0.06);
+
+        }
+
+
+        .card h2 {
+
+            margin-top: 0;
+
+        }
+
+
+        /* =====================================================
+           FORM
+        ===================================================== */
+
+        .form-group {
+
+            margin-bottom: 18px;
+
+        }
+
+
+        label {
+
+            display: block;
+
+            font-weight: bold;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        textarea {
+
+            width: 100%;
+
+            min-height: 150px;
+
+            padding: 12px;
+
+            border: 1px solid #d1d5db;
+
+            border-radius: 8px;
+
+            resize: vertical;
+
+            font-family: Arial, sans-serif;
+
+            font-size: 15px;
+
+        }
+
+
+        textarea:focus {
+
+            outline: none;
+
+            border-color: #0f766e;
+
+        }
+
+
+        /* =====================================================
+           SUBMIT BUTTON
+        ===================================================== */
+
+        .submit-btn {
+
+            background: #0f766e;
+
+            color: white;
+
+            border: none;
+
+            padding: 12px 22px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-size: 15px;
+
+        }
+
+
+        .submit-btn:hover {
+
+            background: #115e59;
+
+        }
+
+
+        /* =====================================================
+           ERROR
+        ===================================================== */
+
+        .error {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            padding: 12px;
+
+            border-radius: 8px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        /* =====================================================
+           RESULT
+        ===================================================== */
+
+        .result {
+
+            border-left: 5px solid #0f766e;
+
+            padding-left: 20px;
+
+        }
+
+
+        .result-row {
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .result-label {
+
+            font-weight: bold;
+
+            display: block;
+
+            margin-bottom: 5px;
+
+        }
+
+
+        .result-value {
+
+            color: #374151;
+
+        }
+
+
+        /* =====================================================
+           SEVERITY
+        ===================================================== */
+
+        .severity {
+
+            display: inline-block;
+
+            padding: 6px 12px;
+
+            border-radius: 20px;
+
+            font-weight: bold;
+
+            font-size: 14px;
+
+        }
+
+
+        .severity-mild {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+        }
+
+
+        .severity-moderate {
+
+            background: #fef3c7;
+
+            color: #92400e;
+
+        }
+
+
+        .severity-urgent {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+        }
+
+
+        /* =====================================================
+           AI GUIDANCE
+        ===================================================== */
+
+        .guidance {
+
+            background: #f0fdfa;
+
+            border: 1px solid #99f6e4;
+
+            padding: 18px;
+
+            border-radius: 10px;
+
+            margin-top: 20px;
+
+            line-height: 1.6;
+
+        }
+
+
+        /* =====================================================
+           DOCTOR CARD
+        ===================================================== */
+
+        .doctor-card {
+
+            border: 1px solid #e5e7eb;
+
+            padding: 18px;
+
+            border-radius: 10px;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .doctor-card h3 {
+
+            margin-top: 0;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .doctor-info {
+
+            color: #4b5563;
+
+            margin: 6px 0;
+
+        }
+
+
+        /* =====================================================
+           BOOK BUTTON
+        ===================================================== */
+
+        .book-btn {
+
+            display: inline-block;
+
+            background: #2563eb;
+
+            color: white;
+
+            text-decoration: none;
+
+            padding: 10px 18px;
+
+            border-radius: 7px;
+
+            margin-top: 12px;
+
+            font-size: 14px;
+
+        }
+
+
+        .book-btn:hover {
+
+            background: #1d4ed8;
+
+        }
+
+
+        /* =====================================================
+           NO DOCTORS
+        ===================================================== */
+
+        .no-doctors {
+
+            background: #f9fafb;
+
+            padding: 20px;
+
+            border-radius: 8px;
+
+            color: #6b7280;
+
+            text-align: center;
+
+        }
+
+
+        /* =====================================================
+           DISCLAIMER
+        ===================================================== */
+
+        .disclaimer {
+
+            margin-top: 20px;
+
+            font-size: 13px;
+
+            color: #6b7280;
+
+            line-height: 1.5;
+
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .navbar {
+
+                padding: 15px 20px;
+
+                flex-direction: column;
+
+                align-items: flex-start;
+
+            }
+
+
+            .navbar div {
+
+                margin-top: 12px;
+
+            }
+
+
+            .navbar a {
+
+                margin-left: 0;
+
+                margin-right: 15px;
+
+            }
+
+
+            .container {
+
+                margin-top: 25px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         NAVBAR
+    ===================================================== -->
+
+    <div class="navbar">
+
+        <h2>
+            Sanjeevani Clinic
+        </h2>
+
+
+        <div>
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+
+            <a href="/medical-history">
+                Medical History
+            </a>
+
+
+            <a href="/medical-reports">
+                Medical Reports
+            </a>
+
+
+            <a href="/appointments">
+                Appointments
+            </a>
+
+
+            <a href="/logout">
+                Logout
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN CONTAINER
+    ===================================================== -->
+
+    <div class="container">
+
+
+        <!-- =================================================
+             HEADER
+        ================================================= -->
+
+        <div class="header">
+
+            <h1>
+                Health Screening
+            </h1>
+
+
+            <p>
+
+                Enter your symptoms to get a preliminary
+                care category and specialist recommendation.
+
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             ERROR
+        ================================================= -->
+
+        {% if error %}
+
+        <div class="error">
+
+            {{ error }}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             SCREENING FORM
+        ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Enter Your Symptoms
+            </h2>
+
+
+            <form
+                action="/screening"
+                method="post"
+            >
+
+                <div class="form-group">
+
+                    <label for="symptoms">
+
+                        Symptoms
+
+                    </label>
+
+
+                    <textarea
+                        id="symptoms"
+                        name="symptoms"
+                        placeholder="Example: fever, cough, headache, chest pain..."
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="submit-btn"
+                >
+
+                    Analyze Symptoms
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- =================================================
+             SCREENING RESULT
+        ================================================= -->
+
+        {% if result %}
+
+        <div class="card">
+
+            <h2>
+                Screening Result
+            </h2>
+
+
+            <div class="result">
+
+
+                <!-- SYMPTOMS -->
+
+                <div class="result-row">
+
+                    <span class="result-label">
+
+                        Symptoms
+
+                    </span>
+
+
+                    <span class="result-value">
+
+                        {{ result.symptoms }}
+
+                    </span>
+
+                </div>
+
+
+                <!-- CARE CATEGORY -->
+
+                <div class="result-row">
+
+                    <span class="result-label">
+
+                        Recommended Care Category
+
+                    </span>
+
+
+                    <span class="result-value">
+
+                        {{ result.care_category }}
+
+                    </span>
+
+                </div>
+
+
+                <!-- SPECIALIST -->
+
+                <div class="result-row">
+
+                    <span class="result-label">
+
+                        Recommended Specialist
+
+                    </span>
+
+
+                    <span class="result-value">
+
+                        {{ result.recommended_specialist }}
+
+                    </span>
+
+                </div>
+
+
+                <!-- SEVERITY -->
+
+                <div class="result-row">
+
+                    <span class="result-label">
+
+                        Severity
+
+                    </span>
+
+
+                    {% if result.severity == "Urgent" %}
+
+                    <span
+                        class="severity severity-urgent"
+                    >
+
+                        {{ result.severity }}
+
+                    </span>
+
+
+                    {% elif result.severity == "Moderate" %}
+
+                    <span
+                        class="severity severity-moderate"
+                    >
+
+                        {{ result.severity }}
+
+                    </span>
+
+
+                    {% else %}
+
+                    <span
+                        class="severity severity-mild"
+                    >
+
+                        {{ result.severity }}
+
+                    </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <!-- AI GUIDANCE -->
+
+                <div class="guidance">
+
+                    <strong>
+                        Screening Guidance
+                    </strong>
+
+
+                    <p>
+
+                        {{ result.ai_response }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- DISCLAIMER -->
+
+                <div class="disclaimer">
+
+                    <strong>
+                        Important:
+                    </strong>
+
+                    This screening result is for preliminary
+                    guidance only and is not a medical diagnosis.
+                    Please consult a qualified healthcare
+                    professional for proper evaluation.
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             RECOMMENDED DOCTORS
+        ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Recommended Doctors
+            </h2>
+
+
+            {% if doctors %}
+
+            <p>
+
+                Based on your screening result,
+                these doctors match the recommended
+                care category.
+
+            </p>
+
+
+            {% for doctor in doctors %}
+
+            <div class="doctor-card">
+
+
+                <!-- DOCTOR NAME -->
+
+                <h3>
+
+                    Dr. {{ doctor.name }}
+
+                </h3>
+
+
+                <!-- SPECIALIZATION -->
+
+                <p class="doctor-info">
+
+                    <strong>
+                        Specialization:
+                    </strong>
+
+                    {{ doctor.specialization }}
+
+                </p>
+
+
+                <!-- EXPERIENCE -->
+
+                <p class="doctor-info">
+
+                    <strong>
+                        Experience:
+                    </strong>
+
+                    {{ doctor.experience_years }}
+
+                    years
+
+                </p>
+
+
+                <!-- =================================================
+                     BOOK APPOINTMENT
+
+                     IMPORTANT:
+                     doctor_id + appointment_date
+                     dono pass ho rahe hain.
+                ================================================= -->
+
+                <a
+                    href="/book-appointment?doctor_id={{ doctor.id }}&appointment_date={{ today }}"
+                    class="book-btn"
+                >
+
+                    Book Appointment
+
+                </a>
+
+
+            </div>
+
+            {% endfor %}
+
+
+            {% else %}
+
+            <!-- =================================================
+                 NO DOCTOR
+            ================================================= -->
+
+            <div class="no-doctors">
+
+                <p>
+
+                    No matching doctors are currently
+                    available for this category.
+
+                </p>
+
+
+                <p>
+
+                    Please check the doctors page
+                    or try again later.
+
+                </p>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+        {% endif %}
+
+
+    </div>
+
+
+</body>
+
+</html>

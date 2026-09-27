@@ -1,170 +1,275 @@
-import os 
-import sys 
-import uvicorn 
-from fastapi import FastAPI, Form, Request 
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles 
-from fastapi.templating import Jinja2Templates 
-from src.exception import CustomException 
-from src.logger import get_logger 
-logger = get_logger(__name__) 
-from src.pipeline.predict_pipeline import CustomData, PredictPipeline
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
-from nlp_pretrained.ner_tagger import(get_pos_tags , extract_entities) 
-from nlp_pretrained.embedding import (most_similar_words) 
-from nlp_pretrained.sentiment_analyzer import analyze_sentiment 
+import os
 
-app= FastAPI(title="Covid Prediction Clinic") 
 
-##mouting the css file 
-app.mount("/static", StaticFiles(directory="static"), name="static") 
+# ============================================================
+# DATABASE
+# ============================================================
 
-##Set the template folder 
-templates = Jinja2Templates(directory="templates") 
+from src.database.base import Base
+from src.database.connection import engine
 
-@app.get("/", response_class=HTMLResponse) 
-async def home(request:Request):
-    logger.info("Home page accessed...") 
-    return templates.TemplateResponse(request, "index.html") 
 
-@app.get("/predict", response_class=HTMLResponse)
-async def predict_form(request: Request):
-    logger.info("Predict form page accessed.....") 
-    return templates.TemplateResponse(request, "predict.html", {"result":None}) 
+# ============================================================
+# IMPORT MODELS
+# ============================================================
+# Important:
+# Models ko import karna zaroori hai taaki
+# SQLAlchemy unki tables ko identify kar sake.
 
-@app.post("/predict", response_class=HTMLResponse)
-async def predict_result(
-    request: Request,
-    age:int = Form(...),
-    gender: str = Form(...),
-    fever: float = Form(...),
-    cough: str = Form(...),
-    city: str = Form(...) 
-) :
-    try:
-        logger.info(f"Prediction request received :: age{age}, gender{gender}, fever{fever}, cough{cough},city{city}")
-        custom_data = CustomData(age=age,gender=gender,fever=fever,cough=cough,city=city)
-        data_df = custom_data.get_data_as_dataframe() 
-        predict_pipeline = PredictPipeline() 
-        result , probability = predict_pipeline.predict(data_df) 
-        return templates.TemplateResponse(
-            request,
-            "predict.html",
-            {
-                "result": result,
-                "probability":probability,
-                "form_data": {
-                    "age":age,
-                    "gender":gender,
-                    "fever":fever,
-                    "cough":cough,
-                    "city":city
-                }
-            }
-        )
-    except Exception as e:
-        raise CustomException(e,sys) 
+from src.models.prescription import Prescription
+from src.models.prescription_medicine import PrescriptionMedicine
+
+
+# ============================================================
+# CREATE DATABASE TABLES
+# ============================================================
+
+Base.metadata.create_all(
+    bind=engine
+)
+
+
+# ============================================================
+# SESSION SECRET
+# ============================================================
+
+SESSION_SECRET = os.getenv(
+    "SESSION_SECRET",
+    "change_this_to_a_long_random_secret"
+)
+
+
+# ============================================================
+# CREATE FASTAPI APP
+# ============================================================
+
+app = FastAPI(
+
+    title="Sanjeevani Clinic",
+
+    description="AI Assisted Healthcare Platform",
+
+    version="1.0.0"
+
+)
+
+
+# ============================================================
+# SESSION MIDDLEWARE
+# ============================================================
+
+app.add_middleware(
+
+    SessionMiddleware,
+
+    secret_key=SESSION_SECRET,
+
+    max_age=60 * 60 * 24 * 7
+
+)
+
+
+# ============================================================
+# STATIC FILES
+# ============================================================
+
+if os.path.isdir("static"):
+
+    app.mount(
+
+        "/static",
+
+        StaticFiles(
+            directory="static"
+        ),
+
+        name="static"
+
+    )
+
+
+# ============================================================
+# TEMPLATES
+# ============================================================
+
+templates = Jinja2Templates(
+
+    directory="templates"
+
+)
+
+
+# ============================================================
+# MAKE TEMPLATES AVAILABLE THROUGH APP STATE
+# ============================================================
+
+app.state.templates = templates
+
+
+# ============================================================
+# IMPORT ROUTERS
+# ============================================================
+
+from src.routers.auth import (
+    router as auth_router
+)
+
+from src.routers.profile import (
+    router as profile_router
+)
+
+from src.routers.doctor import (
+    router as doctor_router
+)
+
+from src.routers.appointment import (
+    router as appointment_router
+)
+
+from src.routers.notification import (
+    router as notification_router
+)
+
+from src.routers.screening import (
+    router as screening_router
+)
+
+from src.routers.medical_history import (
+    router as medical_history_router
+)
+
+from src.routers.documents import (
+    router as documents_router
+)
+
+from src.routers.chatbot import (
+    router as chatbot_router
+)
+
+from src.routers.injury import (
+    router as injury_router
+)
+
+from src.routers.prescription import (
+    router as prescription_router
+)
+
+from src.routers.treatment_review import (
+    router as treatment_review_router
+)
+
+
+# ============================================================
+# REGISTER ROUTERS
+# ============================================================
+
+app.include_router(
+    auth_router
+)
+
+
+app.include_router(
+    profile_router
+)
+
+
+app.include_router(
+    doctor_router
+)
+
+
+app.include_router(
+    appointment_router
+)
+
+
+app.include_router(
+    notification_router
+)
+
+
+app.include_router(
+    screening_router
+)
+
+
+app.include_router(
+    medical_history_router
+)
+
+
+app.include_router(
+    documents_router
+)
+
+
+app.include_router(
+    chatbot_router
+)
+
+
+app.include_router(
+    injury_router
+)
+
+
+app.include_router(
+    prescription_router
+)
+
+
+app.include_router(
+    treatment_review_router
+)
+
+
+# ============================================================
+# HOME PAGE
+# ============================================================
+
+@app.get(
+    "/",
+    response_class=HTMLResponse
+)
+def home(
+    request: Request
+):
+
+    return templates.TemplateResponse(
+
+        request,
+
+        "index.html",
+
+        {
+
+            "user":
+                request.session
+
+        }
+
+    )
+
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
 
 @app.get("/health")
-async def health_check():
-    logger.info("Monitering alert....")
-    return {"status":"ok"}
+def health():
 
+    return {
 
-### NLP Pretrained 
+        "status":
+            "healthy",
 
-@app.get("/pretrained-nlp" , response_class=HTMLResponse) 
-async def pretrained_nlp_form(request: Request):
-    return templates.TemplateResponse(request, 
-                                      "pretrained_nlp.html",
-                                      {
-                                          "result": None,
+        "service":
+            "Sanjeevani Clinic"
 
-                                          "form_data": {
-                                              "query": ""
-                                          },
-                                          "error": None 
-                                      })
-
-@app.post("/pretrained-nlp" , response_class=HTMLResponse) 
-async def pretrained_nlp_analysis(
-    request: Request,
-    query: str= Form(...)
-):
-    try:
-        ## text clean 
-        query = query.strip() 
-        if not query:
-            return templates.TemplateResponse(
-                request,
-                "pretrained_nlp.html",
-                {
-                    "result": None,
-                    "form_data": {
-                        "query": ""
-                    },
-                    "error": "Please enter some text..." 
-                }
-            )
-
-        ## Pos tagging 
-        pos_tags = get_pos_tags(query) 
-
-        ## NER 
-        entities = extract_entities(query) 
-
-        ## Sentiment Analysis 
-        sentiment = analyze_sentiment(query) 
-
-        ## Word Embeddings 
-        similar_words = [] 
-        words = query.split() 
-        first_word = words[0].lower() 
-        if words:
-            try:
-                similar_words = most_similar_words(first_word , topn=5) 
-            except Exception as e :
-                logger.warning(f"Glove similarity failed for: " , {first_word} ,"and the error is:", {e}) 
-                similar_words = [] 
-        ## final result 
-        result = {
-            "query": query,
-            "pos_tags": pos_tags,
-            "entities": entities,
-            "similar_words": similar_words,
-            "sentiment": sentiment
-        }
-        ##render result 
-        return templates.TemplateResponse(
-            request,
-            "pretrained_nlp.html",
-            {
-                "result": result,
-                "form_data": {
-                    "query": query
-                },
-                "error": None
-            }
-        )
-
-
-
-    except Exception as e :
-        logger.info("Error occured in pretrained nlp analysis")
-        return templates.TemplateResponse(
-            request,
-            "pretrained_nlp.html",
-            {
-                "result": None,
-                "form_data": {
-                    "query": query
-                },
-                "error": str(e)
-            }
-        )
-     
-
-
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True) 
+    }

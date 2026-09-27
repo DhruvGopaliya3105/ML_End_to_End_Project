@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Medical History - Sanjeevani AI</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f8fc;
+            color: #173b67;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 25px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 38px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 35px;
+            font-size: 17px;
+        }
+
+        .empty {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        .record {
+            background: white;
+            border-radius: 22px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .record-date {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .status {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+        }
+
+        .field {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .label {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .value {
+            color: #173b67;
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-top: 30px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .treatment,
+        .follow-up {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+
+        .item-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .item-text {
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 12px;
+            border-radius: 15px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 700px) {
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .record-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <a
+        href="/dashboard"
+        class="back"
+    >
+        ← Back to Dashboard
+    </a>
+
+
+    <h1>
+        🏥 Medical History
+    </h1>
+
+
+    <p class="subtitle">
+        Your visits, symptoms, treatments,
+        medicines and follow-ups in one place.
+    </p>
+
+
+    {% if history %}
+
+
+        {% for item in history %}
+
+            {% set record = item.record %}
+
+
+            <div class="record">
+
+
+                <div class="record-header">
+
+                    <div class="record-date">
+                        📅 {{ record.visit_date }}
+                    </div>
+
+                    <div class="status">
+                        {{ record.status }}
+                    </div>
+
+                </div>
+
+
+                <div class="grid">
+
+
+                    {% if record.chief_complaint %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Chief Complaint
+                        </div>
+
+                        <div class="value">
+                            {{ record.chief_complaint }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.symptoms %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Symptoms
+                        </div>
+
+                        <div class="value">
+                            {{ record.symptoms }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.clinical_notes %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Clinical Notes
+                        </div>
+
+                        <div class="value">
+                            {{ record.clinical_notes }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.diagnosis_notes %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Assessment Notes
+                        </div>
+
+                        <div class="value">
+                            {{ record.diagnosis_notes }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.treatment_summary %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Treatment Summary
+                        </div>
+
+                        <div class="value">
+                            {{ record.treatment_summary }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.medicines %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Medicines
+                        </div>
+
+                        <div class="value">
+                            {{ record.medicines }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if record.doctor_instructions %}
+
+                    <div class="field">
+
+                        <div class="label">
+                            Doctor Instructions
+                        </div>
+
+                        <div class="value">
+                            {{ record.doctor_instructions }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                </div>
+
+
+                {% if item.treatments %}
+
+                <div class="section">
+
+                    <div class="section-title">
+                        💊 Treatments
+                    </div>
+
+
+                    {% for treatment in item.treatments %}
+
+                    <div class="treatment">
+
+                        <div class="item-title">
+                            {{ treatment.treatment_name }}
+                        </div>
+
+                        {% if treatment.description %}
+
+                        <div class="item-text">
+                            {{ treatment.description }}
+                        </div>
+
+                        {% endif %}
+
+                        {% if treatment.start_date %}
+
+                        <span class="badge">
+                            Start: {{ treatment.start_date }}
+                        </span>
+
+                        {% endif %}
+
+                        {% if treatment.end_date %}
+
+                        <span class="badge">
+                            End: {{ treatment.end_date }}
+                        </span>
+
+                        {% endif %}
+
+                        <span class="badge">
+                            {{ treatment.status }}
+                        </span>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                {% endif %}
+
+
+                {% if item.follow_ups %}
+
+                <div class="section">
+
+                    <div class="section-title">
+                        📅 Follow-ups
+                    </div>
+
+
+                    {% for follow_up in item.follow_ups %}
+
+                    <div class="follow-up">
+
+                        <div class="item-title">
+                            {{ follow_up.follow_up_date }}
+                        </div>
+
+                        {% if follow_up.reason %}
+
+                        <div class="item-text">
+                            <strong>Reason:</strong>
+                            {{ follow_up.reason }}
+                        </div>
+
+                        {% endif %}
+
+                        {% if follow_up.instructions %}
+
+                        <div class="item-text">
+                            <strong>Instructions:</strong>
+                            {{ follow_up.instructions }}
+                        </div>
+
+                        {% endif %}
+
+                        <span class="badge">
+                            {{ follow_up.status }}
+                        </span>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                {% endif %}
+
+
+            </div>
+
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <div class="empty">
+
+            <h2>
+                No Medical History Yet
+            </h2>
+
+            <p>
+                Your medical records will appear here
+                after your consultations.
+            </p>
+
+        </div>
+
+
+    {% endif %}
+
+
+</div>
+
+
+</body>
+
+</html>

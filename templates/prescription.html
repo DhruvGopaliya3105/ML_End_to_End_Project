@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sanjeevani Clinic - Prescription</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .header h1 {
+            margin: 0 0 8px;
+            color: #1769aa;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: #1769aa;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .medicine {
+            border: 1px solid #ddd;
+            padding: 18px;
+            border-radius: 10px;
+            margin-top: 15px;
+            background: #fafafa;
+        }
+
+        .medicine-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        button {
+            border: none;
+            padding: 11px 18px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-top: 15px;
+        }
+
+        .add-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .submit-btn {
+            background: #1769aa;
+            color: white;
+            width: 100%;
+            font-size: 17px;
+        }
+
+        .previous {
+            border-left: 5px solid #1769aa;
+            padding: 15px;
+            background: #f8fbff;
+            margin-top: 15px;
+            border-radius: 7px;
+        }
+
+        .medicine-item {
+            background: white;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 7px;
+            border: 1px solid #ddd;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 7px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media(max-width: 700px) {
+
+            .medicine-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- ================================================= -->
+    <!-- HEADER -->
+    <!-- ================================================= -->
+
+    <div class="header">
+
+        <h1>Sanjeevani Clinic</h1>
+
+        <p>
+            Prescription & Treatment
+        </p>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- PREVIOUS PRESCRIPTION -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>Previous Prescription</h2>
+
+        <div id="previousPrescription">
+
+            Loading previous prescription...
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- NEW PRESCRIPTION -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>New Prescription</h2>
+
+
+        <label>
+            Doctor ID
+        </label>
+
+        <input
+            type="number"
+            id="doctor_id"
+            placeholder="Enter doctor ID"
+        >
+
+
+        <label>
+            Medical Record ID
+        </label>
+
+        <input
+            type="number"
+            id="medical_record_id"
+            placeholder="Enter medical record ID"
+        >
+
+
+        <label>
+            Treatment ID
+        </label>
+
+        <input
+            type="number"
+            id="treatment_id"
+            placeholder="Enter treatment ID"
+        >
+
+
+        <label>
+            Diagnosis
+        </label>
+
+        <textarea
+            id="diagnosis"
+            placeholder="Enter diagnosis"
+        ></textarea>
+
+
+        <label>
+            Doctor Instructions
+        </label>
+
+        <textarea
+            id="doctor_instructions"
+            placeholder="Enter doctor's instructions"
+        ></textarea>
+
+
+        <!-- ============================================= -->
+        <!-- MEDICINES -->
+        <!-- ============================================= -->
+
+        <h2 style="margin-top:30px;">
+            Medicines
+        </h2>
+
+        <div id="medicineContainer">
+
+        </div>
+
+
+        <button
+            type="button"
+            class="add-btn"
+            onclick="addMedicine()"
+        >
+            + Add Medicine
+        </button>
+
+
+        <button
+            type="button"
+            class="submit-btn"
+            onclick="createPrescription()"
+        >
+            Create Prescription
+        </button>
+
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+// =========================================================
+// ADD MEDICINE
+// =========================================================
+
+function addMedicine() {
+
+    const container =
+        document.getElementById(
+            "medicineContainer"
+        );
+
+
+    const medicine =
+        document.createElement("div");
+
+    medicine.className = "medicine";
+
+
+    medicine.innerHTML = `
+
+        <div class="medicine-grid">
+
+            <div>
+
+                <label>
+                    Medicine Name
+                </label>
+
+                <input
+                    type="text"
+                    class="medicine-name"
+                    placeholder="e.g. Paracetamol"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Dosage
+                </label>
+
+                <input
+                    type="text"
+                    class="medicine-dosage"
+                    placeholder="e.g. 500 mg"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Frequency
+                </label>
+
+                <input
+                    type="text"
+                    class="medicine-frequency"
+                    placeholder="e.g. 2 times a day"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Duration
+                </label>
+
+                <input
+                    type="text"
+                    class="medicine-duration"
+                    placeholder="e.g. 5 days"
+                >
+
+            </div>
+
+        </div>
+
+
+        <label>
+            Instructions
+        </label>
+
+        <textarea
+            class="medicine-instructions"
+            placeholder="e.g. After food"
+        ></textarea>
+
+
+        <button
+            type="button"
+            class="remove-btn"
+            onclick="this.parentElement.remove()"
+        >
+            Remove
+        </button>
+
+    `;
+
+
+    container.appendChild(
+        medicine
+    );
+
+}
+
+
+// =========================================================
+// LOAD PREVIOUS PRESCRIPTION
+// =========================================================
+
+async function loadPreviousPrescription() {
+
+    const container =
+        document.getElementById(
+            "previousPrescription"
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/prescription/history"
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !data.success ||
+            !data.prescriptions ||
+            data.prescriptions.length === 0
+        ) {
+
+            container.innerHTML = `
+                <p>
+                    No previous prescription found.
+                </p>
+            `;
+
+            return;
+
+        }
+
+
+        const latest =
+            data.prescriptions[0];
+
+
+        let html = `
+
+            <div class="previous">
+
+                <strong>
+                    Diagnosis:
+                </strong>
+
+                <p>
+                    ${latest.diagnosis || "Not available"}
+                </p>
+
+                <strong>
+                    Date:
+                </strong>
+
+                <p>
+                    ${latest.created_at}
+                </p>
+
+        `;
+
+
+        if (
+            latest.medicines &&
+            latest.medicines.length > 0
+        ) {
+
+            html += `
+                <strong>
+                    Previous Medicines:
+                </strong>
+            `;
+
+
+            latest.medicines.forEach(
+                medicine => {
+
+                    html += `
+
+                        <div class="medicine-item">
+
+                            <strong>
+                                ${medicine.name || ""}
+                            </strong>
+
+                            <br>
+
+                            Dosage:
+                            ${medicine.dosage || "-"}
+
+                            <br>
+
+                            Frequency:
+                            ${medicine.frequency || "-"}
+
+                            <br>
+
+                            Duration:
+                            ${medicine.duration || "-"}
+
+                            <br>
+
+                            Instructions:
+                            ${medicine.instructions || "-"}
+
+                        </div>
+
+                    `;
+
+                }
+            );
+
+        }
+
+
+        html += `
+
+                <br>
+
+                <strong>
+                    Doctor Instructions:
+                </strong>
+
+                <p>
+                    ${latest.doctor_instructions || "None"}
+                </p>
+
+            </div>
+
+        `;
+
+
+        container.innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        container.innerHTML = `
+            <p>
+                Unable to load previous prescription.
+            </p>
+        `;
+
+        console.error(error);
+
+    }
+
+}
+
+
+// =========================================================
+// CREATE PRESCRIPTION
+// =========================================================
+
+async function createPrescription() {
+
+
+    const medicines = [];
+
+
+    document
+        .querySelectorAll(".medicine")
+        .forEach(
+            medicine => {
+
+                medicines.push({
+
+                    medicine_name:
+                        medicine
+                        .querySelector(
+                            ".medicine-name"
+                        )
+                        .value,
+
+                    dosage:
+                        medicine
+                        .querySelector(
+                            ".medicine-dosage"
+                        )
+                        .value,
+
+                    frequency:
+                        medicine
+                        .querySelector(
+                            ".medicine-frequency"
+                        )
+                        .value,
+
+                    duration:
+                        medicine
+                        .querySelector(
+                            ".medicine-duration"
+                        )
+                        .value,
+
+                    instructions:
+                        medicine
+                        .querySelector(
+                            ".medicine-instructions"
+                        )
+                        .value
+
+                });
+
+            }
+        );
+
+
+    const data = {
+
+        doctor_id:
+            document
+            .getElementById(
+                "doctor_id"
+            ).value || null,
+
+        medical_record_id:
+            document
+            .getElementById(
+                "medical_record_id"
+            ).value || null,
+
+        treatment_id:
+            document
+            .getElementById(
+                "treatment_id"
+            ).value || null,
+
+        diagnosis:
+            document
+            .getElementById(
+                "diagnosis"
+            ).value,
+
+        doctor_instructions:
+            document
+            .getElementById(
+                "doctor_instructions"
+            ).value,
+
+        medicines:
+            medicines
+
+    };
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/prescription/create",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(data)
+
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        const message =
+            document.getElementById(
+                "message"
+            );
+
+
+        if (result.success) {
+
+            message.className =
+                "message success";
+
+            message.style.display =
+                "block";
+
+            message.innerHTML = `
+                Prescription created successfully.
+                Prescription ID:
+                ${result.prescription_id}
+            `;
+
+
+            loadPreviousPrescription();
+
+        } else {
+
+            message.className =
+                "message error";
+
+            message.style.display =
+                "block";
+
+            message.innerHTML =
+                result.message ||
+                "Unable to create prescription.";
+
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        const message =
+            document.getElementById(
+                "message"
+            );
+
+        message.className =
+            "message error";
+
+        message.style.display =
+            "block";
+
+        message.innerHTML =
+            "Something went wrong.";
+
+    }
+
+}
+
+
+// =========================================================
+// INITIAL LOAD
+// =========================================================
+
+addMedicine();
+
+loadPreviousPrescription();
+
+
+</script>
+
+
+</body>
+
+</html>

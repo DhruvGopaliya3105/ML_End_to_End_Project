@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>My Appointments</title>
+
+
+    <style>
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background: #f5f7fb;
+
+            margin: 0;
+
+            padding: 40px;
+
+        }
+
+
+        .container {
+
+            max-width: 1000px;
+
+            margin: auto;
+
+        }
+
+
+        h1 {
+
+            margin-bottom: 25px;
+
+        }
+
+
+        /* SUCCESS MESSAGE */
+
+        .success-message {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+            padding: 15px;
+
+            margin-bottom: 20px;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+
+            text-align: center;
+
+            border: 1px solid #86efac;
+
+        }
+
+
+        /* ERROR MESSAGE */
+
+        .error-message {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            padding: 15px;
+
+            margin-bottom: 20px;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+
+            text-align: center;
+
+        }
+
+
+        .appointment-card {
+
+            background: white;
+
+            padding: 25px;
+
+            margin-bottom: 20px;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0,0,0,0.08);
+
+        }
+
+
+        .appointment-card p {
+
+            margin: 8px 0;
+
+        }
+
+
+        .doctor {
+
+            font-size: 20px;
+
+            font-weight: bold;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .buttons {
+
+            margin-top: 20px;
+
+            display: flex;
+
+            gap: 10px;
+
+        }
+
+
+        .btn {
+
+            display: inline-block;
+
+            padding: 10px 18px;
+
+            border-radius: 6px;
+
+            text-decoration: none;
+
+            border: none;
+
+            cursor: pointer;
+
+            font-size: 14px;
+
+        }
+
+
+        .reschedule {
+
+            background: #2563eb;
+
+            color: white;
+
+        }
+
+
+        .reschedule:hover {
+
+            background: #1d4ed8;
+
+        }
+
+
+        .cancel {
+
+            background: #dc2626;
+
+            color: white;
+
+        }
+
+
+        .cancel:hover {
+
+            background: #b91c1c;
+
+        }
+
+
+        .empty {
+
+            background: white;
+
+            padding: 30px;
+
+            text-align: center;
+
+            border-radius: 10px;
+
+        }
+
+
+        .home-link {
+
+            display: inline-block;
+
+            margin-top: 20px;
+
+            text-decoration: none;
+
+            color: #2563eb;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <h1>
+
+        My Appointments
+
+    </h1>
+
+
+    <!-- ================================================= -->
+    <!-- SUCCESS MESSAGE -->
+    <!-- ================================================= -->
+
+    {% if request.query_params.get("rescheduled") == "success" %}
+
+    <div class="success-message">
+
+        ✅ Appointment Rescheduled Successfully!
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- APPOINTMENTS -->
+    <!-- ================================================= -->
+
+    {% if appointments %}
+
+
+        {% for appointment in appointments %}
+
+
+        <div class="appointment-card">
+
+
+            <!-- DOCTOR -->
+
+            <div class="doctor">
+
+                Doctor:
+
+                {% if appointment.doctor %}
+
+                    {{ appointment.doctor.name }}
+
+                {% else %}
+
+                    Doctor
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- DATE -->
+
+            <p>
+
+                <strong>
+
+                    Date:
+
+                </strong>
+
+                {{ appointment.appointment_date }}
+
+            </p>
+
+
+            <!-- TIME -->
+
+            <p>
+
+                <strong>
+
+                    Time:
+
+                </strong>
+
+                {{ appointment.start_time }}
+
+                -
+
+                {{ appointment.end_time }}
+
+            </p>
+
+
+            <!-- STATUS -->
+
+            <p>
+
+                <strong>
+
+                    Status:
+
+                </strong>
+
+                {{ appointment.status }}
+
+            </p>
+
+
+            <!-- ================================================= -->
+            <!-- BUTTONS -->
+            <!-- ================================================= -->
+
+            <div class="buttons">
+
+
+                <!-- RESCHEDULE -->
+
+                <a
+
+                    href="/appointments/{{ appointment.id }}/reschedule"
+
+                    class="btn reschedule"
+
+                >
+
+                    Reschedule
+
+                </a>
+
+
+                <!-- CANCEL -->
+
+                <form
+
+                    method="POST"
+
+                    action="/appointments/{{ appointment.id }}/cancel"
+
+                    style="display:inline;"
+
+                >
+
+                    <button
+
+                        type="submit"
+
+                        class="btn cancel"
+
+                        onclick="
+                            return confirm(
+                                'Are you sure you want to cancel this appointment?'
+                            );
+                        "
+
+                    >
+
+                        Cancel
+
+                    </button>
+
+                </form>
+
+
+            </div>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <div class="empty">
+
+            <h3>
+
+                No appointments found.
+
+            </h3>
+
+            <p>
+
+                You currently have no appointments.
+
+            </p>
+
+        </div>
+
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- BACK HOME -->
+    <!-- ================================================= -->
+
+    <a
+
+        href="/"
+
+        class="home-link"
+
+    >
+
+        ← Back to Home
+
+    </a>
+
+
+</div>
+
+
+</body>
+
+</html>

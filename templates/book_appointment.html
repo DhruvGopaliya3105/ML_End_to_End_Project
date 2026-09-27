@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Book Appointment - Sanjeevani AI
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f4f7fb;
+
+            color: #172033;
+        }
+
+        .container {
+
+            max-width: 900px;
+
+            margin: 50px auto;
+
+            padding: 20px;
+        }
+
+        .card {
+
+            background: white;
+
+            padding: 35px;
+
+            border-radius: 20px;
+
+            box-shadow:
+                0 10px 30px
+                rgba(0,0,0,0.08);
+        }
+
+        .doctor {
+
+            background: #eff6ff;
+
+            padding: 20px;
+
+            border-radius: 14px;
+
+            margin-bottom: 30px;
+        }
+
+        .doctor h2 {
+
+            margin: 0 0 8px;
+        }
+
+        .field {
+
+            margin-bottom: 22px;
+        }
+
+        label {
+
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-weight: 700;
+        }
+
+        input,
+        select,
+        textarea {
+
+            width: 100%;
+
+            padding: 13px;
+
+            border: 1px solid #cbd5e1;
+
+            border-radius: 10px;
+
+            font-size: 16px;
+        }
+
+        textarea {
+
+            min-height: 100px;
+
+            resize: vertical;
+        }
+
+        .duration {
+
+            background: #f8fafc;
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            margin-bottom: 20px;
+        }
+
+        .times {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(160px, 1fr)
+                );
+
+            gap: 12px;
+        }
+
+        .time-button {
+
+            padding: 13px;
+
+            border: 1px solid #2563eb;
+
+            background: white;
+
+            color: #2563eb;
+
+            border-radius: 10px;
+
+            cursor: pointer;
+
+            font-weight: 700;
+        }
+
+        .time-button.selected {
+
+            background: #2563eb;
+
+            color: white;
+        }
+
+        .submit {
+
+            width: 100%;
+
+            border: 0;
+
+            background: #16a34a;
+
+            color: white;
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            font-size: 17px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+        }
+
+        .submit:disabled {
+
+            background: #94a3b8;
+
+            cursor: not-allowed;
+        }
+
+        .loading {
+
+            color: #64748b;
+
+        }
+
+        .error {
+
+            color: #dc2626;
+
+            font-weight: 600;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="card">
+
+
+        <h1>
+            Book Appointment
+        </h1>
+
+
+        <p>
+            Choose your visit type and available time.
+        </p>
+
+
+        <!-- Doctor -->
+
+        <div class="doctor">
+
+            <h2>
+                Dr. {{ doctor.name }}
+            </h2>
+
+            <p>
+                <strong>
+                    Specialization:
+                </strong>
+
+                {{ doctor.specialization }}
+            </p>
+
+            <p>
+                <strong>
+                    Consultation Fee:
+                </strong>
+
+                ₹{{ doctor.consultation_fee or 0 }}
+            </p>
+
+        </div>
+
+
+        <form
+            action="/book-appointment"
+            method="post"
+        >
+
+
+            <!-- Hidden doctor -->
+
+            <input
+                type="hidden"
+                name="doctor_id"
+                value="{{ doctor.id }}"
+            >
+
+
+            <!-- Hidden date -->
+
+            <input
+                type="hidden"
+                name="appointment_date"
+                value="{{ appointment_date }}"
+            >
+
+
+            <!-- Hidden selected start -->
+
+            <input
+                type="hidden"
+                name="start_time"
+                id="startTime"
+            >
+
+
+            <!-- Hidden selected end -->
+
+            <input
+                type="hidden"
+                name="end_time"
+                id="endTime"
+            >
+
+
+            <!-- Date -->
+
+            <div class="field">
+
+                <label>
+                    Appointment Date
+                </label>
+
+                <input
+                    type="text"
+                    value="{{ appointment_date }}"
+                    disabled
+                >
+
+            </div>
+
+
+            <!-- Visit Type -->
+
+            <div class="field">
+
+                <label>
+                    Visit Type
+                </label>
+
+                <select
+                    name="visit_type_id"
+                    id="visitType"
+                    required
+                >
+
+                    <option value="">
+                        Select Visit Type
+                    </option>
+
+
+                    {% for visit in visit_types %}
+
+                    <option
+                        value="{{ visit.id }}"
+                        data-duration="{{ visit.default_duration_minutes }}"
+                    >
+
+                        {{ visit.name }}
+
+                        -
+
+                        {{ visit.default_duration_minutes }}
+
+                        min
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- Duration -->
+
+            <div
+                class="duration"
+                id="durationBox"
+            >
+
+                Select visit type first.
+
+            </div>
+
+
+            <!-- Available Times -->
+
+            <div class="field">
+
+                <label>
+                    Available Times
+                </label>
+
+
+                <div
+                    class="times"
+                    id="times"
+                >
+
+                    Select visit type first.
+
+                </div>
+
+            </div>
+
+
+            <!-- Reason -->
+
+            <div class="field">
+
+                <label>
+                    Reason for Visit
+                </label>
+
+                <textarea
+                    name="reason"
+                    placeholder="Describe your reason for consultation..."
+                ></textarea>
+
+            </div>
+
+
+            <!-- Payment -->
+
+            <div class="field">
+
+                <label>
+                    Payment Method
+                </label>
+
+                <select
+                    name="payment_method"
+                    required
+                >
+
+                    <option value="CASH">
+                        Cash at Clinic
+                    </option>
+
+                    <option value="ONLINE">
+                        Online Payment
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- Consultation fee -->
+
+            <input
+                type="hidden"
+                name="payment_amount"
+                value="{{ doctor.consultation_fee or 0 }}"
+            >
+
+
+            <!-- Submit -->
+
+            <button
+                type="submit"
+                class="submit"
+                id="submitButton"
+                disabled
+            >
+
+                Confirm Appointment
+
+            </button>
+
+
+        </form>
+
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+
+const visitType =
+    document.getElementById(
+        "visitType"
+    );
+
+
+const times =
+    document.getElementById(
+        "times"
+    );
+
+
+const durationBox =
+    document.getElementById(
+        "durationBox"
+    );
+
+
+const startTime =
+    document.getElementById(
+        "startTime"
+    );
+
+
+const endTime =
+    document.getElementById(
+        "endTime"
+    );
+
+
+const submitButton =
+    document.getElementById(
+        "submitButton"
+    );
+
+
+visitType.addEventListener(
+    "change",
+    async function () {
+
+
+        const visitId =
+            this.value;
+
+
+        startTime.value = "";
+
+        endTime.value = "";
+
+        submitButton.disabled = true;
+
+
+        if (!visitId) {
+
+            durationBox.innerHTML =
+                "Select visit type first.";
+
+            times.innerHTML =
+                "Select visit type first.";
+
+            return;
+        }
+
+
+        // -----------------------------
+        // Show duration
+        // -----------------------------
+
+        const selected =
+            this.options[
+                this.selectedIndex
+            ];
+
+
+        const duration =
+            selected.dataset.duration;
+
+
+        durationBox.innerHTML =
+            "⏱ Estimated Duration: "
+            + duration
+            + " minutes";
+
+
+        // -----------------------------
+        // Loading
+        // -----------------------------
+
+        times.innerHTML =
+            "<span class='loading'>"
+            + "Loading available times..."
+            + "</span>";
+
+
+        // -----------------------------
+        // API URL
+        // -----------------------------
+
+        const doctorId =
+            "{{ doctor.id }}";
+
+
+        const appointmentDate =
+            "{{ appointment_date }}";
+
+
+        const url =
+            `/api/appointment-times`
+            + `?doctor_id=${doctorId}`
+            + `&appointment_date=${appointmentDate}`
+            + `&visit_type_id=${visitId}`;
+
+
+        try {
+
+
+            const response =
+                await fetch(url);
+
+
+            const data =
+                await response.json();
+
+
+            if (!data.success) {
+
+                times.innerHTML =
+                    "<span class='error'>"
+                    + data.message
+                    + "</span>";
+
+                return;
+            }
+
+
+            // -------------------------
+            // No time
+            // -------------------------
+
+            if (
+                !data.times ||
+                data.times.length === 0
+            ) {
+
+                times.innerHTML =
+                    "<span class='error'>"
+                    + "No suitable time available."
+                    + "</span>";
+
+                return;
+            }
+
+
+            // -------------------------
+            // Clear
+            // -------------------------
+
+            times.innerHTML = "";
+
+
+            // -------------------------
+            // Create buttons
+            // -------------------------
+
+            data.times.forEach(
+                function (item) {
+
+
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    button.type =
+                        "button";
+
+
+                    button.className =
+                        "time-button";
+
+
+                    button.innerText =
+                        formatTime(
+                            item.start_time
+                        )
+                        + " - "
+                        + formatTime(
+                            item.end_time
+                        );
+
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+
+
+                            // Remove
+                            // previous selection
+
+                            document
+                                .querySelectorAll(
+                                    ".time-button"
+                                )
+                                .forEach(
+                                    function(btn) {
+
+                                        btn.classList
+                                            .remove(
+                                                "selected"
+                                            );
+
+                                    }
+                                );
+
+
+                            // Select current
+
+                            button.classList.add(
+                                "selected"
+                            );
+
+
+                            // Store values
+
+                            startTime.value =
+                                item.start_time;
+
+
+                            endTime.value =
+                                item.end_time;
+
+
+                            // Enable booking
+
+                            submitButton.disabled =
+                                false;
+
+                        }
+                    );
+
+
+                    times.appendChild(
+                        button
+                    );
+
+                }
+            );
+
+
+        }
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            times.innerHTML =
+                "<span class='error'>"
+                + "Unable to load available times."
+                + "</span>";
+
+        }
+
+    }
+);
+
+
+// ============================================================
+// FORMAT TIME
+// ============================================================
+
+function formatTime(timeString) {
+
+
+    const parts =
+        timeString.split(":");
+
+
+    const hour =
+        parseInt(parts[0]);
+
+
+    const minute =
+        parseInt(parts[1]);
+
+
+    const date =
+        new Date();
+
+
+    date.setHours(
+        hour,
+        minute,
+        0,
+        0
+    );
+
+
+    return date.toLocaleTimeString(
+        [],
+        {
+            hour: "2-digit",
+
+            minute: "2-digit"
+        }
+    );
+
+}
+
+</script>
+
+
+</body>
+
+</html>

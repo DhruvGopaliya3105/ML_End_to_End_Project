@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Sanjeevani Clinic Assistant</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #000000;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 700px;
+            height: 650px;
+            margin: 40px auto;
+            background: #111111;
+            border: 1px solid #333333;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 30px rgba(255,255,255,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #000000;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #333333;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .chat-header p {
+            margin: 7px 0 0;
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+
+        #chatBox {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #000000;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+
+        .bot-message .message-content {
+            background: #222222;
+            color: white;
+            border: 1px solid #333333;
+        }
+
+        .user-message .message-content {
+            background: white;
+            color: black;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .option-button {
+            width: 100%;
+            padding: 12px;
+            background: #111111;
+            color: white;
+            border: 1px solid #444444;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .option-button:hover {
+            background: #222222;
+            border-color: white;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background: #111111;
+            border-top: 1px solid #333333;
+            gap: 8px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #444444;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            background: #222222;
+            color: white;
+        }
+
+        #messageInput::placeholder {
+            color: #888888;
+        }
+
+        #sendButton,
+        #micButton {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: black;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #sendButton:hover,
+        #micButton:hover {
+            background: #dddddd;
+        }
+
+        #micButton.listening {
+            background: #ff4444;
+            color: white;
+        }
+
+        .back-button {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            text-decoration: none;
+            color: white;
+            background: #111111;
+            border-top: 1px solid #333333;
+        }
+
+        @media (max-width: 600px) {
+
+            .chat-container {
+                width: 100%;
+                height: 100vh;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .input-area {
+                flex-wrap: wrap;
+            }
+
+            #messageInput {
+                width: 100%;
+                flex-basis: 100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="chat-container">
+
+
+    <!-- HEADER -->
+
+    <div class="chat-header">
+
+        <h2>
+            🏥 Sanjeevani Clinic Assistant
+        </h2>
+
+        <p>
+            Your personal clinic assistant
+        </p>
+
+    </div>
+
+
+    <!-- CHAT -->
+
+    <div id="chatBox">
+
+
+        <div class="message bot-message">
+
+            <div class="message-content">
+
+                Hello! 👋
+
+                <br>
+
+                Welcome to Sanjeevani Clinic.
+
+                <br><br>
+
+                How can I help you today?
+
+                <div class="options">
+
+                    <button
+                        class="option-button"
+                        onclick="selectOption('My Appointment')">
+
+                        📅 My Appointment
+
+                    </button>
+
+                    <button
+                        class="option-button"
+                        onclick="selectOption('Find Doctor')">
+
+                        👨‍⚕️ Find Doctor
+
+                    </button>
+
+                    <button
+                        class="option-button"
+                        onclick="selectOption('Reschedule Appointment')">
+
+                        🔄 Reschedule Appointment
+
+                    </button>
+
+                    <button
+                        class="option-button"
+                        onclick="selectOption('Cancel Appointment')">
+
+                        ❌ Cancel Appointment
+
+                    </button>
+
+                    <button
+                        class="option-button"
+                        onclick="selectOption('Book Appointment')">
+
+                        📅 Book Appointment
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="input-area">
+
+        <input
+            type="text"
+            id="messageInput"
+            placeholder="Type or speak your message..."
+        >
+
+
+        <!-- MIC -->
+
+        <button
+            id="micButton"
+            onclick="startVoice()"
+            title="Speak">
+
+            🎤
+
+        </button>
+
+
+        <!-- SEND -->
+
+        <button
+            id="sendButton"
+            onclick="sendMessage()">
+
+            Send
+
+        </button>
+
+    </div>
+
+
+    <!-- BACK -->
+
+    <a
+        href="/appointments"
+        class="back-button">
+
+        ← My Appointments
+
+    </a>
+
+
+</div>
+
+
+
+<script>
+
+
+    // =====================================================
+    // OPTION BUTTON
+    // =====================================================
+
+    function selectOption(option) {
+
+        addMessage(
+            option,
+            "user"
+        );
+
+        sendToBot(option);
+
+    }
+
+
+    // =====================================================
+    // SEND TEXT MESSAGE
+    // =====================================================
+
+    function sendMessage() {
+
+        const input =
+            document.getElementById(
+                "messageInput"
+            );
+
+        const message =
+            input.value.trim();
+
+
+        if (!message) {
+            return;
+        }
+
+
+        addMessage(
+            message,
+            "user"
+        );
+
+
+        input.value = "";
+
+
+        sendToBot(message);
+
+    }
+
+
+    // =====================================================
+    // SEND MESSAGE TO FASTAPI
+    // =====================================================
+
+    async function sendToBot(message) {
+
+        try {
+
+            const response =
+                await fetch(
+
+                    "/chatbot/message?message="
+                    +
+                    encodeURIComponent(message),
+
+                    {
+                        method: "POST"
+                    }
+
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (data.reply) {
+
+                addMessage(
+                    data.reply,
+                    "bot"
+                );
+
+
+                // BOT VOICE
+
+                speakText(
+                    data.reply
+                );
+
+            }
+
+            else {
+
+                addMessage(
+                    "Sorry, something went wrong.",
+                    "bot"
+                );
+
+            }
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            addMessage(
+                "Unable to connect to the server.",
+                "bot"
+            );
+
+        }
+
+    }
+
+
+    // =====================================================
+    // ADD MESSAGE
+    // =====================================================
+
+    function addMessage(
+        text,
+        sender
+    ) {
+
+        const chatBox =
+            document.getElementById(
+                "chatBox"
+            );
+
+
+        const message =
+            document.createElement(
+                "div"
+            );
+
+
+        message.classList.add(
+            "message"
+        );
+
+
+        if (sender === "user") {
+
+            message.classList.add(
+                "user-message"
+            );
+
+        }
+
+        else {
+
+            message.classList.add(
+                "bot-message"
+            );
+
+        }
+
+
+        const content =
+            document.createElement(
+                "div"
+            );
+
+
+        content.classList.add(
+            "message-content"
+        );
+
+
+        content.textContent =
+            text;
+
+
+        message.appendChild(
+            content
+        );
+
+
+        chatBox.appendChild(
+            message
+        );
+
+
+        chatBox.scrollTop =
+            chatBox.scrollHeight;
+
+    }
+
+
+    // =====================================================
+    // VOICE INPUT
+    // =====================================================
+
+    function startVoice() {
+
+
+        const SpeechRecognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+
+        if (!SpeechRecognition) {
+
+            alert(
+                "Voice recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge."
+            );
+
+            return;
+
+        }
+
+
+        const recognition =
+            new SpeechRecognition();
+
+
+        // English
+
+        recognition.lang =
+            "en-US";
+
+
+        recognition.interimResults =
+            false;
+
+
+        recognition.continuous =
+            false;
+
+
+        const micButton =
+            document.getElementById(
+                "micButton"
+            );
+
+
+        micButton.classList.add(
+            "listening"
+        );
+
+
+        micButton.innerHTML =
+            "🔴";
+
+
+        recognition.start();
+
+
+        recognition.onresult =
+            function(event) {
+
+
+                const transcript =
+                    event.results[0][0].transcript;
+
+
+                document.getElementById(
+                    "messageInput"
+                ).value =
+                    transcript;
+
+
+                // Automatically send
+
+                addMessage(
+                    transcript,
+                    "user"
+                );
+
+
+                sendToBot(
+                    transcript
+                );
+
+            };
+
+
+        recognition.onerror =
+            function(event) {
+
+                console.error(
+                    "Voice error:",
+                    event.error
+                );
+
+                alert(
+                    "Voice input could not be detected. Please try again."
+                );
+
+            };
+
+
+        recognition.onend =
+            function() {
+
+                micButton.classList.remove(
+                    "listening"
+                );
+
+                micButton.innerHTML =
+                    "🎤";
+
+            };
+
+    }
+
+
+    // =====================================================
+    // BOT VOICE OUTPUT
+    // =====================================================
+
+    function speakText(text) {
+
+
+        if (
+            !("speechSynthesis" in window)
+        ) {
+
+            return;
+
+        }
+
+
+        // Stop previous voice
+
+        window.speechSynthesis.cancel();
+
+
+        const speech =
+            new SpeechSynthesisUtterance(
+                text
+            );
+
+
+        speech.lang =
+            "en-US";
+
+
+        speech.rate =
+            0.9;
+
+
+        speech.pitch =
+            1;
+
+
+        speech.volume =
+            1;
+
+
+        window.speechSynthesis.speak(
+            speech
+        );
+
+    }
+
+
+    // =====================================================
+    // ENTER KEY
+    // =====================================================
+
+    document
+        .getElementById("messageInput")
+        .addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    sendMessage();
+
+                }
+
+            }
+        );
+
+
+</script>
+
+
+</body>
+
+</html>

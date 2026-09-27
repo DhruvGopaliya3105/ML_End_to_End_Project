@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Medical Reports | Sanjeevani Clinic
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        /* =====================================================
+           NAVBAR
+        ===================================================== */
+
+        .navbar {
+            background: #0f766e;
+            color: white;
+            padding: 18px 40px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h2 {
+            margin: 0;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        /* =====================================================
+           CONTAINER
+        ===================================================== */
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #6b7280;
+        }
+
+        /* =====================================================
+           CARD
+        ===================================================== */
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+
+            box-shadow:
+                0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        /* =====================================================
+           FORM
+        ===================================================== */
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        select,
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+
+            background: white;
+        }
+
+        /* =====================================================
+           UPLOAD BUTTON
+        ===================================================== */
+
+        .upload-btn {
+            background: #0f766e;
+            color: white;
+
+            border: none;
+
+            padding: 12px 22px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-size: 15px;
+        }
+
+        .upload-btn:hover {
+            background: #115e59;
+        }
+
+        /* =====================================================
+           ERROR
+        ===================================================== */
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+
+            padding: 12px;
+
+            border-radius: 8px;
+
+            margin-bottom: 20px;
+        }
+
+        /* =====================================================
+           DOCUMENT
+        ===================================================== */
+
+        .document {
+            border: 1px solid #e5e7eb;
+
+            padding: 18px;
+
+            border-radius: 10px;
+
+            margin-bottom: 15px;
+        }
+
+        .document h3 {
+            margin-top: 0;
+        }
+
+        .document p {
+            margin: 6px 0;
+
+            color: #4b5563;
+        }
+
+        /* =====================================================
+           ACTION BUTTONS
+        ===================================================== */
+
+        .buttons {
+            margin-top: 18px;
+        }
+
+        .button {
+            display: inline-block;
+
+            background: #0f766e;
+
+            color: white;
+
+            text-decoration: none;
+
+            padding: 10px 16px;
+
+            border-radius: 7px;
+
+            margin-right: 8px;
+
+            margin-bottom: 8px;
+
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: #115e59;
+        }
+
+        /* =====================================================
+           ANALYZE BUTTON
+        ===================================================== */
+
+        .analyze-button {
+            background: #2563eb;
+        }
+
+        .analyze-button:hover {
+            background: #1d4ed8;
+        }
+
+        /* =====================================================
+           EMPTY
+        ===================================================== */
+
+        .empty {
+            text-align: center;
+
+            padding: 30px;
+
+            color: #6b7280;
+        }
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .navbar {
+                padding: 15px 20px;
+
+                flex-direction: column;
+
+                align-items: flex-start;
+            }
+
+            .navbar div {
+                margin-top: 12px;
+            }
+
+            .navbar a {
+                margin-left: 0;
+                margin-right: 15px;
+            }
+
+            .container {
+                margin-top: 25px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         NAVBAR
+    ===================================================== -->
+
+    <div class="navbar">
+
+        <h2>
+            Sanjeevani Clinic
+        </h2>
+
+
+        <div>
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+
+            <a href="/medical-history">
+                Medical History
+            </a>
+
+
+            <a href="/logout">
+                Logout
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN CONTAINER
+    ===================================================== -->
+
+    <div class="container">
+
+
+        <!-- =================================================
+             HEADER
+        ================================================= -->
+
+        <div class="header">
+
+            <h1>
+                Medical Reports
+            </h1>
+
+
+            <p>
+
+                Upload and manage your medical reports,
+                prescriptions, blood tests and other
+                medical documents.
+
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             ERROR MESSAGE
+        ================================================= -->
+
+        {% if error %}
+
+        <div class="error">
+
+            {{ error }}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             UPLOAD CARD
+        ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Upload Medical Report
+            </h2>
+
+
+            <form
+                action="/medical-reports/upload"
+                method="post"
+                enctype="multipart/form-data"
+            >
+
+
+                <!-- DOCUMENT TYPE -->
+
+                <div class="form-group">
+
+                    <label for="document_type">
+
+                        Document Type
+
+                    </label>
+
+
+                    <select
+                        name="document_type"
+                        id="document_type"
+                    >
+
+                        <option value="Medical Report">
+                            Medical Report
+                        </option>
+
+
+                        <option value="Blood Test">
+                            Blood Test
+                        </option>
+
+
+                        <option value="X-Ray">
+                            X-Ray
+                        </option>
+
+
+                        <option value="MRI">
+                            MRI
+                        </option>
+
+
+                        <option value="CT Scan">
+                            CT Scan
+                        </option>
+
+
+                        <option value="Prescription">
+                            Prescription
+                        </option>
+
+
+                        <option value="Discharge Summary">
+                            Discharge Summary
+                        </option>
+
+
+                        <option value="Other">
+                            Other
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- FILE -->
+
+                <div class="form-group">
+
+                    <label for="file">
+
+                        Select File
+
+                    </label>
+
+
+                    <input
+                        type="file"
+                        name="file"
+                        id="file"
+
+                        accept=".pdf,.jpg,.jpeg,.png"
+
+                        required
+                    >
+
+                </div>
+
+
+                <!-- SUBMIT -->
+
+                <button
+                    type="submit"
+                    class="upload-btn"
+                >
+
+                    Upload Report
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- =================================================
+             UPLOADED DOCUMENTS
+        ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Uploaded Reports
+            </h2>
+
+
+            {% if documents %}
+
+
+                {% for document in documents %}
+
+
+                <div class="document">
+
+
+                    <!-- DOCUMENT NAME -->
+
+                    <h3>
+
+                        {{ document.document_name }}
+
+                    </h3>
+
+
+                    <!-- DOCUMENT TYPE -->
+
+                    <p>
+
+                        <strong>
+                            Type:
+                        </strong>
+
+                        {{ document.document_type
+                           or "Not specified" }}
+
+                    </p>
+
+
+                    <!-- UPLOADED DATE -->
+
+                    <p>
+
+                        <strong>
+                            Uploaded:
+                        </strong>
+
+                        {{ document.uploaded_at }}
+
+                    </p>
+
+
+                    <!-- FILE SIZE -->
+
+                    <p>
+
+                        <strong>
+                            Size:
+                        </strong>
+
+
+                        {% if document.file_size %}
+
+                            {{ (
+                                document.file_size / 1024
+                            ) | round(2) }}
+
+                            KB
+
+                        {% else %}
+
+                            Not available
+
+                        {% endif %}
+
+                    </p>
+
+
+                    <!-- STATUS -->
+
+                    <p>
+
+                        <strong>
+                            Status:
+                        </strong>
+
+                        {{ document.status }}
+
+                    </p>
+
+
+                    <!-- =================================================
+                         ACTION BUTTONS
+                    ================================================= -->
+
+                    <div class="buttons">
+
+
+                        <!-- VIEW -->
+
+                        <a
+                            href="/medical-reports/{{ document.id }}/view"
+                            class="button"
+                        >
+
+                            View
+
+                        </a>
+
+
+                        <!-- DOWNLOAD -->
+
+                        <a
+                            href="/medical-reports/{{ document.id }}/download"
+                            class="button"
+                        >
+
+                            Download
+
+                        </a>
+
+
+                        <!-- ANALYZE -->
+
+                        <a
+                            href="/medical-reports/{{ document.id }}/analyze"
+                            class="button analyze-button"
+                        >
+
+                            Analyze Report
+
+                        </a>
+
+
+                    </div>
+
+
+                </div>
+
+
+                {% endfor %}
+
+
+            {% else %}
+
+
+                <!-- NO DOCUMENTS -->
+
+                <div class="empty">
+
+                    <p>
+
+                        No medical reports uploaded yet.
+
+                    </p>
+
+                </div>
+
+
+            {% endif %}
+
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

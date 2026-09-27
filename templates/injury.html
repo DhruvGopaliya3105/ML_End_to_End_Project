@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Sanjeevani Clinic - Injury Assistant
+    </title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            margin: 15px 0;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #result {
+            margin-top: 25px;
+        }
+
+        .card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .doctor {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+        }
+
+        .doctor button {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .emergency {
+            background: #fee2e2;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+    <h1>
+        🏥 Sanjeevani Injury Assistant
+    </h1>
+
+    <p>
+        Upload a photo of your injury for
+        preliminary AI-assisted triage.
+    </p>
+
+
+    <div class="warning">
+
+        ⚠️ This is not a medical diagnosis.
+        If the injury is severe or you have
+        an emergency, seek immediate medical care.
+
+    </div>
+
+
+    <form id="injuryForm">
+
+        <input
+            type="file"
+            id="injuryImage"
+            name="file"
+            accept="image/jpeg,image/png,image/webp"
+            required
+        >
+
+        <br>
+
+        <button type="submit">
+            Analyze Injury
+        </button>
+
+    </form>
+
+
+    <div id="loading">
+
+        🔄 Analyzing image...
+
+    </div>
+
+
+    <div id="result"></div>
+
+</div>
+
+
+
+<script>
+
+const form =
+    document.getElementById(
+        "injuryForm"
+    );
+
+
+const loading =
+    document.getElementById(
+        "loading"
+    );
+
+
+const result =
+    document.getElementById(
+        "result"
+    );
+
+
+form.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+        result.innerHTML = "";
+
+        loading.style.display =
+            "block";
+
+
+        const fileInput =
+            document.getElementById(
+                "injuryImage"
+            );
+
+
+        if (!fileInput.files.length) {
+
+            loading.style.display =
+                "none";
+
+            result.innerHTML =
+                "<p>Please select an image.</p>";
+
+            return;
+        }
+
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "file",
+            fileInput.files[0]
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/injury/analyze",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            loading.style.display =
+                "none";
+
+
+            if (!data.success) {
+
+                result.innerHTML =
+                    `
+                    <div class="card">
+                        <strong>Error:</strong>
+                        ${data.message || "Something went wrong."}
+                    </div>
+                    `;
+
+                return;
+            }
+
+
+            // =========================================
+            // EMERGENCY
+            // =========================================
+
+            if (
+                data.route ===
+                "EMERGENCY"
+            ) {
+
+                result.innerHTML =
+                    `
+                    <div class="emergency">
+
+                        <h2>
+                            ⚠️ Urgent Medical Attention
+                        </h2>
+
+                        <p>
+                            ${data.message}
+                        </p>
+
+                    </div>
+                    `;
+
+                return;
+            }
+
+
+            const analysis =
+                data.analysis;
+
+
+            let html = `
+
+                <div class="card">
+
+                    <h2>
+                        Injury Analysis
+                    </h2>
+
+                    <p>
+                        <strong>Injury:</strong>
+                        ${analysis.injury_type}
+                    </p>
+
+                    <p>
+                        <strong>Body Part:</strong>
+                        ${analysis.body_part}
+                    </p>
+
+                    <p>
+                        <strong>Severity:</strong>
+                        ${analysis.severity}
+                    </p>
+
+                    <p>
+                        <strong>Suggested Specialist:</strong>
+                        ${analysis.specialist}
+                    </p>
+
+                    <p>
+                        <strong>Recommendation:</strong>
+                        ${analysis.recommendation}
+                    </p>
+
+                </div>
+            `;
+
+
+            // =========================================
+            // DOCTORS
+            // =========================================
+
+            if (
+                data.doctors &&
+                data.doctors.length > 0
+            ) {
+
+                html += `
+
+                    <div class="card">
+
+                        <h2>
+                            Available Doctors
+                        </h2>
+
+                `;
+
+
+                data.doctors.forEach(
+                    function(doctor) {
+
+                        html += `
+
+                            <div class="doctor">
+
+                                <strong>
+                                    Dr. ${doctor.name}
+                                </strong>
+
+                                <br>
+
+                                <span>
+                                    ${doctor.specialization}
+                                </span>
+
+                                <br>
+
+                                <button
+                                    onclick="
+                                        selectDoctor(
+                                            ${doctor.id}
+                                        )
+                                    "
+                                >
+                                    Select Doctor
+                                </button>
+
+                            </div>
+
+                        `;
+                    }
+                );
+
+
+                html += `</div>`;
+
+            }
+
+
+            html += `
+
+                <div class="card">
+
+                    <p>
+                        ${data.message}
+                    </p>
+
+                    <p>
+                        Next step:
+                        Select a doctor and
+                        continue to available slots.
+                    </p>
+
+                </div>
+
+            `;
+
+
+            result.innerHTML =
+                html;
+
+        }
+
+
+        catch(error) {
+
+            loading.style.display =
+                "none";
+
+
+            result.innerHTML =
+                `
+                <div class="card">
+
+                    <strong>
+                        Error:
+                    </strong>
+
+                    ${error.message}
+
+                </div>
+                `;
+
+        }
+
+    }
+);
+
+
+
+function selectDoctor(
+    doctorId
+) {
+
+    alert(
+        "Doctor selected: " +
+        doctorId +
+        ". Slot booking will use the existing appointment system."
+    );
+
+    /*
+        IMPORTANT:
+
+        We intentionally do NOT create
+        another booking system here.
+
+        Your existing chatbot appointment
+        service already handles:
+
+        Doctor
+        ↓
+        Available slots
+        ↓
+        Booking
+        ↓
+        BOOKED
+        ↓
+        CONFIRMED
+    */
+}
+
+</script>
+
+
+</body>
+
+</html>
