@@ -1,10 +1,15 @@
+import logging
+import os
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import OperationalError
 from starlette.middleware.sessions import SessionMiddleware
-
-import os
 
 
 # ============================================================
@@ -15,24 +20,24 @@ from src.database.base import Base
 from src.database.connection import engine
 
 
-# ============================================================
-# IMPORT MODELS
-# ============================================================
-# Important:
-# Models ko import karna zaroori hai taaki
-# SQLAlchemy unki tables ko identify kar sake.
-
-from src.models.prescription import Prescription
-from src.models.prescription_medicine import PrescriptionMedicine
+logger = logging.getLogger(__name__)
+BASE_DIR = Path(__file__).resolve().parent
 
 
-# ============================================================
-# CREATE DATABASE TABLES
-# ============================================================
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError:
+        app.state.database_ready = False
+        logger.exception(
+            "Database is unavailable; the API will start, but database-backed "
+            "routes will not work until the database is available."
+        )
+    else:
+        app.state.database_ready = True
 
-Base.metadata.create_all(
-    bind=engine
-)
+    yield
 
 
 # ============================================================
@@ -55,7 +60,9 @@ app = FastAPI(
 
     description="AI Assisted Healthcare Platform",
 
-    version="1.0.0"
+    version="1.0.0",
+
+    lifespan=lifespan
 
 )
 
@@ -79,14 +86,16 @@ app.add_middleware(
 # STATIC FILES
 # ============================================================
 
-if os.path.isdir("static"):
+STATIC_DIR = BASE_DIR / "static"
+
+if STATIC_DIR.is_dir():
 
     app.mount(
 
         "/static",
 
         StaticFiles(
-            directory="static"
+            directory=STATIC_DIR
         ),
 
         name="static"
@@ -100,7 +109,7 @@ if os.path.isdir("static"):
 
 templates = Jinja2Templates(
 
-    directory="templates"
+    directory=BASE_DIR / "templates"
 
 )
 
@@ -254,6 +263,7 @@ def home(
 
         }
 
+
     )
 
 
@@ -262,7 +272,7 @@ def home(
 # ============================================================
 
 @app.get("/health")
-def health():
+def health(request: Request):
 
     return {
 
@@ -270,6 +280,11 @@ def health():
             "healthy",
 
         "service":
-            "Sanjeevani Clinic"
+            "Sanjeevani Clinic",
+
+        "database":
+            "ready"
+            if getattr(request.app.state, "database_ready", False)
+            else "unavailable"
 
     }

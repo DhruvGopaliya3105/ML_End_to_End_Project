@@ -994,6 +994,14 @@
 
     <div class="nav-right">
 
+        <a
+            href="/chatbot"
+            class="notification-btn"
+            title="Open clinic chatbot"
+            style="font-size: 18px; width: auto; padding: 0 14px; text-decoration: none; color: #0f766e; font-weight: 700;"
+        >
+            💬 Chat
+        </a>
 
         <!-- Notifications -->
 
@@ -1009,7 +1017,7 @@
         <!-- Profile -->
 
         <a
-            href="/profile"
+            href="{{ '/login' if user.user_name == 'Guest' else '/profile' }}"
             class="profile-link"
         >
 
@@ -1213,7 +1221,7 @@
         <!-- AI Assistant -->
 
         <a
-            href="#ai-assistant"
+            href="/chatbot"
             class="quick-card"
         >
 
@@ -1294,7 +1302,7 @@
 
 
             <a
-                href="#injury-analysis"
+                href="/injury"
                 class="feature-btn"
             >
                 Analyze Injury →
@@ -1338,7 +1346,7 @@
 
 
             <a
-                href="#medical-reports"
+                href="/medical-reports"
                 class="feature-btn"
             >
                 View Reports →
@@ -1382,7 +1390,7 @@
 
 
             <a
-                href="#medical-history"
+                href="/medical-history"
                 class="feature-btn"
             >
                 View History →
@@ -1426,7 +1434,7 @@
 
 
             <a
-                href="#follow-up"
+                href="/medical-history"
                 class="feature-btn"
             >
                 Follow-up →
@@ -1470,7 +1478,7 @@
 
 
             <a
-                href="#feedback"
+                href="/chatbot"
                 class="feature-btn"
             >
                 Give Feedback →
@@ -1514,7 +1522,7 @@
 
 
             <a
-                href="#second-opinion"
+                href="/doctors"
                 class="feature-btn"
             >
                 Explore →
@@ -1550,7 +1558,7 @@
 
 
                 <a
-                    href="#medical-history"
+                    href="/medical-history"
                     class="view-link"
                 >
                     View all
@@ -1657,10 +1665,10 @@
 
 
                 <a
-                    href="/profile"
+                    href="{{ '/login' if user.user_name == 'Guest' else '/profile' }}"
                     class="view-link"
                 >
-                    Edit
+                    {{ 'Login' if user.user_name == 'Guest' else 'Edit' }}
                 </a>
 
             </div>
@@ -1699,11 +1707,11 @@
 
 
                 <a
-                    href="/profile"
+                    href="{{ '/login' if user.user_name == 'Guest' else '/profile' }}"
                     class="profile-btn"
                 >
 
-                    View My Profile
+                    {{ 'Login to your profile' if user.user_name == 'Guest' else 'View My Profile' }}
 
                 </a>
 
