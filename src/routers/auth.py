@@ -237,29 +237,37 @@ def dashboard(
         "user_id"
     )
 
-    # Not logged in
-    if user_id is None:
+    if user_id is not None:
 
-        return RedirectResponse(
-            url="/login",
-            status_code=303
+        user = (
+            db.query(User)
+            .filter(User.id == user_id)
+            .first()
         )
 
-    # Get fresh user from MySQL
-    user = (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
-    )
+        if user is None:
 
-    if user is None:
+            request.session.clear()
 
-        request.session.clear()
+            user = {
+                "user_name": "Guest",
+                "user_email": "",
+                "user_role": "PATIENT"
+            }
 
-        return RedirectResponse(
-            url="/login",
-            status_code=303
-        )
+        else:
+            user = {
+                "user_name": user.name,
+                "user_email": user.email,
+                "user_role": user.role
+            }
+
+    else:
+        user = {
+            "user_name": "Guest",
+            "user_email": "",
+            "user_role": "PATIENT"
+        }
 
     return templates.TemplateResponse(
         request,

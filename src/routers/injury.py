@@ -42,6 +42,7 @@ async def injury_page(request: Request):
     templates = request.app.state.templates
 
     return templates.TemplateResponse(
+        request,
         "injury.html",
         {
             "request": request
