@@ -1,0 +1,558 @@
+========================================================================
+  SANJEEVANI CLINIC  -  COMPLETE SETUP IN VS CODE, START TO FINISH
+========================================================================
+
+  Follow these in order, top to bottom. Every command is typed into the
+  VS Code terminal. After each step there is a "YOU SHOULD SEE" line so
+  you know it worked before moving on.
+
+  Total time: about 10 minutes.
+
+  CONTENTS
+    PART 1  -  Open the project in VS Code
+    PART 2  -  Create the virtual environment (venv)
+    PART 3  -  Install the dependencies
+    PART 4  -  Create the MySQL database
+    PART 5  -  Create your .env file
+    PART 6  -  ML PIPELINE: data ingestion
+    PART 7  -  ML PIPELINE: data transformation
+    PART 8  -  ML PIPELINE: model training
+    PART 9  -  Run the complete project
+    PART 10 -  Log in and use it
+    PART 11 -  Troubleshooting
+    PART 12 -  Project structure reference
+
+========================================================================
+  PART 1  -  OPEN THE PROJECT IN VS CODE
+========================================================================
+
+1.1  Unzip the project folder somewhere easy, e.g.
+        C:\Users\YourName\Desktop\sanjeevani_clinic
+
+1.2  Open VS Code.
+
+1.3  File  ->  Open Folder...  ->  select the "sanjeevani_clinic" folder.
+     (Open the folder that has main.py directly inside it.)
+
+1.4  Open a terminal inside VS Code:
+        Menu:  Terminal  ->  New Terminal
+     or press  Ctrl + `  (the backtick key, under Esc)
+
+1.5  Check the terminal is in the right folder:
+
+        Windows:   dir
+        Mac/Linux: ls
+
+     YOU SHOULD SEE:  main.py, requirements.txt, database_setup.sql, src, templates
+
+     If you do NOT see main.py, you opened the wrong folder.
+     Fix it with:   cd "C:\Users\YourName\Desktop\sanjeevani_clinic"
+
+1.6  Check Python is installed (need 3.11 or newer):
+
+        python --version
+
+     YOU SHOULD SEE:  Python 3.13.x  (or 3.11 / 3.12)
+
+     If it says "not recognized", install Python from python.org and
+     TICK "Add python.exe to PATH" during installation.
+
+
+========================================================================
+  PART 2  -  CREATE THE VIRTUAL ENVIRONMENT (venv)
+========================================================================
+
+  A venv is a private copy of Python for this project, so its packages
+  never clash with other projects on your PC.
+
+2.1  Create it:
+
+        python -m venv .venv
+
+     YOU SHOULD SEE: nothing (it just takes ~20 seconds).
+     A new ".venv" folder appears in the VS Code file list on the left.
+
+2.2  Activate it:
+
+        Windows (PowerShell):   .venv\Scripts\activate
+        Windows (cmd):          .venv\Scripts\activate.bat
+        Mac / Linux:            source .venv/bin/activate
+
+     YOU SHOULD SEE:  (.venv)  at the very start of your terminal line.
+
+     ** This is important. Every step below assumes you can see (.venv). **
+     If you close the terminal, you must activate it again (step 2.2).
+
+     If PowerShell refuses with "running scripts is disabled", run this
+     once in that terminal and then repeat step 2.2:
+
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+2.3  Tell VS Code to use this venv:
+        Ctrl + Shift + P  ->  type:  Python: Select Interpreter
+        ->  choose the one showing  .\.venv\Scripts\python.exe
+
+
+========================================================================
+  PART 3  -  INSTALL THE DEPENDENCIES
+========================================================================
+
+3.1  Upgrade pip first (avoids odd install errors):
+
+        python -m pip install --upgrade pip
+
+3.2  Install everything the project needs:
+
+        pip install -r requirements.txt
+
+     YOU SHOULD SEE: a long list ending with
+                     "Successfully installed fastapi-... sqlalchemy-... pymysql-... cryptography-..."
+     Takes 2-3 minutes. The yellow "new release of pip" notice is harmless.
+
+     NOTE: "cryptography" is in that list on purpose. MySQL 8 needs it, and
+     without it the app silently falls back to SQLite. Do not remove it.
+
+3.3  Confirm it worked:
+
+        python -c "import fastapi, sqlalchemy, pymysql, cryptography; print('dependencies OK')"
+
+     YOU SHOULD SEE:  dependencies OK
+
+
+========================================================================
+  PART 4  -  CREATE THE MYSQL DATABASE
+========================================================================
+
+4.1  Make sure MySQL is running.
+
+        Windows: open "Services" and check MySQL80 is Running, or run
+                 (as Administrator):   net start MySQL80
+        Mac:     brew services start mysql
+        Linux:   sudo systemctl start mysql
+
+4.2  Open MySQL Workbench and connect to your local instance
+     (usually "Local instance MySQL80", user root).
+
+4.3  In Workbench:  File  ->  Open SQL Script...
+     -> choose   database_setup.sql   from this project folder.
+
+4.4  Run the whole script:
+        Press the lightning-bolt icon  (or Ctrl + Shift + Enter).
+     If Workbench asks, pick "Execute all statements".
+
+     YOU SHOULD SEE: in the Output panel, no red errors, and at the bottom
+     a result grid like this:
+
+        what               total   note
+        users              2       expect 2
+        doctors            20      expect 20
+        doctor_schedules   140     expect 140
+        visit_types        5       expect 5
+        appointments       0       starts at 0
+        TABLES IN DB       15      expect 15
+
+     If those numbers match, your database is ready.
+
+     The script already created two logins for you:
+        patient@demo.com  /  Demo@1234
+        admin@demo.com    /  Admin@1234
+
+4.5  Know your MySQL password ---- you will need it in the next step.
+     If you use a special app user instead of root, create it now in
+     Workbench:
+
+        CREATE USER 'sanjeevani'@'localhost' IDENTIFIED BY 'YourPassword';
+        GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'sanjeevani'@'localhost';
+        FLUSH PRIVILEGES;
+
+
+========================================================================
+  PART 5  -  CREATE YOUR .env FILE
+========================================================================
+
+  The .env file holds your passwords. It is NOT uploaded to git.
+
+5.1  Copy the template:
+
+        Windows:   copy .env.example .env
+        Mac/Linux: cp .env.example .env
+
+5.2  Open it in VS Code:
+
+        code .env
+     or just double-click .env in the file list on the left.
+
+5.3  Fill in your MySQL password (this is the main thing to change):
+
+        DB_USER=root
+        DB_PASSWORD=your_actual_mysql_password_here
+        DB_HOST=localhost
+        DB_PORT=3306
+        DB_NAME=sanjeevani_clinic
+        USE_SQLITE=false
+
+     IMPORTANT:  USE_SQLITE=false  (or delete that line).
+     If it is true, the app ignores MySQL completely.
+
+5.4  Optional - turn on the AI features. Leave it blank if you don't have
+     a key yet; the app works fine without it.
+
+        GROQ_API_KEY=
+
+5.5  Set a session secret (any long random string):
+
+        SESSION_SECRET=change_this_to_something_long_and_random
+
+5.6  Save the file (Ctrl + S).
+
+5.7  Test the connection BEFORE running the app:
+
+        python -c "import pymysql,os;from dotenv import load_dotenv;load_dotenv();c=pymysql.connect(host=os.getenv('DB_HOST'),user=os.getenv('DB_USER'),password=os.getenv('DB_PASSWORD'),database=os.getenv('DB_NAME'));print('MySQL connection OK');c.close()"
+
+     YOU SHOULD SEE:  MySQL connection OK
+
+     If it fails, do NOT continue ---- fix it now using PART 11. If you
+     continue, the app will quietly run on SQLite instead and it will look
+     like your data vanished.
+
+
+========================================================================
+  PART 6  -  ML PIPELINE: DATA INGESTION
+========================================================================
+
+  This is the ML side of the project (the /predict Covid screening page).
+  Three stages: ingestion -> transformation -> training.
+
+  Already-done models are included in the artifacts/ folder, so this part
+  is optional if you just want to run the website. Do it anyway the first
+  time so you see the whole pipeline work.
+
+6.1  Run it:
+
+        python -m src.components.data_ingestion
+
+     YOU SHOULD SEE: many "INFO ... " log lines, and finally
+
+        Data Ingestion started....
+        Data read successfullywith shape: (100, 6)
+        Performing train-test-split
+        Data Ingestion completed successfully...
+
+     WHAT IT DID: read notebook/data/covid_toy.csv (100 rows), split it
+     80/20 into a train and a test set, and wrote:
+
+        artifacts/raw.csv     artifacts/train.csv     artifacts/test.csv
+
+6.2  Check the files exist:
+
+        Windows:   dir artifacts
+        Mac/Linux: ls artifacts
+
+     YOU SHOULD SEE:  raw.csv  test.csv  train.csv
+
+
+========================================================================
+  PART 7  -  ML PIPELINE: DATA TRANSFORMATION
+========================================================================
+
+7.1  Run it:
+
+        python -m src.components.data_transformation
+
+     YOU SHOULD SEE:
+
+        Train and test data loaded for transformation
+        preprocessor object created successfully...
+        Applying preprocessing oon train and test data
+        Object saved successfully at : <...>/artifacts/preprocessor.pkl
+
+     WHAT IT DID: filled missing numbers with the mean, encoded "cough"
+     as an ordered value (Mild < Strong), one-hot encoded "gender" and
+     "city", then saved that whole recipe to artifacts/preprocessor.pkl
+     so the prediction page applies the exact same steps later.
+
+7.2  Check:
+
+        Windows:   dir artifacts
+        Mac/Linux: ls artifacts
+
+     YOU SHOULD SEE:  preprocessor.pkl  is now there too.
+
+
+========================================================================
+  PART 8  -  ML PIPELINE: MODEL TRAINING
+========================================================================
+
+8.1  Run it:
+
+        python -m src.pipeline.train_pipeline
+
+     YOU SHOULD SEE: accuracy lines for four models and then
+
+        LogisiticRegression -> Test Accuracy: 0.35
+        DecisionTree        -> Test Accuracy: 0.35
+        RandomForest        -> Test Accuracy: 0.35
+        KNeighboursClassifier -> Test Accuracy: 0.40
+        Best Model saved as model.pkl ::: KNeighboursClassifier
+        TRAINING PIPELINE COMPLETED | BEST MODEL: KNeighboursClassifier, Accuracy: 0.40
+
+     WHAT IT DID: tried 4 classifiers, kept the most accurate one, and saved
+     it to artifacts/model.pkl. The /predict page loads this file.
+
+8.2  Check:
+
+        Windows:   dir artifacts
+        Mac/Linux: ls artifacts
+
+     YOU SHOULD SEE:  model.pkl  and  preprocessor.pkl
+
+     NOTE: 40% accuracy is EXPECTED. covid_toy.csv is a 100-row practice
+     dataset, not real clinical data. This demonstrates the ML plumbing;
+     it is not a medical test.
+
+     ALTERNATIVE: steps 6, 7 and 8 in a single command:
+        python train_model.py
+
+8.3  WHY YOU SHOULD REALLY DO THIS STEP
+
+     A file saved by scikit-learn (model.pkl / preprocessor.pkl) is NOT
+     portable between scikit-learn versions. The model.pkl shipped in this
+     project was saved with one version; if your pip installs a different
+     one, loading it fails.
+
+     If that happens, the /predict page now shows a yellow warning box
+     saying the ML model could not be loaded, instead of quietly showing a
+     rule-based number labelled "Model confidence".
+
+     Retraining (step 8.1) always fixes it, because then the model is saved
+     with YOUR installed version. It takes a few seconds.
+
+     start.sh / start.bat also do this automatically: if the model cannot be
+     loaded, they run train_model.py before starting the server.
+
+
+========================================================================
+  PART 9  -  RUN THE COMPLETE PROJECT
+========================================================================
+
+9.1  Start the web server (make sure (.venv) is still showing):
+
+        python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+     YOU SHOULD SEE:
+
+        INFO:     Started server process [1234]
+        INFO:     Application startup complete.
+        INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+     Leave this terminal running. It IS the website.
+
+     If you see the big "ACTIVE DATABASE: SQLite" warning block, your MySQL
+     settings are wrong ---- go to PART 11.
+
+9.2  Open your browser at:
+
+        http://127.0.0.1:8000
+
+9.3  FIRST - check the health page:
+
+        http://127.0.0.1:8000/health
+
+     YOU SHOULD SEE:
+
+        {
+          "status": "healthy",
+          "database": "ready",
+          "database_backend": "mysql",
+          "database_target": "MySQL (localhost:3306/sanjeevani_clinic)",
+          "ai_features": "disabled (GROQ_API_KEY not set)"
+        }
+
+     The important line is "database_backend": "mysql".
+     If it says "sqlite", you are NOT on MySQL. Fix it (PART 11) before
+     going further.
+
+
+========================================================================
+  PART 10  -  LOG IN AND USE IT
+========================================================================
+
+10.1  Click "Login" and sign in with:
+
+         patient@demo.com   /   Demo@1234
+
+      (Or click "Sign up" to make your own account.)
+
+10.2  Things to try, in this order, to prove everything works:
+
+        [ ] Doctors        -> 20 doctors listed
+        [ ] Click a doctor -> profile page opens
+        [ ] Book Appointment -> pick a date -> time slots appear -> book
+        [ ] My Appointments -> your booking is listed
+        [ ] Reschedule      -> change the date/time
+        [ ] Cancel          -> status becomes CANCELLED
+        [ ] Health Screening -> type symptoms, get a care category
+        [ ] Covid Screening (/predict) -> fill the form, get a result
+        [ ] Chatbot         -> send a message
+        [ ] Medical Reports -> upload a PDF
+        [ ] Profile         -> edit and save
+        [ ] Notifications   -> opens without error
+
+10.3  Confirm the data really landed in MySQL. In MySQL Workbench:
+
+         USE sanjeevani_clinic;
+         SELECT id, appointment_date, start_time, end_time,
+                visit_type, status, payment_amount
+         FROM appointments;
+
+      YOU SHOULD SEE: your booked appointment, with visit_type saving as
+      "General Consultation" (not a number like "1").
+
+10.4  To stop the server:  click the terminal and press  Ctrl + C
+
+
+========================================================================
+  PART 11  -  TROUBLESHOOTING
+========================================================================
+
+  START HERE if something breaks: read the VS Code terminal. The app now
+  prints the exact reason it could not reach MySQL.
+
+  +----------------------------------------------------------------------+
+  | "ACTIVE DATABASE: SQLite"  warning block in the terminal             |
+  +----------------------------------------------------------------------+
+  The app could not reach MySQL, so it quietly used a local file instead.
+  The line right below says why:
+
+    "Reason for fallback: MySQL connection failed (...) -- <REASON>"
+
+      REASON says                                        ->  DO THIS
+      ----------------------------------------------------------------
+      "MySQL rejected the username or password"          ->  Fix DB_USER / DB_PASSWORD in .env
+      "Nothing is listening on that MySQL host/port"     ->  Start MySQL (4.1), or fix DB_PORT
+      "The database 'x' is missing, or user 'y' has       ->  Re-run database_setup.sql,
+        no privileges on it"                                 or GRANT privileges (4.5)
+      "'cryptography' package is required for             ->  pip install cryptography
+        sha256_password or caching_sha2_password"
+      "user authenticates via the operating-system        ->  Create a password user (4.5)
+        socket (auth_socket)"
+      "Could not reach the MySQL server"                 ->  MySQL is not running
+
+  +----------------------------------------------------------------------+
+  | Other common errors                                                  |
+  +----------------------------------------------------------------------+
+
+  "'python' is not recognized"
+     ->  Try  py -3.13  instead of python, or reinstall Python with
+         "Add python.exe to PATH" ticked.
+
+  "No module named 'fastapi'" / "'uvicorn' is not recognized"
+     ->  Your venv is not active. You must see (.venv) in the terminal.
+         Re-run step 2.2.
+
+  "running scripts is disabled on this system"  (PowerShell)
+     ->  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+         then activate again.
+
+  "Access denied for user 'root'@'localhost'"
+     ->  Wrong DB_PASSWORD in .env. This is your MySQL password, not
+         your PC login password.
+
+  "Can't connect to MySQL server on 'localhost'"
+     ->  MySQL service is not running. See 4.1.
+
+  "Unknown database 'sanjeevani_clinic'"
+     ->  You did not run database_setup.sql, or you are connected to a
+         different MySQL server. Go back to PART 4.
+
+  jinja2.exceptions.TemplateNotFound
+     ->  You started uvicorn from the wrong folder. cd into the folder
+         that contains main.py and start again.
+
+  "Port 8000 is already in use"
+     ->  Use a different port:  --port 8001
+         then open http://127.0.0.1:8001
+         (on Windows:  netstat -ano | findstr :8000  to see what holds it)
+
+  AI pages say "not enabled"
+     ->  GROQ_API_KEY is blank in .env. The app is fine; only the AI
+         features are off. Add a free key from console.groq.com/keys.
+
+  Medical report upload says OCR failed
+     ->  Tesseract is a separate program, not a pip package. Text and
+         normal PDFs work without it.
+
+  +----------------------------------------------------------------------+
+  | Start completely over                                               |
+  +----------------------------------------------------------------------+
+  Rebuild the database:  re-run database_setup.sql in Workbench.
+  Rebuild the venv:
+        Windows:   rmdir /s /q .venv
+        Mac/Linux: rm -rf .venv
+  then repeat PART 2 and PART 3.
+  Retrain the model:     python train_model.py
+
+
+========================================================================
+  PART 12  -  PROJECT STRUCTURE REFERENCE
+========================================================================
+
+  ROOT FILES
+    main.py                 -> FastAPI app, entry point, mounts all routers
+    database_setup.sql      -> MySQL schema + seed data (PART 4)
+    steps.txt               -> this file
+    README.md               -> project overview
+    MYSQL_SETUP.md          -> extra MySQL help
+    requirements.txt        -> Python dependencies (PART 3)
+    .env.example            -> template for your .env (PART 5)
+    start.sh / start.bat    -> one-command launchers
+    train_model.py          -> runs the full ML pipeline in one go
+    seed_sqlite_demo.py     -> only for the SQLite fallback route
+
+  src/
+    config.py               -> all absolute paths, one place
+    database/connection.py  -> MySQL engine + session, SQLite fallback
+    models/                 -> 15 SQLAlchemy models (tables)
+    schemas/                -> Pydantic request/response models
+    security/password.py    -> Argon2 password hashing
+    services/               -> business logic (appointments, doctors, ...)
+    routers/                -> HTTP routes (auth, doctor, appointment, ...)
+    components/
+      data_ingestion.py       -> PART 6
+      data_transformation.py  -> PART 7
+      model_trainer.py        -> used by PART 8
+    pipeline/
+      train_pipeline.py       -> PART 8 entry point (all 3 stages)
+      predict_pipeline.py     -> loads model.pkl for the /predict page
+    exception.py            -> custom error handling
+    logger.py               -> logging setup
+    utils.py                -> save/load pickle, evaluate models
+
+  OTHER FOLDERS
+    templates/              -> 24 Jinja2 HTML pages
+    static/style.css        -> stylesheet
+    notebook/data/          -> covid_toy.csv (training data, 100 rows)
+    artifacts/              -> model.pkl, preprocessor.pkl, train/test/raw csv
+    uploads/medical_reports/-> uploaded patient documents
+    logs/                   -> app logs (created at runtime)
+    _deprecated/            -> unused backup files, safe to delete
+
+  USEFUL URLS while running
+    http://127.0.0.1:8000          -> home page
+    http://127.0.0.1:8000/login    -> login
+    http://127.0.0.1:8000/health   -> database + AI status
+    http://127.0.0.1:8000/docs     -> interactive API documentation
+
+  RUN COMMANDS CHEAT SHEET
+    activate venv      :  .venv\Scripts\activate        (source .venv/bin/activate)
+    install deps       :  pip install -r requirements.txt
+    ML: ingestion      :  python -m src.components.data_ingestion
+    ML: transform      :  python -m src.components.data_transformation
+    ML: train          :  python -m src.pipeline.train_pipeline
+    ML: all in one     :  python train_model.py
+    run website        :  python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    stop website       :  Ctrl + C
+
+========================================================================
+  END
+========================================================================

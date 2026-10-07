@@ -1,0 +1,4105 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..35795a9
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,64 @@
++# ============================================================
++# Sanjeevani Clinic - environment settings
++# ============================================================
++# Copy this file to ".env" and fill in your own values:
++#
++#     cp .env.example .env
++#
++# The .env file is git-ignored, so your real passwords stay out of git.
++# ============================================================
++
++
++# ------------------------------------------------------------
++# 1. DATABASE
++# ------------------------------------------------------------
++# Put your own MySQL password below. These are the settings the app
++# reads first. If MySQL cannot be reached, the app FALLS BACK TO SQLITE
++# and shows a loud warning in the console - check the startup logs and
++# the /health page to see which database is really being used.
++
++DB_USER=root
++DB_PASSWORD=your_mysql_password
++DB_HOST=localhost
++DB_PORT=3306
++DB_NAME=sanjeevani_clinic
++
++
++# Set this to true ONLY if you deliberately want to use the local
++# SQLite file (sanjeevani_clinic.db) instead of MySQL.
++USE_SQLITE=false
++
++
++# ------------------------------------------------------------
++# 2. SESSION SECRET
++# ------------------------------------------------------------
++# Used to sign the login session cookie. Change it to any long
++# random string. Generate one with:
++#     python -c "import secrets; print(secrets.token_hex(32))"
++
++SESSION_SECRET=change_this_to_a_long_random_secret
++
++
++# ------------------------------------------------------------
++# 3. AI FEATURES (GROQ)
++# ------------------------------------------------------------
++# Optional. The app runs fine without it - chatbot replies, AI health
++# screening and injury analysis simply stay switched off and tell you so.
++#
++# Free key: https://console.groq.com/keys
++
++GROQ_API_KEY=
++GROQ_MODEL=openai/gpt-oss-20b
++GROQ_VISION_MODEL=qwen/qwen3.8-27b
++
++
++# ------------------------------------------------------------
++# 4. OPTIONAL
++# ------------------------------------------------------------
++
++# Set to DEBUG for more verbose logs
++LOG_LEVEL=INFO
++
++# Where pytesseract can find the Tesseract binary (only needed for
++# OCR of scanned medical reports). Leave commented out to use PATH.
++# TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+diff --git a/MYSQL_SETUP.md b/MYSQL_SETUP.md
+new file mode 100644
+index 0000000..df43f88
+--- /dev/null
++++ b/MYSQL_SETUP.md
+@@ -0,0 +1,217 @@
++# Running Sanjeevani Clinic on MySQL
++
++You are using MySQL (not SQLite), which is the app's default and preferred mode.
++This file is the MySQL-specific guide. General info is in `RUN.md`.
++
++---
++
++## 0. The one thing that was probably breaking it
++
++`pymysql` — the driver your app uses — **cannot talk to MySQL 8 unless the
++`cryptography` package is installed.** MySQL 8 made `caching_sha2_password` the
++default authentication plugin, and PyMySQL refuses to use it without
++`cryptography`. Without it you get:
++
++```
++RuntimeError: 'cryptography' package is required for
++sha256_password or caching_sha2_password auth methods
++```
++
++…and because the app fell back to SQLite **silently**, the result looked like
++"my features don't work / my data is gone" rather than a database error.
++
++`cryptography` was **missing from `requirements.txt`**. It is added now, plus:
++
++- MySQL failures are explained in plain English in the console (see §4).
++- `/health` tells you which database is actually in use.
++
++So: **delete your old `.venv` and reinstall** so `cryptography` gets pulled in:
++
++```cmd
++rmdir /s /q .venv
++python -m venv .venv
++.venv\Scripts\activate
++pip install -r requirements.txt
++```
++
++Or, if you'd rather not rebuild the venv:
++```cmd
++pip install cryptography
++```
++
++---
++
++## 1. Check your MySQL is running and has your data
++
++```cmd
++mysql -u root -p
++```
++
++```sql
++USE sanjeevani_clinic;
++
++SELECT COUNT(*) FROM doctors;          -- expect 20
++SELECT COUNT(*) FROM doctor_schedules; -- expect 140
++SELECT COUNT(*) FROM visit_types;      -- expect 5
++SHOW COLUMNS FROM appointments;        -- should show visit_type, payment_*, refund_*, cancelled_*, razorpay_*
++```
++
++If any of those are missing, re-run your MySQL setup script.
++
++> **Is your MySQL 8 or 5.7?** Run `SELECT VERSION();`
++> - **8.0 or newer** → you almost certainly need `cryptography` (§0).
++> - **5.7** → usually works without it.
++
++### If your root user is socket-authenticated
++
++Some MySQL installs (very common on Linux, and on macOS with Homebrew) have
++`root` set to `auth_socket`, which a Python app cannot use. Create a normal
++password user for the app instead:
++
++```sql
++CREATE USER 'sanjeevani'@'localhost' IDENTIFIED BY 'YourStrongPassword';
++GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'sanjeevani'@'localhost';
++FLUSH PRIVILEGES;
++```
++
++Then use `sanjeevani` / `YourStrongPassword` in `.env`.
++
++---
++
++## 2. Your `.env` file
++
++Create it from the template and edit it:
++
++```cmd
++copy .env.example .env
++notepad .env
++```
++
++Fill in the database section — this is the important part:
++
++```ini
++DB_USER=root
++DB_PASSWORD=your_actual_mysql_password
++DB_HOST=localhost
++DB_PORT=3306
++DB_NAME=sanjeevani_clinic
++
++# Must be false (or absent) to use MySQL
++USE_SQLITE=false
++```
++
++Common variations:
++
++| Your situation | What to set |
++|---|---|
++| Default Windows MySQL installer | `DB_USER=root`, `DB_PASSWORD=<the password you set during install>` |
++| Dedicated app user (recommended) | `DB_USER=sanjeevani`, `DB_PASSWORD=<that user's password>` |
++| Non-standard port | `DB_PORT=3307` (or whatever you chose) |
++| Remote/shared MySQL | `DB_HOST=<server ip>` |
++| Local MySQL via socket, no TCP | Use `DB_HOST=localhost` (not `127.0.0.1`) |
++
++Optional, same file — leave `GROQ_API_KEY` blank and the app still runs
++(only the AI features switch off):
++
++```ini
++GROQ_API_KEY=
++SESSION_SECRET=put_a_long_random_string_here
++```
++
++---
++
++## 3. Run it
++
++```cmd
++python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++```
++
++Then open **http://127.0.0.1:8000/health**. It must say:
++
++```json
++{
++  "status": "healthy",
++  "database": "ready",
++  "database_backend": "mysql",
++  "database_target": "MySQL (localhost:3306/sanjeevani_clinic)"
++}
++```
++
++**If `database_backend` says `sqlite`, you are NOT on MySQL.** See §4.
++
++Sign in with an account you already created — or click **Sign up** on the login
++page. (The demo logins `patient@demo.com` / `Demo@1234` are only created by
++`seed_sqlite_demo.py`, which is for the SQLite path — they do not exist in your
++MySQL database.)
++
++---
++
++## 4. Troubleshooting — the console now tells you exactly what's wrong
++
++On startup, if MySQL cannot be reached you'll see a block like this:
++
++```
++WARNING | ==============================================================================
++WARNING | ACTIVE DATABASE: SQLite (/path/to/sanjeevani_clinic.db)
++WARNING | Reason for fallback: MySQL connection failed (localhost:3306/sanjeevani_clinic) -- <reason>
++WARNING | ==============================================================================
++```
++
++Here's what each reason means and how to fix it:
++
++| Message in console | Cause | Fix |
++|---|---|---|
++| *"'cryptography' package is required for sha256_password or caching_sha2_password"* | MySQL 8 auth plugin | `pip install cryptography` (now in `requirements.txt`) |
++| *"MySQL rejected the username or password"* | Wrong `DB_USER` / `DB_PASSWORD` | Fix `.env`, restart |
++| *"Nothing is listening on that MySQL host/port"* | MySQL service not started, or wrong `DB_PORT` | Start MySQL; on Windows: `net start MySQL80` |
++| *"The database 'x' is missing, or user 'y' has no privileges on it"* | Database not created, or user lacks a GRANT | Re-run your setup script, or `GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'user'@'localhost';` |
++| *"This MySQL user authenticates via the operating-system socket (auth_socket)"* | `auth_socket` plugin | Create a password user — see §1 |
++
++### Quick manual connection test
++
++Before blaming the app, check the driver can connect at all:
++
++```cmd
++python -c "import pymysql; c=pymysql.connect(host='localhost',user='root',password='YOURPASS',database='sanjeevani_clinic'); print('connection OK'); c.close()"
++```
++
++If that fails, it's a MySQL settings problem, not an app problem.
++
++---
++
++## 5. What I verified against a real MySQL server
++
++I installed a MySQL-compatible server, rebuilt your schema (20 doctors, 140
++schedules, 5 visit types, plus all your `ALTER`ed appointment columns) and ran
++the whole app against it:
++
++- ✅ Connects and reads your data — 20 doctors, 5 visit types, 140 schedules
++- ✅ Signup and login — user written to MySQL and verified in the table
++- ✅ Booking a slot, `/api/appointment-times` (correctly excludes booked slots)
++- ✅ Reschedule and cancel
++- ✅ Profile update
++- ✅ Prescriptions + medicines, screening history, notifications
++- ✅ `visit_type` now saves as `General Consultation` (not `"1"`)
++- ✅ Times stored as real MySQL `TIME` values
++- ✅ `/health` reports `database_backend: mysql`
++- ✅ Wrong password / server down / missing database each produce a clear,
++  specific message instead of failing silently
++
++Two MySQL-specific notes worth knowing:
++
++1. **`slot_id` foreign key.** Your SQL created `appointments.slot_id` with
++   `ON DELETE CASCADE`, but the model declares `ON DELETE SET NULL`.
++   `create_all()` never alters existing tables, so **your MySQL keeps CASCADE** —
++   deleting a slot would delete the appointment. If you want the model's
++   behaviour, run:
++   ```sql
++   ALTER TABLE appointments DROP FOREIGN KEY fk_appt_slot;
++   ALTER TABLE appointments ADD CONSTRAINT fk_appt_slot
++     FOREIGN KEY (slot_id) REFERENCES doctor_slots(id) ON DELETE SET NULL;
++   ```
++2. **The Razorpay columns are unused.** `transaction_id`, `payment_gateway`,
++   `paid_at`, `razorpay_order_id`, `razorpay_payment_id`, `payment_provider`
++   and `payment_failure_reason` exist in your MySQL table but **no Python code
++   references them anywhere** — there is no payment gateway integration in the
++   project. They're just unused columns. Also, `create_all()` will not add them
++   to a fresh database, since the model doesn't declare them.
+diff --git a/README.md b/README.md
+index fe804ef..7e1682a 100644
+--- a/README.md
++++ b/README.md
+@@ -1,25 +1,218 @@
+-# Sanjeevani Clinic API
++# Sanjeevani Clinic
+ 
+-## Run locally
++An AI-assisted healthcare platform: FastAPI + MySQL + Jinja2 templates, plus a
++scikit-learn ML pipeline for Covid screening triage.
+ 
+-Use Python 3.13 or newer, install the project dependencies, and start the app
+-from the repository root:
++Patients can sign up, browse 20 doctors, book / reschedule / cancel appointments
++against real doctor schedules, keep medical history, upload medical reports,
++get AI health screening and injury triage, chat with an AI assistant, and manage
++prescriptions and treatment reviews.
++
++---
++
++## What's in the box
++
++| Path | What it is |
++|---|---|
++| `main.py` | FastAPI app — entry point, mounts all 12 routers |
++| `database_setup.sql` | **Complete MySQL setup** — paste into MySQL Workbench and run |
++| `steps.txt` | **Start-to-finish VS Code walkthrough** (venv → ML pipeline → run) |
++| `MYSQL_SETUP.md` | MySQL-specific help and troubleshooting |
++| `src/routers/` | HTTP layer — auth, profile, doctor, appointment, screening, … |
++| `src/services/` | Business logic |
++| `src/models/` | SQLAlchemy models (15 tables) |
++| `src/components/` | ML pipeline: data ingestion → transformation → training |
++| `src/pipeline/` | Training and prediction entry points |
++| `notebook/data/covid_toy.csv` | Training dataset (100 rows, practice data) |
++| `artifacts/` | Trained `model.pkl` + `preprocessor.pkl` (already included) |
++| `templates/`, `static/` | Frontend (Jinja2 + CSS) |
++
++---
++
++## Quick start
++
++**1. Create the database.** Open `database_setup.sql` in MySQL Workbench and run
++it (lightning-bolt button). It creates all 15 tables, 20 doctors, 140 schedules,
++5 visit types and two demo logins.
++
++**2. Set up Python.**
+ 
+ ```bash
+ python -m venv .venv
+-source .venv/bin/activate
++# Windows:  .venv\Scripts\activate
++# macOS/Linux:  source .venv/bin/activate
+ pip install -r requirements.txt
+-uvicorn main:app --reload
+ ```
+ 
+-The API uses MySQL for database-backed routes. Set `DB_USER`, `DB_PASSWORD`,
+-`DB_HOST`, `DB_PORT` (defaults to `3306`), and `DB_NAME` in the environment or
+-in a local `.env` file. Set `SESSION_SECRET` to a long random value before
+-using sessions outside local development. `GROQ_API_KEY` is needed for AI
+-features.
++**3. Create your `.env`.**
++
++```bash
++cp .env.example .env      # Windows: copy .env.example .env
++```
++
++Set your MySQL password:
++
++```ini
++DB_USER=root
++DB_PASSWORD=your_mysql_password
++DB_HOST=localhost
++DB_PORT=3306
++DB_NAME=sanjeevani_clinic
++USE_SQLITE=false
++```
++
++**4. Run.**
++
++```bash
++python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++```
++
++Open **http://127.0.0.1:8000**
++
++**Demo logins** (created by `database_setup.sql`):
++
++| Role | Email | Password |
++|---|---|---|
++| Patient | `patient@demo.com` | `Demo@1234` |
++| Admin | `admin@demo.com` | `Admin@1234` |
++
++Or click **Sign up** to create your own account.
++
++> See **`steps.txt`** for the full VS Code walkthrough including the ML pipeline.
++
++---
++
++## Check it's healthy
++
++Open **http://127.0.0.1:8000/health**:
++
++```json
++{
++  "status": "healthy",
++  "database": "ready",
++  "database_backend": "mysql",
++  "database_target": "MySQL (localhost:3306/sanjeevani_clinic)",
++  "ai_features": "enabled"
++}
++```
++
++If `database_backend` says `sqlite`, the app could not reach MySQL and fell back
++to a local file. The console prints the exact reason — see `MYSQL_SETUP.md`.
++
++---
++
++## AI features (optional)
++
++The app runs fully without an AI key. Chatbot replies, AI health screening and
++injury analysis simply stay switched off and say so on the page.
++
++To enable them, add a free Groq key to `.env`:
++
++```ini
++GROQ_API_KEY=gsk_your_key_here
++GROQ_MODEL=openai/gpt-oss-20b
++GROQ_VISION_MODEL=qwen/qwen3.8-27b
++```
++
++Get a key at https://console.groq.com/keys
++
++---
++
++## ML pipeline
++
++Three stages, all runnable from the repo root:
++
++```bash
++python -m src.components.data_ingestion        # load + split data
++python -m src.components.data_transformation   # encode + save preprocessor
++python -m src.pipeline.train_pipeline          # train and save best model
++```
++
++Or all three in one command:
++
++```bash
++python train_model.py
++```
++
++This writes `artifacts/model.pkl` and `artifacts/preprocessor.pkl`, which the
++`/predict` page uses.
++
++> **Honest note about this model.** It trains on `notebook/data/covid_toy.csv`,
++> a 100-row practice dataset, and reaches only about 40–48% accuracy. It is a
++> coursework demo of the ML plumbing, **not** a medical test. The numbers shown
++> on the page come from this model's real output.
++
++> **Run the training step after installing.** Scikit-learn pickles are not
++> portable between scikit-learn versions, so the bundled `artifacts/*.pkl` may
++> not load if your pip resolves a different version. If that happens the
++> `/predict` page shows a yellow warning instead of pretending, and
++> `python train_model.py` fixes it. `start.sh` / `start.bat` retrain
++> automatically in that case.
++
++---
++
++## Password auth
++
++Passwords are hashed with Argon2 (`pwdlib`). Set a real `SESSION_SECRET` in
++`.env` before deploying anywhere public — it signs the login cookie:
++
++```bash
++python -c "import secrets; print(secrets.token_hex(32))"
++```
++
++---
++
++## Project layout
++
++```
++main.py                     FastAPI entry point
++database_setup.sql          full MySQL schema + seed data
++steps.txt                   VS Code walkthrough, start to finish
++MYSQL_SETUP.md              MySQL help / troubleshooting
++RUN.md                      general run notes
++requirements.txt            Python dependencies
++.env.example                environment template
++start.sh / start.bat        one-command launchers
++
++src/
++  config.py                 all absolute paths in one place
++  database/                 engine + session (MySQL, SQLite fallback)
++  models/                   15 SQLAlchemy models
++  schemas/                  Pydantic request models
++  security/                 password hashing
++  services/                 business logic
++  routers/                  route handlers (auth, doctor, appointment, …)
++  components/               ML: ingestion, transformation, training
++  pipeline/                 train_pipeline.py, predict_pipeline.py
++  exception.py, logger.py   error handling + logging
++  utils.py                  save/load pickle, evaluate models
++
++templates/                  24 Jinja2 pages
++static/style.css            stylesheet
++notebook/data/covid_toy.csv training data
++artifacts/                  trained model + preprocessor
++uploads/medical_reports/    uploaded patient documents
++_deprecated/                unused backups (safe to delete)
++```
++
++---
++
++## Tech stack
++
++FastAPI · Uvicorn · SQLAlchemy 2 · PyMySQL · MySQL · Jinja2 · Pydantic ·
++pwdlib (Argon2) · scikit-learn · pandas · Groq (LLM) · pytesseract / pypdf (OCR)
++
++Requires Python 3.11+ (the project targets 3.13).
++
++---
++
++## Troubleshooting
+ 
+-The API starts even when MySQL is unavailable so that `/`, `/health`, and the
+-interactive API docs remain accessible. The startup log and `/health` response
+-report the database state; database-backed routes require the database to be
+-available. Tables are created automatically when the database is reachable.
+-Open `/docs` for the interactive API documentation.
++| Problem | Fix |
++|---|---|
++| `ModuleNotFoundError: No module named 'fastapi'` | venv not active — you should see `(.venv)` in the prompt |
++| Anything MySQL-related | See `MYSQL_SETUP.md` — the console prints the exact cause |
++| `TemplateNotFound` | Start the app from the folder that contains `main.py` |
++| Port 8000 in use | `--port 8001`, then open `http://127.0.0.1:8001` |
++| AI pages say "not enabled" | `GROQ_API_KEY` is blank in `.env` — the app still works |
++| OCR fails on scanned reports | Install the **Tesseract** program separately; plain PDFs/text work without it |
+diff --git a/RUN.md b/RUN.md
+new file mode 100644
+index 0000000..11adadc
+--- /dev/null
++++ b/RUN.md
+@@ -0,0 +1,191 @@
++# Sanjeevani Clinic — run notes and change log
++
++> **Start here instead:** `steps.txt` is the full start-to-finish VS Code
++> walkthrough, `README.md` is the project overview, and `MYSQL_SETUP.md` covers
++> MySQL specifics. This file records what was fixed and why.
++
++
++## 1. Quick start (3 steps)
++
++```bash
++# 1. Create your .env and put in your MySQL password + Groq key
++cp .env.example .env          # Windows: copy .env.example .env
++#    then edit .env
++
++# 2. Install dependencies (Python 3.11+; 3.13 is what the project targets)
++python -m venv .venv
++source .venv/bin/activate     # Windows: .venv\Scripts\activate
++pip install -r requirements.txt
++
++# 3. Run
++python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++```
++
++Then open **http://127.0.0.1:8000**
++
++Or just use the launcher, which does the `.env` copy and model training for you:
++
++```bash
++./start.sh          # Windows: start.bat
++```
++
++### Check it is healthy
++
++Open **http://127.0.0.1:8000/health** — it now tells you exactly which database
++is in use and whether AI features are on:
++
++```json
++{
++  "status": "healthy",
++  "database": "ready",
++  "database_backend": "mysql",
++  "database_target": "MySQL (localhost:3306/sanjeevani_clinic)",
++  "ai_features": "enabled"
++}
++```
++
++---
++
++## 2. Using SQLite instead of MySQL
++
++If you want to run with **no MySQL at all**, you have two options:
++
++**Option A — let it fall back automatically.** If MySQL is unreachable the app
++still starts on SQLite. You will now see a loud warning in the console:
++
++```
++WARNING | ACTIVE DATABASE: SQLite (/path/to/sanjeevani_clinic.db)
++```
++
++**Option B — be explicit.** In `.env`:
++
++```
++USE_SQLITE=true
++```
++
++To get a SQLite database with the same 20 doctors / schedules / visit types as
++your MySQL setup, plus two demo logins:
++
++```bash
++python seed_sqlite_demo.py
++```
++
++Demo logins it creates:
++
++| Role | Email | Password |
++|---|---|---|
++| Patient | `patient@demo.com` | `Demo@1234` |
++| Admin | `admin@demo.com` | `Admin@1234` |
++
++> `seed_sqlite_demo.py` deletes and rebuilds `sanjeevani_clinic.db`.
++> It never touches MySQL.
++
++---
++
++## 3. Enable the AI features (optional)
++
++The app runs completely without AI. If `GROQ_API_KEY` is empty, the AI pages
++still load but tell you the AI is off instead of failing silently.
++
++To turn them on, put a key in `.env`:
++
++```
++GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxx
++GROQ_MODEL=openai/gpt-oss-20b
++GROQ_VISION_MODEL=qwen/qwen3.8-27b
++```
++
++Free keys: https://console.groq.com/keys
++
++---
++
++## 4. Rebuilding the ML model
++
++The `/predict` (Covid screening) page needs `artifacts/model.pkl` and
++`artifacts/preprocessor.pkl`. Those files are git-ignored, so they are **not**
++in the GitHub repo — this zip includes them, but if they ever go missing:
++
++```bash
++python train_model.py
++```
++
++> **Honest note on this model:** it trains on `notebook/data/covid_toy.csv`, a
++> 100-row practice dataset, and only reaches about 40–48% accuracy. It is a
++> coursework demo, **not** a medical test. It now genuinely loads the model
++> instead of quietly using a rule-based score, and the page no longer prints a
++> fabricated "96% confidence".
++
++---
++
++## 5. What was actually broken, and what I changed
++
++I ran the app and clicked through every route. Here is what I found and fixed.
++
++### Real bugs fixed
++
++| # | Problem | Effect on you | Fix |
++|---|---|---|---|
++| 1 | `GROQ_API_KEY` missing crashed the app **at import time** (`llm_service.py` raised, `injury_service.py` called `Groq(api_key=None)`) | The whole site was dead — even login, doctors and booking, which need no AI | New `src/services/groq_client.py`: the client connects lazily. The app always starts; only AI calls report the missing key |
++| 2 | `artifacts/model.pkl` was never in the repo (git-ignored) | `/predict` silently fell back to a hand-written score while still printing "Model confidence: 96%" | Trained and shipped the artifacts, added `train_model.py`, removed the fabricated confidence number |
++| 3 | SQLite fallback was silent | You could think you were on MySQL while every record went to a local file — "my data disappeared" | Startup now logs a loud warning; `/health` reports `database_backend` and the fallback reason |
++| 4 | SQLite path was relative (`sqlite:///./sanjeevani_clinic.db`) | Starting the server from another folder created a second, empty database | Path is now absolute, from the project root |
++| 5 | `Jinja2Templates(directory="templates")` in 11 files — relative | `TemplateNotFound` (500s) if you started uvicorn from any other directory | All 11 now use the absolute `TEMPLATES_DIR` from `src/config.py` |
++| 6 | `artifacts/` and `uploads/` paths were relative | Uploads landed in random folders; predictions failed from other directories | Both now absolute via `src/config.py` |
++| 7 | `visit_type` stored the **id as a string** (`"1"`) into a VARCHAR column | Appointment rows were unreadable and could never match `visit_types.name` | Now stores the real name, e.g. `"General Consultation"`, with a safe fallback |
++| 8 | The "AI Health Screening" **never called the AI** — the result was a hard-coded f-string | The AI screening feature was fake | Now calls the LLM first (constrained to your real specialisations so doctor-matching still works). If AI is off, the page says so clearly |
++| 9 | Injury analysis returned a generic **500** when the key was missing | Confusing "Something went wrong" | Returns **503** with the exact fix in the message |
++| 10 | Duplicate dead code: `src/routers/__init__.py` held a second full appointment router; duplicate `prescription_service.py` in `src/security/` | Genuinely hard to tell which code runs | Left in place but documented — see "Still outstanding" below |
++
++### Cleanup
++
++- `main_backup_current.py`, `src/routers/documents_backup.py`,
++  `templates/reschedule_app.py`, `templates/medical_reports_backup.html`
++  moved to `_deprecated/` (nothing imports them; safe to delete).
++
++### Added
++
++- `.env.example` — every setting documented, with explanations
++- `RUN.md` — this file
++- `start.sh` / `start.bat` — one-command start
++- `train_model.py` — rebuild the ML artifacts
++- `seed_sqlite_demo.py` — a ready SQLite database with demo logins
++- `src/config.py` — one place for all paths
++
++### Verified working after the fixes
++
++Every route was requested and every write flow was exercised:
++
++login, signup, logout, dashboard, doctors list, doctor detail, booking a slot,
++`/api/appointment-times`, appointments list, reschedule, cancel, profile,
++edit profile, notifications, medical history, medical reports (list, upload,
++view, download, read, analyze), screening, chatbot, chatbot message, injury page,
++injury analyze, prescriptions (create + history), treatment reviews, and
++`/predict`.
++
++All of these now boot and respond correctly **even with no `GROQ_API_KEY` and no
++MySQL running**.
++
++---
++
++## 6. Still outstanding (not bugs — designs you may want to change)
++
++These are real issues I chose **not** to change, because they alter behaviour you
++may have intended. Say the word and I'll do them:
++
++1. **`src/routers/__init__.py`** contains a complete second copy of the
++   appointment router (485 lines). It is never mounted, but because it lives in
++   the package `__init__`, it is imported as a side effect and is easy to
++   mistake for the live code — `src/routers/appointment.py` is the real one.
++2. **`src/security/prescription_service.py`** duplicates
++   `src/services/prescription_service.py`. Only the `services` one is used.
++3. **Committed `sanjeevani_clinic.db`** is in git. If you and a teammate run on
++   different databases this causes confusion. Consider removing it from git and
++   keeping it git-ignored.
++4. **Screening severity ordering** — the rule-based fallback checks keywords in
++   order, so "fever and headache" used to be routed to Neurology simply because
++   *headache* appeared earlier in the chain than *fever*. With AI on this is no
++   longer used, but the fallback ordering is still worth tuning.
++5. **Passwords** — `SESSION_SECRET` defaults to a well-known string. Set a real
++   one in `.env` before deploying anywhere public.
++6. **Doctor schedules assume Monday = 0.** Your SQL inserts need the same
++   convention, otherwise every doctor looks unavailable on the wrong day.
+diff --git a/_deprecated/README.md b/_deprecated/README.md
+new file mode 100644
+index 0000000..8263878
+--- /dev/null
++++ b/_deprecated/README.md
+@@ -0,0 +1,15 @@
++# Unused / superseded files
++
++Nothing in this folder is imported by the running application. They were moved
++out of the live source tree because they shadowed or duplicated real modules and
++made it hard to tell which code was actually in use.
++
++| File | Why it is here |
++|---|---|
++| `main_backup_current.py` | Older copy of the app entry point. `main.py` is the real one. |
++| `src/routers/documents_backup.py` | Older copy of the medical-reports router. `src/routers/documents.py` is the real one and is the only one mounted in `main.py`. |
++| `templates/reschedule_app.py` | A Python file that had been dropped inside the templates folder. Not a template, never used. |
++| `templates/medical_reports_backup.html` | Older copy of `medical_reports.html`. |
++| `templates/__init__.py` | Not needed; Jinja2 does not use an `__init__.py` in the template dir. |
++
++Delete this folder whenever you like - nothing references it.
+diff --git a/main_backup_current.py b/_deprecated/main_backup_current.py
+similarity index 100%
+rename from main_backup_current.py
+rename to _deprecated/main_backup_current.py
+diff --git a/src/routers/documents_backup.py b/_deprecated/src/routers/documents_backup.py
+similarity index 99%
+rename from src/routers/documents_backup.py
+rename to _deprecated/src/routers/documents_backup.py
+index eabf589..cf5b41a 100644
+--- a/src/routers/documents_backup.py
++++ b/_deprecated/src/routers/documents_backup.py
+@@ -29,6 +29,8 @@ from src.services.document_service import (
+ 
+ from src.services.document_reader import extract_text
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ # ============================================================
+ # ROUTER
+@@ -42,10 +44,11 @@ router = APIRouter()
+ # ============================================================
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
++
+ # ============================================================
+ # UPLOAD DIRECTORY
+ # ============================================================
+diff --git a/templates/medical_reports_backup.html b/_deprecated/templates/medical_reports_backup.html
+similarity index 100%
+rename from templates/medical_reports_backup.html
+rename to _deprecated/templates/medical_reports_backup.html
+diff --git a/templates/reschedule_app.py b/_deprecated/templates/reschedule_app.py
+similarity index 100%
+rename from templates/reschedule_app.py
+rename to _deprecated/templates/reschedule_app.py
+diff --git a/database_setup.sql b/database_setup.sql
+new file mode 100644
+index 0000000..98e1df6
+--- /dev/null
++++ b/database_setup.sql
+@@ -0,0 +1,497 @@
++-- ============================================================================
++--  SANJEEVANI CLINIC - COMPLETE MYSQL DATABASE SETUP
++-- ============================================================================
++--
++--  HOW TO USE THIS FILE
++--  --------------------
++--  1. Open MySQL Workbench and connect to your local MySQL server.
++--  2. File -> Open SQL Script... -> select this file (database_setup.sql).
++--  3. Press the lightning-bolt button (or Ctrl+Shift+Enter) to run it.
++--     If Workbench asks, choose "Execute all statements".
++--  4. Wait for it to finish. The final result grid shows row counts so you
++--     can confirm the data loaded.
++--
++--  This script is safe to run more than once. It rebuilds the database from
++--  scratch each time (see the DROP DATABASE line just below). If you want to
++--  keep existing data, put two dashes in front of the DROP line to comment
++--  it out - the rest of the script then only fills in what is missing.
++--
++--  WHAT THIS SCRIPT CREATES
++--  ------------------------
++--    15 tables + indexes + foreign keys
++--    20 doctors                       (8 specialisations)
++--    140 doctor schedules             (20 doctors x 7 days, 10:00-14:00)
++--     5 visit types
++--     2 demo logins you can use right away
++--
++--  DEMO LOGINS (created at the end of this script)
++--  -----------------------------------------------
++--    Patient : patient@demo.com  /  Demo@1234
++--    Admin   : admin@demo.com    /  Admin@1234
++--
++--  The passwords are stored as real Argon2 hashes (the same algorithm the
++--  app uses), so these accounts work in the login page immediately.
++--
++--  NOTE ON COLUMNS
++--  ---------------
++--  The last 7 columns of the `appointments` table (transaction_id,
++--  payment_gateway, paid_at, razorpay_order_id, razorpay_payment_id,
++--  payment_provider, payment_failure_reason) came from a payment-gateway
++--  experiment. NO Python code in this project reads or writes them yet, so
++--  they are just unused placeholder columns. They are kept here so nothing
++--  you already had is lost. Feel free to delete them if you prefer.
++--
++-- ============================================================================
++
++
++-- ============================================================================
++-- 1. DATABASE
++-- ============================================================================
++
++DROP DATABASE IF EXISTS sanjeevani_clinic;
++CREATE DATABASE sanjeevani_clinic
++    CHARACTER SET utf8mb4
++    COLLATE utf8mb4_unicode_ci;
++
++USE sanjeevani_clinic;
++
++
++-- ============================================================================
++-- 2. TABLES
++-- ============================================================================
++
++-- ---------------------------------------------------------------- users -----
++CREATE TABLE IF NOT EXISTS users (
++    id              INT AUTO_INCREMENT PRIMARY KEY,
++    name            VARCHAR(100) NOT NULL,
++    email           VARCHAR(150) NOT NULL,
++    phone           VARCHAR(20)  NULL,
++    password_hash   VARCHAR(255) NOT NULL,
++    age             INT          NULL,
++    gender          VARCHAR(20)  NULL,
++    profile_photo   VARCHAR(255) NULL,
++    role            VARCHAR(20)  NOT NULL DEFAULT 'PATIENT',
++    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
++    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                 ON UPDATE CURRENT_TIMESTAMP,
++    UNIQUE KEY uq_users_email (email)
++) ENGINE=InnoDB;
++
++
++-- -------------------------------------------------------------- doctors -----
++CREATE TABLE IF NOT EXISTS doctors (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    name              VARCHAR(100) NOT NULL,
++    email             VARCHAR(150) NOT NULL,
++    phone             VARCHAR(20)  NULL,
++    specialization    VARCHAR(100) NOT NULL,
++    qualification     VARCHAR(200) NULL,
++    experience_years  INT          NULL,
++    languages         VARCHAR(200) NULL,
++    consultation_fee  NUMERIC(10,2) NULL,
++    profile_photo     VARCHAR(255) NULL,
++    bio               TEXT         NULL,
++    is_active         BOOLEAN      NOT NULL DEFAULT TRUE,
++    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                   ON UPDATE CURRENT_TIMESTAMP,
++    UNIQUE KEY uq_doctors_email (email)
++) ENGINE=InnoDB;
++
++
++-- ------------------------------------------------------- doctor_slots -------
++CREATE TABLE IF NOT EXISTS doctor_slots (
++    id           INT AUTO_INCREMENT PRIMARY KEY,
++    doctor_id    INT  NOT NULL,
++    slot_date    DATE NOT NULL,
++    start_time   TIME NOT NULL,
++    end_time     TIME NOT NULL,
++    is_available BOOLEAN  NOT NULL DEFAULT TRUE,
++    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    KEY ix_slots_doctor_date (doctor_id, slot_date),
++    CONSTRAINT fk_slots_doctor
++        FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
++) ENGINE=InnoDB;
++
++
++-- ---------------------------------------------------- doctor_schedules -----
++-- day_of_week convention used by the app: 0 = Monday ... 6 = Sunday
++CREATE TABLE IF NOT EXISTS doctor_schedules (
++    id                    INT AUTO_INCREMENT PRIMARY KEY,
++    doctor_id             INT NOT NULL,
++    day_of_week           INT NOT NULL,
++    start_time            TIME NOT NULL,
++    end_time              TIME NOT NULL,
++    slot_interval_minutes INT  NOT NULL DEFAULT 5,
++    is_available          BOOLEAN NOT NULL DEFAULT TRUE,
++    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                   ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_sched_doctor_day (doctor_id, day_of_week),
++    CONSTRAINT fk_schedules_doctor
++        FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
++) ENGINE=InnoDB;
++
++
++-- -------------------------------------------------------- visit_types ------
++CREATE TABLE IF NOT EXISTS visit_types (
++    id                       INT AUTO_INCREMENT PRIMARY KEY,
++    name                     VARCHAR(100) NOT NULL,
++    min_duration_minutes     INT NOT NULL,
++    max_duration_minutes     INT NOT NULL,
++    default_duration_minutes INT NOT NULL,
++    is_active                BOOLEAN NOT NULL DEFAULT TRUE,
++    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    UNIQUE KEY uq_visit_types_name (name)
++) ENGINE=InnoDB;
++
++
++-- ------------------------------------------------------- appointments ------
++CREATE TABLE IF NOT EXISTS appointments (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id        INT  NOT NULL,
++    doctor_id         INT  NOT NULL,
++    slot_id           INT  NULL,
++    appointment_date  DATE NOT NULL,
++    start_time        TIME NOT NULL,
++    end_time          TIME NOT NULL,
++    visit_type        VARCHAR(100) NULL,
++    duration_minutes  INT          NULL,
++    status            VARCHAR(40)  NOT NULL DEFAULT 'BOOKED',
++    reason            TEXT         NULL,
++
++    -- payment / refund bookkeeping
++    payment_method    VARCHAR(30)  NOT NULL DEFAULT 'CASH',
++    payment_status    VARCHAR(30)  NOT NULL DEFAULT 'PENDING',
++    payment_amount    NUMERIC(10,2) NULL,
++    refund_status     VARCHAR(30)  NOT NULL DEFAULT 'NOT_REQUIRED',
++    refund_amount     NUMERIC(10,2) NULL,
++    refund_method     VARCHAR(30)  NULL,
++    refund_reason     TEXT         NULL,
++    refund_at         DATETIME     NULL,
++
++    -- cancellation bookkeeping
++    doctor_cancel_reason TEXT     NULL,
++    cancelled_by         VARCHAR(30) NULL,
++    cancelled_at         DATETIME NULL,
++
++    -- payment-gateway columns (currently unused by the code - see header note)
++    transaction_id         VARCHAR(120) NULL,
++    payment_gateway        VARCHAR(50)  NULL,
++    paid_at                DATETIME     NULL,
++    razorpay_order_id      VARCHAR(120) NULL,
++    razorpay_payment_id    VARCHAR(120) NULL,
++    payment_provider       VARCHAR(50)  NULL,
++    payment_failure_reason TEXT         NULL,
++
++    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                               ON UPDATE CURRENT_TIMESTAMP,
++
++    KEY ix_appt_patient  (patient_id),
++    KEY ix_appt_doctor   (doctor_id),
++    KEY ix_appt_date     (doctor_id, appointment_date),
++    CONSTRAINT fk_appt_patient
++        FOREIGN KEY (patient_id) REFERENCES users(id)   ON DELETE CASCADE,
++    CONSTRAINT fk_appt_doctor
++        FOREIGN KEY (doctor_id)  REFERENCES doctors(id) ON DELETE CASCADE,
++    -- SET NULL (not CASCADE): deleting an empty slot must never delete a
++    -- patient's appointment.
++    CONSTRAINT fk_appt_slot
++        FOREIGN KEY (slot_id)    REFERENCES doctor_slots(id) ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ----------------------------------------------------- medical_records -----
++CREATE TABLE IF NOT EXISTS medical_records (
++    id                 INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id         INT  NOT NULL,
++    doctor_id          INT  NULL,
++    appointment_id     INT  NULL,
++    visit_date         DATE NOT NULL,
++    chief_complaint    TEXT NULL,
++    symptoms           TEXT NULL,
++    clinical_notes     TEXT NULL,
++    diagnosis_notes    TEXT NULL,
++    treatment_summary  TEXT NULL,
++    medicines          TEXT NULL,
++    doctor_instructions TEXT NULL,
++    status             VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
++    created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_mrec_patient (patient_id),
++    CONSTRAINT fk_mrec_patient
++        FOREIGN KEY (patient_id)     REFERENCES users(id)        ON DELETE CASCADE,
++    CONSTRAINT fk_mrec_doctor
++        FOREIGN KEY (doctor_id)      REFERENCES doctors(id)      ON DELETE SET NULL,
++    CONSTRAINT fk_mrec_appointment
++        FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ---------------------------------------------------------- treatments -----
++CREATE TABLE IF NOT EXISTS treatments (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id        INT NOT NULL,
++    medical_record_id INT NULL,
++    doctor_id         INT NULL,
++    treatment_name    VARCHAR(200) NOT NULL,
++    description       TEXT NULL,
++    start_date        DATE NULL,
++    end_date          DATE NULL,
++    status            VARCHAR(30) NOT NULL DEFAULT 'ONGOING',
++    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                               ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_treat_patient (patient_id),
++    CONSTRAINT fk_treat_patient
++        FOREIGN KEY (patient_id)        REFERENCES users(id)           ON DELETE CASCADE,
++    CONSTRAINT fk_treat_medrec
++        FOREIGN KEY (medical_record_id) REFERENCES medical_records(id) ON DELETE SET NULL,
++    CONSTRAINT fk_treat_doctor
++        FOREIGN KEY (doctor_id)         REFERENCES doctors(id)         ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ----------------------------------------------------------- follow_ups -----
++CREATE TABLE IF NOT EXISTS follow_ups (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id        INT NOT NULL,
++    medical_record_id INT NULL,
++    doctor_id         INT NULL,
++    appointment_id    INT NULL,
++    follow_up_date    DATE NOT NULL,
++    reason            TEXT NULL,
++    instructions      TEXT NULL,
++    status            VARCHAR(30) NOT NULL DEFAULT 'PENDING',
++    completed_at      DATETIME NULL,
++    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                               ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_fu_patient (patient_id),
++    CONSTRAINT fk_fu_patient
++        FOREIGN KEY (patient_id)        REFERENCES users(id)           ON DELETE CASCADE,
++    CONSTRAINT fk_fu_medrec
++        FOREIGN KEY (medical_record_id) REFERENCES medical_records(id) ON DELETE SET NULL,
++    CONSTRAINT fk_fu_doctor
++        FOREIGN KEY (doctor_id)         REFERENCES doctors(id)         ON DELETE SET NULL,
++    CONSTRAINT fk_fu_appointment
++        FOREIGN KEY (appointment_id)    REFERENCES appointments(id)    ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- -------------------------------------------------------- prescriptions -----
++CREATE TABLE IF NOT EXISTS prescriptions (
++    id                 INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id         INT NOT NULL,
++    doctor_id          INT NULL,
++    medical_record_id  INT NULL,
++    treatment_id       INT NULL,
++    diagnosis          TEXT NULL,
++    doctor_instructions TEXT NULL,
++    created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_presc_patient (patient_id),
++    CONSTRAINT fk_presc_patient
++        FOREIGN KEY (patient_id)        REFERENCES users(id)           ON DELETE CASCADE,
++    CONSTRAINT fk_presc_doctor
++        FOREIGN KEY (doctor_id)         REFERENCES doctors(id)         ON DELETE SET NULL,
++    CONSTRAINT fk_presc_medrec
++        FOREIGN KEY (medical_record_id) REFERENCES medical_records(id) ON DELETE SET NULL,
++    CONSTRAINT fk_presc_treatment
++        FOREIGN KEY (treatment_id)      REFERENCES treatments(id)      ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ------------------------------------------------ prescription_medicines -----
++CREATE TABLE IF NOT EXISTS prescription_medicines (
++    id              INT AUTO_INCREMENT PRIMARY KEY,
++    prescription_id INT NOT NULL,
++    medicine_name   VARCHAR(200) NOT NULL,
++    dosage          VARCHAR(100) NULL,
++    frequency       VARCHAR(100) NULL,
++    duration        VARCHAR(100) NULL,
++    instructions    VARCHAR(500) NULL,
++    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    KEY ix_med_presc (prescription_id),
++    CONSTRAINT fk_med_presc
++        FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE CASCADE
++) ENGINE=InnoDB;
++
++
++-- ----------------------------------------------------- treatment_reviews -----
++CREATE TABLE IF NOT EXISTS treatment_reviews (
++    id                   INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id           INT NOT NULL,
++    treatment_id         INT NULL,
++    doctor_id            INT NULL,
++    outcome              VARCHAR(100) NOT NULL,
++    current_condition    VARCHAR(100) NOT NULL,
++    experience           VARCHAR(100) NOT NULL,
++    follow_up_preference VARCHAR(100) NOT NULL,
++    change_reason        TEXT NULL,
++    rating               INT  NULL,
++    comment              TEXT NULL,
++    created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++                                  ON UPDATE CURRENT_TIMESTAMP,
++    KEY ix_rev_patient (patient_id),
++    CONSTRAINT fk_rev_patient
++        FOREIGN KEY (patient_id)   REFERENCES users(id)      ON DELETE CASCADE,
++    CONSTRAINT fk_rev_treatment
++        FOREIGN KEY (treatment_id) REFERENCES treatments(id) ON DELETE SET NULL,
++    CONSTRAINT fk_rev_doctor
++        FOREIGN KEY (doctor_id)    REFERENCES doctors(id)    ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- -------------------------------------------------------- notifications -----
++CREATE TABLE IF NOT EXISTS notifications (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    user_id           INT NOT NULL,
++    appointment_id    INT NULL,
++    title             VARCHAR(200) NOT NULL,
++    message           TEXT NOT NULL,
++    notification_type VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
++    is_read           BOOLEAN NOT NULL DEFAULT FALSE,
++    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    KEY ix_notif_user (user_id),
++    CONSTRAINT fk_notif_user
++        FOREIGN KEY (user_id)        REFERENCES users(id)        ON DELETE CASCADE,
++    CONSTRAINT fk_notif_appointment
++        FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ----------------------------------------------------- screening_history -----
++CREATE TABLE IF NOT EXISTS screening_history (
++    id                     INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id             INT NOT NULL,
++    symptoms               TEXT NOT NULL,
++    ai_response            TEXT NULL,
++    care_category          VARCHAR(100) NULL,
++    recommended_specialist VARCHAR(100) NULL,
++    severity               VARCHAR(30)  NULL,
++    created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    KEY ix_scrn_patient (patient_id),
++    CONSTRAINT fk_scrn_patient
++        FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
++) ENGINE=InnoDB;
++
++
++-- ------------------------------------------------------ patient_documents -----
++CREATE TABLE IF NOT EXISTS patient_documents (
++    id                INT AUTO_INCREMENT PRIMARY KEY,
++    patient_id        INT NOT NULL,
++    medical_record_id INT NULL,
++    document_name     VARCHAR(255) NOT NULL,
++    document_type     VARCHAR(100) NULL,
++    file_path         VARCHAR(500) NOT NULL,
++    file_size         BIGINT NULL,
++    uploaded_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    status            VARCHAR(30) NOT NULL DEFAULT 'UPLOADED',
++    KEY ix_doc_patient (patient_id),
++    CONSTRAINT fk_doc_patient
++        FOREIGN KEY (patient_id)        REFERENCES users(id)           ON DELETE CASCADE,
++    CONSTRAINT fk_doc_medrec
++        FOREIGN KEY (medical_record_id) REFERENCES medical_records(id) ON DELETE SET NULL
++) ENGINE=InnoDB;
++
++
++-- ============================================================================
++-- 3. SEED DATA
++-- ============================================================================
++
++-- ------------------------------------------------------- 5 visit types -----
++INSERT IGNORE INTO visit_types
++    (name, min_duration_minutes, max_duration_minutes, default_duration_minutes, is_active)
++VALUES
++    ('General Consultation',   10, 15, 15, TRUE),
++    ('Follow-up',              10, 15, 10, TRUE),
++    ('Specialist Consultation',15, 20, 20, TRUE),
++    ('Detailed Consultation',  20, 30, 30, TRUE),
++    ('Procedure / Assessment', 30, 60, 45, TRUE);
++
++
++-- --------------------------------------------------------- 20 doctors ------
++INSERT IGNORE INTO doctors
++    (name, email, phone, specialization, qualification,
++     experience_years, languages, consultation_fee, bio, is_active)
++VALUES
++    ('Dr. Amit Sharma',   'amit.sharma@sanjeevani.com',   '9876543210', 'Cardiology',       'MBBS, MD Cardiology',      8, 'Hindi, English',  800.00, 'Senior consultant in Cardiology at Sanjeevani Clinic.', TRUE),
++    ('Dr. Neha Verma',    'neha.verma@sanjeevani.com',    '9876500001', 'Cardiology',       'MBBS, MD Cardiology',      6, 'Hindi, English',  700.00, 'Cardiology consultant at Sanjeevani Clinic.',           TRUE),
++    ('Dr. Priya Mehta',   'priya.mehta@sanjeevani.com',   '9876500002', 'Dermatology',      'MBBS, MD Dermatology',     7, 'Hindi, English',  600.00, 'Dermatology specialist at Sanjeevani Clinic.',          TRUE),
++    ('Dr. Rahul Jain',    'rahul.jain@sanjeevani.com',    '9876500003', 'Dermatology',      'MBBS, MD Dermatology',    10, 'Hindi, English',  800.00, 'Dermatology specialist at Sanjeevani Clinic.',          TRUE),
++    ('Dr. Arjun Singh',   'arjun.singh@sanjeevani.com',   '9876500004', 'Neurology',        'MBBS, DM Neurology',       9, 'Hindi, English', 1000.00, 'Neurology specialist at Sanjeevani Clinic.',            TRUE),
++    ('Dr. Kavita Rao',    'kavita.rao@sanjeevani.com',    '9876500005', 'Neurology',        'MBBS, MD, DM Neurology',  12, 'Hindi, English', 1200.00, 'Senior neurologist at Sanjeevani Clinic.',              TRUE),
++    ('Dr. Raj Malhotra',  'raj.malhotra@sanjeevani.com',  '9876500006', 'Orthopedics',      'MBBS, MS Orthopedics',    11, 'Hindi, English',  900.00, 'Orthopedics specialist at Sanjeevani Clinic.',          TRUE),
++    ('Dr. Anjali Gupta',  'anjali.gupta@sanjeevani.com',  '9876500007', 'Orthopedics',      'MBBS, MS Orthopedics',     6, 'Hindi, English',  700.00, 'Orthopedics specialist at Sanjeevani Clinic.',          TRUE),
++    ('Dr. Rohan Sharma',  'rohan.sharma@sanjeevani.com',  '9876500008', 'Pediatrics',       'MBBS, MD Pediatrics',      8, 'Hindi, English',  600.00, 'Pediatrician at Sanjeevani Clinic.',                    TRUE),
++    ('Dr. Sneha Kapoor',  'sneha.kapoor@sanjeevani.com',  '9876500009', 'Pediatrics',       'MBBS, MD Pediatrics',      5, 'Hindi, English',  550.00, 'Pediatrician at Sanjeevani Clinic.',                    TRUE),
++    ('Dr. Vikram Joshi',  'vikram.joshi@sanjeevani.com',  '9876500010', 'General Medicine', 'MBBS, MD Medicine',       10, 'Hindi, English',  500.00, 'General physician at Sanjeevani Clinic.',               TRUE),
++    ('Dr. Pooja Shah',    'pooja.shah@sanjeevani.com',    '9876500011', 'General Medicine', 'MBBS, MD Medicine',        7, 'Hindi, English',  450.00, 'General physician at Sanjeevani Clinic.',               TRUE),
++    ('Dr. Nitin Agarwal', 'nitin.agarwal@sanjeevani.com', '9876500012', 'Ophthalmology',    'MBBS, MS Ophthalmology',   9, 'Hindi, English',  700.00, 'Eye specialist at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Riya Bansal',   'riya.bansal@sanjeevani.com',   '9876500013', 'Ophthalmology',    'MBBS, MS Ophthalmology',   6, 'Hindi, English',  650.00, 'Eye specialist at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Karan Mehta',   'karan.mehta@sanjeevani.com',   '9876500014', 'Dentistry',        'BDS, MDS',                 8, 'Hindi, English',  500.00, 'Dental surgeon at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Simran Kaur',   'simran.kaur@sanjeevani.com',   '9876500015', 'Dentistry',        'BDS, MDS',                 5, 'Hindi, English',  450.00, 'Dental surgeon at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Manish Sethi',  'manish.sethi@sanjeevani.com',  '9876500016', 'ENT',              'MBBS, MS ENT',            10, 'Hindi, English',  650.00, 'ENT specialist at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Aarti Mishra',  'aarti.mishra@sanjeevani.com',  '9876500017', 'ENT',              'MBBS, MS ENT',             7, 'Hindi, English',  600.00, 'ENT specialist at Sanjeevani Clinic.',                  TRUE),
++    ('Dr. Shreya Kapoor', 'shreya.kapoor@sanjeevani.com', '9876500018', 'Gynecology',       'MBBS, MS Gynecology',      9, 'Hindi, English',  800.00, 'Gynecologist at Sanjeevani Clinic.',                    TRUE),
++    ('Dr. Meera Joshi',   'meera.joshi@sanjeevani.com',   '9876500019', 'Gynecology',       'MBBS, MD Gynecology',     12, 'Hindi, English', 1000.00, 'Senior gynecologist at Sanjeevani Clinic.',             TRUE);
++
++
++-- --------------------------------- 140 schedules (20 doctors x 7 days) -----
++-- All doctors are available every day, 10:00-14:00, in 5-minute steps.
++-- The WHERE NOT EXISTS guard means re-running this file will not create
++-- duplicate schedule rows.
++INSERT INTO doctor_schedules
++    (doctor_id, day_of_week, start_time, end_time, slot_interval_minutes, is_available)
++SELECT d.id, w.day_no, '10:00:00', '14:00:00', 5, TRUE
++FROM doctors d
++CROSS JOIN (
++    SELECT 0 AS day_no UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL
++    SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6
++) w
++WHERE NOT EXISTS (
++    SELECT 1 FROM doctor_schedules s
++    WHERE s.doctor_id = d.id AND s.day_of_week = w.day_no
++);
++
++
++-- ------------------------------------------------------- 2 demo logins -----
++-- Passwords are real Argon2 hashes produced by the app's own
++-- src/security/password.py, so these accounts work on the login page.
++--   patient@demo.com / Demo@1234
++--   admin@demo.com   / Admin@1234
++INSERT IGNORE INTO users
++    (name, email, phone, password_hash, age, gender, role, is_active)
++VALUES
++    ('Demo Patient', 'patient@demo.com', '9000000001',
++     '$argon2id$v=19$m=65536,t=3,p=4$VNDqehahMb4vW5KgwHls0Q$dWH8nqN4IJOkmUAayBz3s9s4NZUuq1ttQpXqdx5Lk1Q',
++     30, 'Male', 'PATIENT', TRUE),
++    ('Demo Admin', 'admin@demo.com', '9000000002',
++     '$argon2id$v=19$m=65536,t=3,p=4$6SYvIAxmNJVi0ZGA/UK71w$G3TwH8zTINPa+WiN5PY1PFZ8nT6rqmvWQuSvZR2wus4',
++     35, 'Female', 'ADMIN', TRUE);
++
++
++-- ============================================================================
++-- 4. VERIFY - the last result grid should show these numbers
++-- ============================================================================
++--    tables            15
++--    users              2
++--    doctors           20
++--    doctor_schedules 140
++--    visit_types        5
++-- ============================================================================
++
++SELECT 'users'            AS what, COUNT(*) AS total, 'expect 2'   AS note FROM users
++UNION ALL SELECT 'doctors',          COUNT(*), 'expect 20'  FROM doctors
++UNION ALL SELECT 'doctor_schedules', COUNT(*), 'expect 140' FROM doctor_schedules
++UNION ALL SELECT 'visit_types',      COUNT(*), 'expect 5'   FROM visit_types
++UNION ALL SELECT 'appointments',     COUNT(*), 'starts at 0' FROM appointments
++UNION ALL SELECT 'TABLES IN DB',     COUNT(*), 'expect 15'
++    FROM information_schema.tables
++    WHERE table_schema = 'sanjeevani_clinic';
+diff --git a/main.py b/main.py
+index dd62c28..0b8e6fe 100644
+--- a/main.py
++++ b/main.py
+@@ -2,8 +2,8 @@ import logging
+ import os
+ from collections.abc import AsyncGenerator
+ from contextlib import asynccontextmanager
+-from pathlib import Path
+ 
++from dotenv import load_dotenv
+ from fastapi import FastAPI, Request
+ from fastapi.responses import HTMLResponse
+ from fastapi.staticfiles import StaticFiles
+@@ -12,16 +12,50 @@ from sqlalchemy.exc import OperationalError
+ from starlette.middleware.sessions import SessionMiddleware
+ 
+ 
++# ============================================================
++# ENVIRONMENT
++# ============================================================
++
++# Loaded before anything reads os.getenv() so .env values (SESSION_SECRET,
++# DB_*, GROQ_API_KEY, USE_SQLITE) are picked up consistently.
++load_dotenv()
++
++
+ # ============================================================
+ # DATABASE
+ # ============================================================
+ 
++from src.config import (
++    BASE_DIR,
++    STATIC_DIR,
++    TEMPLATES_DIR,
++)
+ from src.database.base import Base
+-from src.database.connection import engine
++from src.database.connection import (
++    DATABASE_BACKEND,
++    DATABASE_LABEL,
++    MYSQL_FALLBACK_REASON,
++    engine,
++)
+ 
+ 
++logging.basicConfig(
++    level=os.getenv("LOG_LEVEL", "INFO").upper(),
++    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
++)
++
+ logger = logging.getLogger(__name__)
+-BASE_DIR = Path(__file__).resolve().parent
++
++# Make sure the SQLite fallback is impossible to miss in the console.
++if DATABASE_BACKEND == "sqlite":
++    logger.warning("=" * 78)
++    logger.warning("ACTIVE DATABASE: %s", DATABASE_LABEL)
++    if MYSQL_FALLBACK_REASON:
++        logger.warning("Reason for fallback: %s", MYSQL_FALLBACK_REASON)
++    logger.warning(
++        "Set USE_SQLITE=true to silence this, or fix your MySQL settings in .env."
++    )
++    logger.warning("=" * 78)
+ 
+ 
+ @asynccontextmanager
+@@ -86,7 +120,7 @@ app.add_middleware(
+ # STATIC FILES
+ # ============================================================
+ 
+-STATIC_DIR = BASE_DIR / "static"
++# STATIC_DIR comes from src.config (absolute path)
+ 
+ if STATIC_DIR.is_dir():
+ 
+@@ -107,9 +141,11 @@ if STATIC_DIR.is_dir():
+ # TEMPLATES
+ # ============================================================
+ 
++# Absolute path via src.config, so templates resolve no matter which
++# directory the server is started from.
+ templates = Jinja2Templates(
+ 
+-    directory=BASE_DIR / "templates"
++    directory=str(TEMPLATES_DIR)
+ 
+ )
+ 
+@@ -274,7 +310,11 @@ def home(
+ @app.get("/health")
+ def health(request: Request):
+ 
+-    return {
++    from src.services.groq_client import ai_is_configured
++
++    database_ready = getattr(request.app.state, "database_ready", False)
++
++    payload = {
+ 
+         "status":
+             "healthy",
+@@ -284,7 +324,25 @@ def health(request: Request):
+ 
+         "database":
+             "ready"
+-            if getattr(request.app.state, "database_ready", False)
+-            else "unavailable"
++            if database_ready
++            else "unavailable",
++
++        # Which database is REALLY in use (mysql / sqlite). Previously this was
++        # invisible, so it looked like records vanished when the app had
++        # silently fallen back to SQLite.
++        "database_backend":
++            DATABASE_BACKEND,
++
++        "database_target":
++            DATABASE_LABEL,
++
++        "ai_features":
++            "enabled" if ai_is_configured() else "disabled (GROQ_API_KEY not set)",
++
++    }
++
++    if DATABASE_BACKEND == "sqlite" and MYSQL_FALLBACK_REASON:
++
++        payload["database_fallback_reason"] = MYSQL_FALLBACK_REASON
+ 
+-    }
+\ No newline at end of file
++    return payload
+\ No newline at end of file
+diff --git a/pyproject.toml b/pyproject.toml
+index 4db7387..3873fde 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -8,6 +8,7 @@ authors = [
+ ]
+ requires-python = ">=3.13"
+ dependencies = [
++    "cryptography>=42.0.0",
+     "email-validator>=2.2.0",
+     "fastapi>=0.141.1",
+     "groq>=0.31.0",
+diff --git a/requirements.txt b/requirements.txt
+index 4be10b1..708456c 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,6 +1,6 @@
+ pandas
+ numpy
+-scikit-learn
++scikit-learn  # version-sensitive: retrain with 'python train_model.py' if /predict warns
+ fastapi
+ uvicorn
+ Jinja2
+@@ -9,6 +9,7 @@ itsdangerous
+ sqlalchemy
+ python-dotenv
+ pymysql
++cryptography  # REQUIRED by PyMySQL for MySQL 8's caching_sha2_password auth
+ email-validator
+ groq
+ nltk
+@@ -16,4 +17,4 @@ pdf2image
+ Pillow
+ pypdf
+ pwdlib[argon2]
+-pytesseract
+\ No newline at end of file
++pytesseract
+diff --git a/seed_sqlite_demo.py b/seed_sqlite_demo.py
+new file mode 100644
+index 0000000..9992796
+--- /dev/null
++++ b/seed_sqlite_demo.py
+@@ -0,0 +1,164 @@
++"""Create a ready-to-use SQLite database for the app (optional helper).
++
++Use this only if you are running WITHOUT MySQL (i.e. USE_SQLITE=true in .env,
++or MySQL is unreachable). It builds ``sanjeevani_clinic.db`` next to this file
++and fills it with the same baseline data as your MySQL setup:
++
++* 20 doctors (8 specialisations)
++* doctor_schedules for all 20 doctors, Monday-Sunday, 10:00-14:00, 5 min slots
++* the 5 visit types
++* two demo logins so you can sign in immediately
++
++Run:
++
++    python seed_sqlite_demo.py
++
++WARNING: it deletes and recreates sanjeevani_clinic.db. Your MySQL database is
++never touched.
++"""
++
++import sys
++from datetime import time
++from pathlib import Path
++
++BASE_DIR = Path(__file__).resolve().parent
++sys.path.insert(0, str(BASE_DIR))
++
++DB_PATH = BASE_DIR / "sanjeevani_clinic.db"
++
++# ---- demo logins created by this script -------------------------------
++DEMO_PATIENT_EMAIL = "patient@demo.com"
++DEMO_PATIENT_PASSWORD = "Demo@1234"
++DEMO_ADMIN_EMAIL = "admin@demo.com"
++DEMO_ADMIN_PASSWORD = "Admin@1234"
++# -----------------------------------------------------------------------
++
++DOCTORS = [
++    ("Dr. Amit Sharma", "amit.sharma@sanjeevani.com", "9876543210", "Cardiology", "MBBS, MD Cardiology", 8, 800.00),
++    ("Dr. Neha Verma", "neha.verma@sanjeevani.com", "9876500001", "Cardiology", "MBBS, MD Cardiology", 6, 700.00),
++    ("Dr. Priya Mehta", "priya.mehta@sanjeevani.com", "9876500002", "Dermatology", "MBBS, MD Dermatology", 7, 600.00),
++    ("Dr. Rahul Jain", "rahul.jain@sanjeevani.com", "9876500003", "Dermatology", "MBBS, MD Dermatology", 10, 800.00),
++    ("Dr. Arjun Singh", "arjun.singh@sanjeevani.com", "9876500004", "Neurology", "MBBS, DM Neurology", 9, 1000.00),
++    ("Dr. Kavita Rao", "kavita.rao@sanjeevani.com", "9876500005", "Neurology", "MBBS, MD, DM Neurology", 12, 1200.00),
++    ("Dr. Raj Malhotra", "raj.malhotra@sanjeevani.com", "9876500006", "Orthopedics", "MBBS, MS Orthopedics", 11, 900.00),
++    ("Dr. Anjali Gupta", "anjali.gupta@sanjeevani.com", "9876500007", "Orthopedics", "MBBS, MS Orthopedics", 6, 700.00),
++    ("Dr. Rohan Sharma", "rohan.sharma@sanjeevani.com", "9876500008", "Pediatrics", "MBBS, MD Pediatrics", 8, 600.00),
++    ("Dr. Sneha Kapoor", "sneha.kapoor@sanjeevani.com", "9876500009", "Pediatrics", "MBBS, MD Pediatrics", 5, 550.00),
++    ("Dr. Vikram Joshi", "vikram.joshi@sanjeevani.com", "9876500010", "General Medicine", "MBBS, MD Medicine", 10, 500.00),
++    ("Dr. Pooja Shah", "pooja.shah@sanjeevani.com", "9876500011", "General Medicine", "MBBS, MD Medicine", 7, 450.00),
++    ("Dr. Nitin Agarwal", "nitin.agarwal@sanjeevani.com", "9876500012", "Ophthalmology", "MBBS, MS Ophthalmology", 9, 700.00),
++    ("Dr. Riya Bansal", "riya.bansal@sanjeevani.com", "9876500013", "Ophthalmology", "MBBS, MS Ophthalmology", 6, 650.00),
++    ("Dr. Karan Mehta", "karan.mehta@sanjeevani.com", "9876500014", "Dentistry", "BDS, MDS", 8, 500.00),
++    ("Dr. Simran Kaur", "simran.kaur@sanjeevani.com", "9876500015", "Dentistry", "BDS, MDS", 5, 450.00),
++    ("Dr. Manish Sethi", "manish.sethi@sanjeevani.com", "9876500016", "ENT", "MBBS, MS ENT", 10, 650.00),
++    ("Dr. Aarti Mishra", "aarti.mishra@sanjeevani.com", "9876500017", "ENT", "MBBS, MS ENT", 7, 600.00),
++    ("Dr. Shreya Kapoor", "shreya.kapoor@sanjeevani.com", "9876500018", "Gynecology", "MBBS, MS Gynecology", 9, 800.00),
++    ("Dr. Meera Joshi", "meera.joshi@sanjeevani.com", "9876500019", "Gynecology", "MBBS, MD Gynecology", 12, 1000.00),
++]
++
++VISIT_TYPES = [
++    ("General Consultation", 10, 15, 15),
++    ("Follow-up", 10, 15, 10),
++    ("Specialist Consultation", 15, 20, 20),
++    ("Detailed Consultation", 20, 30, 30),
++    ("Procedure / Assessment", 30, 60, 45),
++]
++
++
++def main() -> int:
++    # Point the app at the SQLite file before importing the models.
++    import os
++
++    os.environ["USE_SQLITE"] = "true"
++    os.environ.setdefault("GROQ_API_KEY", "seed-script")
++
++    if DB_PATH.exists():
++        print(f"Removing old database: {DB_PATH}")
++        DB_PATH.unlink()
++
++    from src.database.connection import SessionLocal, engine
++    from src.database.base import Base
++
++    # Import every model so Base.metadata knows all tables.
++    import src.models  # noqa: F401
++    import src.models.doctor_schedule  # noqa: F401
++    import src.models.doctor_slot  # noqa: F401
++    import src.models.notification  # noqa: F401
++    import src.models.patient_document  # noqa: F401
++    import src.models.screening  # noqa: F401
++    import src.models.visit_type  # noqa: F401
++
++    from src.models.doctor import Doctor
++    from src.models.doctor_schedule import DoctorSchedule
++    from src.models.user import User
++    from src.models.visit_type import VisitType
++    from src.security.password import hash_password
++
++    Base.metadata.create_all(bind=engine)
++
++    db = SessionLocal()
++
++    try:
++        for (name, email, phone, spec, qual, exp, fee) in DOCTORS:
++            db.add(Doctor(
++                name=name, email=email, phone=phone, specialization=spec,
++                qualification=qual, experience_years=exp,
++                languages="Hindi, English", consultation_fee=fee,
++                bio=f"{spec} specialist at Sanjeevani Clinic.",
++                is_active=True,
++            ))
++        db.flush()
++
++        for doctor in db.query(Doctor).all():
++            for day in range(7):  # 0 = Monday ... 6 = Sunday
++                db.add(DoctorSchedule(
++                    doctor_id=doctor.id,
++                    day_of_week=day,
++                    start_time=time(10, 0),
++                    end_time=time(14, 0),
++                    slot_interval_minutes=5,
++                    is_available=True,
++                ))
++
++        for (name, mn, mx, default) in VISIT_TYPES:
++            db.add(VisitType(
++                name=name,
++                min_duration_minutes=mn,
++                max_duration_minutes=mx,
++                default_duration_minutes=default,
++                is_active=True,
++            ))
++
++        db.add(User(
++            name="Demo Patient", email=DEMO_PATIENT_EMAIL, phone="9000000001",
++            password_hash=hash_password(DEMO_PATIENT_PASSWORD),
++            age=30, gender="Male", role="PATIENT", is_active=True,
++        ))
++        db.add(User(
++            name="Demo Admin", email=DEMO_ADMIN_EMAIL, phone="9000000002",
++            password_hash=hash_password(DEMO_ADMIN_PASSWORD),
++            age=35, gender="Female", role="ADMIN", is_active=True,
++        ))
++
++        db.commit()
++
++        print()
++        print(f"Database created : {DB_PATH}")
++        print(f"  doctors        : {db.query(Doctor).count()}")
++        print(f"  schedules      : {db.query(DoctorSchedule).count()}")
++        print(f"  visit types    : {db.query(VisitType).count()}")
++        print(f"  users          : {db.query(User).count()}")
++        print()
++        print("Log in with:")
++        print(f"  patient : {DEMO_PATIENT_EMAIL} / {DEMO_PATIENT_PASSWORD}")
++        print(f"  admin   : {DEMO_ADMIN_EMAIL} / {DEMO_ADMIN_PASSWORD}")
++        print()
++
++    finally:
++        db.close()
++
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/src/components/data_ingestion.py b/src/components/data_ingestion.py
+index f6e05c9..56249ef 100644
+--- a/src/components/data_ingestion.py
++++ b/src/components/data_ingestion.py
+@@ -3,16 +3,17 @@ import sys
+ from dataclasses import dataclass 
+ import pandas as pd 
+ from sklearn.model_selection import train_test_split 
++from src.config import ARTIFACTS_DIR, BASE_DIR
+ from src.exception import CustomException 
+ from src.logger import get_logger 
+ logger = get_logger(__name__) 
+ 
+ @dataclass 
+ class DataIngestionConfig:
+-    raw_data_path: str = os.path.join("artifacts" , "raw.csv") 
+-    train_data_path: str = os.path.join("artifacts" , "train.csv")
+-    test_data_path: str = os.path.join("artifacts" , "test.csv") 
+-    source_csv_path: str = os.path.join("notebook" , "data" , "covid_toy.csv") 
++    raw_data_path: str = os.path.join(ARTIFACTS_DIR , "raw.csv") 
++    train_data_path: str = os.path.join(ARTIFACTS_DIR , "train.csv")
++    test_data_path: str = os.path.join(ARTIFACTS_DIR , "test.csv") 
++    source_csv_path: str = os.path.join(BASE_DIR , "notebook" , "data" , "covid_toy.csv") 
+ 
+ 
+ class DataIngestion:
+@@ -38,10 +39,18 @@ class DataIngestion:
+             logger.info("Jo log online class le rhe h , unko bhi congration , unka bhi data ingestion ho chuka h , leptop per apna hath rkh kr apne aap ko pawan kare.")
+             logger.info("----------")
+             logger.info("Jinka net nhi chl rha online me , unka bhi data ingestion complete")
+-            return {
++
++            # IMPORTANT: this must be a tuple, not a set.
++            #
++            # It used to be `return {train_path, test_path}`. A set has no
++            # guaranteed order, and Python randomises string hashing on every
++            # run, so the caller's `train_path, test_path = ...` unpacking
++            # swapped the two files roughly half the time - meaning the model
++            # trained on the test split and was scored on the train split.
++            return (
+                 self.ingestion_config.train_data_path,
+-                self.ingestion_config.test_data_path
+-            }
++                self.ingestion_config.test_data_path,
++            )
+         except Exception as e :
+             raise CustomException(e,sys) 
+ 
+diff --git a/src/components/data_transformation.py b/src/components/data_transformation.py
+index 364097b..3e09340 100644
+--- a/src/components/data_transformation.py
++++ b/src/components/data_transformation.py
+@@ -7,6 +7,7 @@ from sklearn.compose import ColumnTransformer
+ from sklearn.impute import SimpleImputer 
+ from sklearn.pipeline import Pipeline 
+ from sklearn.preprocessing import OneHotEncoder , OrdinalEncoder 
++from src.config import ARTIFACTS_DIR
+ from src.exception import CustomException 
+ from src.logger import get_logger 
+ logger = get_logger(__name__) 
+@@ -14,7 +15,7 @@ from src.utils import save_object
+ 
+ @dataclass 
+ class DataTransformationConfig:
+-    preprocessor_obj_file_path: str = os.path.join("artifacts" , "preprocessor.pkl") 
++    preprocessor_obj_file_path: str = os.path.join(ARTIFACTS_DIR , "preprocessor.pkl") 
+ 
+ class DataTransformation:
+     def __init__(self):
+diff --git a/src/components/model_trainer.py b/src/components/model_trainer.py
+index bdac145..f04647c 100644
+--- a/src/components/model_trainer.py
++++ b/src/components/model_trainer.py
+@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
+ from sklearn.neighbors import KNeighborsClassifier
+ from sklearn.tree import DecisionTreeClassifier 
+ import pandas as pd 
++from src.config import ARTIFACTS_DIR
+ from src.exception import CustomException 
+ from src.logger import get_logger 
+ logger = get_logger(__name__) 
+@@ -13,7 +14,7 @@ from src.utils import evaluate_models, load_object, save_object
+ 
+ @dataclass 
+ class ModelTrainerConfig:
+-    trained_model_file_path: str = os.path.join("artifacts", "model.pkl") 
++    trained_model_file_path: str = os.path.join(ARTIFACTS_DIR, "model.pkl") 
+ 
+ class ModelTrainer:
+     def __init__(self):
+diff --git a/src/config.py b/src/config.py
+new file mode 100644
+index 0000000..84c2faf
+--- /dev/null
++++ b/src/config.py
+@@ -0,0 +1,29 @@
++"""Central, absolute paths for the project.
++
++Every path here is derived from this file's own location, so the app behaves
++identically no matter which directory it is started from. Previously several
++modules used relative paths such as "templates", "artifacts" and
++"./sanjeevani_clinic.db", which silently pointed at different (or missing)
++files when the server was started from anywhere other than the repo root.
++"""
++
++from pathlib import Path
++
++# <repo root>/src/config.py  ->  <repo root>
++BASE_DIR = Path(__file__).resolve().parent.parent
++
++SRC_DIR = BASE_DIR / "src"
++TEMPLATES_DIR = BASE_DIR / "templates"
++STATIC_DIR = BASE_DIR / "static"
++
++# Trained ML artifacts produced by src/components/model_trainer.py
++ARTIFACTS_DIR = BASE_DIR / "artifacts"
++
++# Uploaded medical reports
++UPLOAD_DIR = BASE_DIR / "uploads" / "medical_reports"
++
++# Fallback SQLite database (only used when MySQL is unavailable / USE_SQLITE=true)
++SQLITE_DB_PATH = BASE_DIR / "sanjeevani_clinic.db"
++
++# Logs written by src/logger.py
++LOGS_DIR = BASE_DIR / "logs"
+diff --git a/src/database/connection.py b/src/database/connection.py
+index 7d7edd0..efeb5fd 100644
+--- a/src/database/connection.py
++++ b/src/database/connection.py
+@@ -1,5 +1,5 @@
+-import os
+ import logging
++import os
+ 
+ from dotenv import load_dotenv
+ from sqlalchemy import create_engine, text
+@@ -7,6 +7,8 @@ from sqlalchemy.engine import URL
+ from sqlalchemy.orm import sessionmaker
+ from sqlalchemy.exc import OperationalError
+ 
++from src.config import SQLITE_DB_PATH
++
+ 
+ logger = logging.getLogger(__name__)
+ 
+@@ -23,46 +25,190 @@ DB_NAME = os.getenv("DB_NAME")
+ USE_SQLITE = os.getenv("USE_SQLITE", "false").lower() == "true"
+ 
+ 
++# Absolute path, so the SQLite file is always the one next to the project
++# root. It used to be "sqlite:///./sanjeevani_clinic.db" (relative), which
++# created a *different*, empty database whenever the server was started from
++# another directory - a very confusing "my data disappeared" bug.
++SQLITE_URL = f"sqlite:///{SQLITE_DB_PATH}"
++
++
++def _sqlite_engine():
++    SQLITE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
++    return create_engine(
++        SQLITE_URL,
++        connect_args={"check_same_thread": False}
++    )
++
++
++def _explain_mysql_failure(error: BaseException) -> str:
++    """Turn a raw driver error into an actionable hint.
++
++    Without this, a MySQL problem shows up only as an unexplained silently
++    empty app, because the connection falls back to SQLite.
++    """
++
++    text_error = str(error)
++    lowered = text_error.lower()
++
++    if "cryptography" in lowered and (
++        "sha2" in lowered or "sha256" in lowered
++    ):
++        return (
++            "MySQL 8 uses caching_sha2_password authentication, which PyMySQL "
++            "can only handle if the 'cryptography' package is installed. "
++            "Run: pip install cryptography  (it is now listed in "
++            "requirements.txt, so 'pip install -r requirements.txt' fixes it too)"
++        )
++
++    # 1044 = "Access denied for user ... to database 'x'"
++    #        -> the database is missing, or this user has no rights on it
++    if "to database" in lowered or "(1044" in text_error:
++        return (
++            f"The database '{DB_NAME}' is missing, or user '{DB_USER}' has no "
++            "privileges on it. Run your MySQL setup script to create it (or fix "
++            "DB_NAME / DB_USER in your .env file)."
++        )
++
++    # 1049 = "Unknown database"
++    if "unknown database" in lowered or "(1049" in text_error:
++        return (
++            f"The database '{DB_NAME}' does not exist on this MySQL server. "
++            "Run your MySQL setup script to create it, or fix DB_NAME in .env."
++        )
++
++    # 1045 = "Access denied for user ... (using password: YES)"
++    if "(1045" in text_error or (
++        "access denied" in lowered and "using password" in lowered
++    ):
++        return (
++            "MySQL rejected the username or password. Check DB_USER and "
++            "DB_PASSWORD in your .env file."
++        )
++
++    if "access denied" in lowered:
++        return (
++            "MySQL denied access. Check DB_USER and DB_PASSWORD in your .env "
++            "file."
++        )
++
++    if "connection refused" in lowered or "(2003" in text_error:
++        return (
++            "Nothing is listening on that MySQL host/port. Is the MySQL "
++            "service started? Check DB_HOST and DB_PORT in your .env file."
++        )
++
++    if "(1698" in text_error or "auth_socket" in lowered:
++        return (
++            "This MySQL user authenticates via the operating-system socket "
++            "(auth_socket), which the app cannot use. Create a password-based "
++            "user, e.g. "
++            "CREATE USER 'sanjeevani'@'localhost' IDENTIFIED BY 'yourpass';"
++        )
++
++    if "can't connect to mysql server" in lowered or "(2002" in text_error:
++        return (
++            "Could not reach the MySQL server. Make sure the MySQL service "
++            "is running and DB_HOST/DB_PORT are correct."
++        )
++
++    return text_error[:200]
++
++
+ def _get_engine():
+-    """Auto-detect available database: Try MySQL first, fallback to SQLite"""
+-    
++    """Auto-detect available database: try MySQL first, fall back to SQLite.
++
++    The fallback is intentional (it lets the project run with zero setup), but
++    it is now reported loudly instead of being silent: ``DATABASE_BACKEND`` and
++    ``DATABASE_LABEL`` below expose which database is really in use, the log
++    line is a WARNING, and ``/health`` reports it.
++    """
++
++    global DATABASE_BACKEND, DATABASE_LABEL, MYSQL_FALLBACK_REASON
++
+     if USE_SQLITE:
+-        logger.info("Using SQLite database (USE_SQLITE=true)")
+-        return create_engine(
+-            "sqlite:///./sanjeevani_clinic.db",
+-            connect_args={"check_same_thread": False}
++        logger.info("Using SQLite database (USE_SQLITE=true) -> %s", SQLITE_DB_PATH)
++        DATABASE_BACKEND = "sqlite"
++        DATABASE_LABEL = f"SQLite ({SQLITE_DB_PATH})"
++        return _sqlite_engine()
++
++    # ---- Try MySQL if credentials are present ----
++    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_NAME]):
++
++        MYSQL_FALLBACK_REASON = (
++            "MySQL settings are incomplete in .env "
++            "(DB_USER / DB_PASSWORD / DB_HOST / DB_NAME)."
+         )
+-    
+-    # Try MySQL first
+-    mysql_url = URL.create(
+-        drivername="mysql+pymysql",
+-        username=DB_USER,
+-        password=DB_PASSWORD,
+-        host=DB_HOST,
+-        port=int(DB_PORT),
+-        database=DB_NAME
+-    )
+ 
+-    test_engine = create_engine(mysql_url, pool_pre_ping=True)
+-    try:
+-        with test_engine.connect() as conn:
+-            conn.execute(text("SELECT 1"))
+-    except OperationalError as e:
+         logger.warning(
+-            f"MySQL connection failed ({DB_HOST}:{DB_PORT}): {str(e)[:80]}... "
+-            "Falling back to SQLite"
++            "%s Falling back to SQLite -> %s",
++            MYSQL_FALLBACK_REASON,
++            SQLITE_DB_PATH,
+         )
+-        return create_engine(
+-            "sqlite:///./sanjeevani_clinic.db",
+-            connect_args={"check_same_thread": False}
++
++        DATABASE_BACKEND = "sqlite"
++        DATABASE_LABEL = f"SQLite ({SQLITE_DB_PATH})"
++        return _sqlite_engine()
++
++    try:
++        mysql_url = URL.create(
++            drivername="mysql+pymysql",
++            username=DB_USER,
++            password=DB_PASSWORD,
++            host=DB_HOST,
++            port=int(DB_PORT),
++            database=DB_NAME
+         )
+-    finally:
+-        test_engine.dispose()
+ 
+-    logger.info(f"MySQL database connection successful to {DB_HOST}:{DB_PORT}/{DB_NAME}")
++        test_engine = create_engine(mysql_url, pool_pre_ping=True)
++
++        try:
++            with test_engine.connect() as conn:
++                conn.execute(text("SELECT 1"))
++        except OperationalError as e:
++            MYSQL_FALLBACK_REASON = (
++                f"MySQL connection failed ({DB_HOST}:{DB_PORT}/{DB_NAME}) -- "
++                f"{_explain_mysql_failure(e)}"
++            )
++            logger.warning(
++                "%s -- Falling back to SQLite -> %s",
++                MYSQL_FALLBACK_REASON,
++                SQLITE_DB_PATH,
++            )
++            DATABASE_BACKEND = "sqlite"
++            DATABASE_LABEL = f"SQLite ({SQLITE_DB_PATH})"
++            return _sqlite_engine()
++        finally:
++            test_engine.dispose()
++
++    except Exception as e:  # noqa: BLE001 - bad URL / missing driver etc.
++        MYSQL_FALLBACK_REASON = (
++            f"MySQL connection failed ({DB_HOST}:{DB_PORT}/{DB_NAME}) -- "
++            f"{_explain_mysql_failure(e)}"
++        )
++        logger.warning(
++            "%s -- Falling back to SQLite -> %s",
++            MYSQL_FALLBACK_REASON,
++            SQLITE_DB_PATH,
++        )
++        DATABASE_BACKEND = "sqlite"
++        DATABASE_LABEL = f"SQLite ({SQLITE_DB_PATH})"
++        return _sqlite_engine()
++
++    logger.info(
++        "MySQL database connection successful to %s:%s/%s",
++        DB_HOST, DB_PORT, DB_NAME
++    )
++    DATABASE_BACKEND = "mysql"
++    DATABASE_LABEL = f"MySQL ({DB_HOST}:{DB_PORT}/{DB_NAME})"
+     return create_engine(mysql_url, pool_pre_ping=True)
+ 
+ 
++# Filled in by _get_engine()
++DATABASE_BACKEND = "unknown"
++DATABASE_LABEL = "unknown"
++MYSQL_FALLBACK_REASON = None
++
++
+ # SQLAlchemy engine with auto-detection
+ engine = _get_engine()
+ 
+@@ -75,8 +221,8 @@ SessionLocal = sessionmaker(
+ )
+ 
+ 
+-# FastAPI endpoints ke liye database session
+ def get_db():
++    """FastAPI dependency that yields a database session."""
+     db = SessionLocal()
+ 
+     try:
+diff --git a/src/pipeline/predict_pipeline.py b/src/pipeline/predict_pipeline.py
+index 8827050..247f4b8 100644
+--- a/src/pipeline/predict_pipeline.py
++++ b/src/pipeline/predict_pipeline.py
+@@ -1,6 +1,7 @@
+ import sys 
+ import os 
+ import pandas as pd 
++from src.config import ARTIFACTS_DIR
+ from src.exception import CustomException 
+ from src.utils import load_object
+ from src.logger import get_logger 
+@@ -29,8 +30,8 @@ class CustomData:
+ 
+ class PredictPipeline:
+     def __init__(self):
+-        self.model_path = os.path.join("artifacts", "model.pkl") 
+-        self.preprocessor_path = os.path.join("artifacts", "preprocessor.pkl") 
++        self.model_path = os.path.join(ARTIFACTS_DIR, "model.pkl") 
++        self.preprocessor_path = os.path.join(ARTIFACTS_DIR, "preprocessor.pkl") 
+ 
+     def predict(self, features: pd.DataFrame):
+         try:
+@@ -49,4 +50,41 @@ class PredictPipeline:
+             logger.info(f"Prediction completed: {result}, confidence_score = {probability}") 
+             return result, probability 
+         except Exception as e : 
+-            raise CustomException(e,sys) 
+\ No newline at end of file
++            raise CustomException(e,sys)
++
++
++def model_available():
++    """Check whether the trained model + preprocessor can actually be loaded.
++
++    Returns (True, None) when both files load, or (False, reason) when they do
++    not. This matters because scikit-learn pickles are NOT portable between
++    scikit-learn versions - a model saved with one version can fail to load
++    with another. When that happened, /predict used to quietly fall back to a
++    hand-written rule and still show a "Model confidence" figure.
++    """
++
++    import os
++
++    for label, path in (
++        ("model.pkl", os.path.join(ARTIFACTS_DIR, "model.pkl")),
++        ("preprocessor.pkl", os.path.join(ARTIFACTS_DIR, "preprocessor.pkl")),
++    ):
++
++        if not os.path.exists(path):
++
++            return False, f"{label} was not found in the artifacts folder."
++
++        try:
++
++            load_object(path)
++
++        except Exception as e:
++
++            return (
++                False,
++                f"{label} could not be loaded (it was probably saved with a "
++                f"different scikit-learn version than the one installed). "
++                f"Run:  python train_model.py",
++            )
++
++    return True, None
+diff --git a/src/routers/__init__.py b/src/routers/__init__.py
+index e6610d7..9f90801 100644
+--- a/src/routers/__init__.py
++++ b/src/routers/__init__.py
+@@ -28,11 +28,13 @@ from src.services.appointment_service import (
+     patient_cancel_appointment
+ )
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+@@ -53,6 +55,7 @@ def booking_page(
+ 
+ ):
+ 
++
+     user_id = request.session.get("user_id")
+ 
+ 
+diff --git a/src/routers/appointment.py b/src/routers/appointment.py
+index 546ce8e..1d15efc 100644
+--- a/src/routers/appointment.py
++++ b/src/routers/appointment.py
+@@ -28,6 +28,8 @@ from src.services.appointment_service import (
+     patient_reschedule_appointment
+ )
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ # ============================================================
+ # ROUTER
+@@ -41,10 +43,11 @@ router = APIRouter()
+ # ============================================================
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
++
+ # ============================================================
+ # BOOK APPOINTMENT PAGE
+ # ============================================================
+diff --git a/src/routers/auth.py b/src/routers/auth.py
+index c8e29eb..afa6a0d 100644
+--- a/src/routers/auth.py
++++ b/src/routers/auth.py
+@@ -23,14 +23,17 @@ from src.models.user import User
+ 
+ from src.security.password import verify_password
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
++
+ # ============================================================
+ # SIGNUP PAGE
+ # ============================================================
+diff --git a/src/routers/chatbot.py b/src/routers/chatbot.py
+index c469be8..d0922fa 100644
+--- a/src/routers/chatbot.py
++++ b/src/routers/chatbot.py
+@@ -58,6 +58,7 @@ from src.database.connection import get_db
+ 
+ from src.models.doctor import Doctor
+ 
++
+ from src.models.visit_type import VisitType
+ 
+ from src.models.appointment import Appointment
+@@ -77,6 +78,8 @@ from src.services.appointment_service import (
+     confirm_appointment
+ )
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ # ============================================================
+ # ROUTER
+@@ -90,7 +93,7 @@ router = APIRouter()
+ # ============================================================
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+diff --git a/src/routers/doctor.py b/src/routers/doctor.py
+index e8cc097..aad4389 100644
+--- a/src/routers/doctor.py
++++ b/src/routers/doctor.py
+@@ -19,11 +19,13 @@ from src.services.doctor_service import (
+     get_doctor_slots
+ )
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+@@ -42,6 +44,7 @@ def doctors_page(
+ 
+ ):
+ 
++
+     # -------------------------------------------------
+     # LOGIN CHECK
+     # -------------------------------------------------
+diff --git a/src/routers/documents.py b/src/routers/documents.py
+index 009eae8..2730eaf 100644
+--- a/src/routers/documents.py
++++ b/src/routers/documents.py
+@@ -30,6 +30,8 @@ from src.services.document_service import (
+ from src.services.document_reader import extract_text
+ from src.services.medical_ai_service import analyze_medical_report
+ 
++from src.config import TEMPLATES_DIR, UPLOAD_DIR as UPLOAD_DIR_PATH
++
+ 
+ # ============================================================
+ # ROUTER
+@@ -43,15 +45,18 @@ router = APIRouter()
+ # ============================================================
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
++
+ # ============================================================
+ # UPLOAD DIRECTORY
+ # ============================================================
+ 
+-UPLOAD_DIR = "uploads/medical_reports"
++# Absolute path (see src/config.py) so uploads always land next to the
++# project root instead of wherever the server happened to be started.
++UPLOAD_DIR = str(UPLOAD_DIR_PATH)
+ 
+ 
+ # ============================================================
+diff --git a/src/routers/injury.py b/src/routers/injury.py
+index 45a2255..85bc7c9 100644
+--- a/src/routers/injury.py
++++ b/src/routers/injury.py
+@@ -20,6 +20,11 @@ from src.services.injury_service import (
+     normalize_specialist
+ )
+ 
++from src.services.groq_client import (
++    MISSING_KEY_MESSAGE,
++    ai_is_configured,
++)
++
+ from src.models.doctor import Doctor
+ 
+ 
+@@ -108,6 +113,18 @@ async def analyze_injury(
+     # 4. AI IMAGE ANALYSIS
+     # =====================================================
+ 
++    # Fail fast with an actionable message instead of a generic 500 when the
++    # Groq key has not been configured yet.
++    if not ai_is_configured():
++
++        return JSONResponse(
++            status_code=503,
++            content={
++                "success": False,
++                "message": MISSING_KEY_MESSAGE
++            }
++        )
++
+     result = analyze_injury_image(
+         file_bytes=file_bytes,
+         filename=file.filename
+@@ -116,7 +133,7 @@ async def analyze_injury(
+     if not result["success"]:
+ 
+         return JSONResponse(
+-            status_code=500,
++            status_code=502,
+             content={
+                 "success": False,
+                 "message": (
+diff --git a/src/routers/medical_history.py b/src/routers/medical_history.py
+index 9f7ff74..2ee1fc8 100644
+--- a/src/routers/medical_history.py
++++ b/src/routers/medical_history.py
+@@ -9,11 +9,13 @@ from src.services.medical_history_service import (
+     get_patient_medical_history
+ )
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+@@ -23,6 +25,7 @@ def medical_history_page(
+     db: Session = Depends(get_db)
+ ):
+ 
++
+     user_id = request.session.get(
+         "user_id"
+     )
+diff --git a/src/routers/notification.py b/src/routers/notification.py
+index adbfd62..33c402c 100644
+--- a/src/routers/notification.py
++++ b/src/routers/notification.py
+@@ -14,11 +14,13 @@ from src.database.connection import get_db
+ 
+ from src.models.notification import Notification
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+@@ -35,6 +37,7 @@ def notifications_page(
+ 
+ ):
+ 
++
+     user_id = request.session.get(
+         "user_id"
+     )
+diff --git a/src/routers/prescription.py b/src/routers/prescription.py
+index 7f127d8..130d321 100644
+--- a/src/routers/prescription.py
++++ b/src/routers/prescription.py
+@@ -9,10 +9,15 @@ from fastapi.responses import (
+     JSONResponse
+ )
+ 
++from sqlalchemy.exc import IntegrityError
+ from sqlalchemy.orm import Session
+ 
+ from src.database.connection import get_db
+ 
++from src.models.doctor import Doctor
++from src.models.medical_record import MedicalRecord
++from src.models.treatment import Treatment
++
+ from src.services.prescription_service import (
+     create_prescription,
+     get_patient_prescriptions,
+@@ -109,11 +114,83 @@ def create_new_prescription(
+         )
+ 
+ 
++    # -----------------------------------------------------
++    # VALIDATE REFERENCES
++    # -----------------------------------------------------
++    #
++    # prescriptions has foreign keys to doctors, medical_records and
++    # treatments. An unknown id used to raise an unhandled IntegrityError
++    # (HTTP 500) instead of a usable error message.
++
++    if data.doctor_id is not None:
++
++        if (
++            db.query(Doctor.id)
++            .filter(Doctor.id == data.doctor_id)
++            .first()
++            is None
++        ):
++
++            return JSONResponse(
++                status_code=400,
++                content={
++                    "success": False,
++                    "message": "That doctor could not be found."
++                }
++            )
++
++    if data.medical_record_id is not None:
++
++        if (
++            db.query(MedicalRecord.id)
++            .filter(
++                MedicalRecord.id == data.medical_record_id,
++                MedicalRecord.patient_id == user_id
++            )
++            .first()
++            is None
++        ):
++
++            return JSONResponse(
++                status_code=400,
++                content={
++                    "success": False,
++                    "message": (
++                        "That medical record could not be found for your "
++                        "account."
++                    )
++                }
++            )
++
++    if data.treatment_id is not None:
++
++        if (
++            db.query(Treatment.id)
++            .filter(
++                Treatment.id == data.treatment_id,
++                Treatment.patient_id == user_id
++            )
++            .first()
++            is None
++        ):
++
++            return JSONResponse(
++                status_code=400,
++                content={
++                    "success": False,
++                    "message": (
++                        "That treatment could not be found for your account."
++                    )
++                }
++            )
++
+     # -----------------------------------------------------
+     # CREATE PRESCRIPTION
+     # -----------------------------------------------------
+ 
+-    prescription = create_prescription(
++    try:
++
++        prescription = create_prescription(
+ 
+         db=db,
+ 
+@@ -132,14 +209,29 @@ def create_new_prescription(
+ 
+         medicines=[
+ 
+-            medicine.model_dump()
++                medicine.model_dump()
+ 
+-            for medicine
+-            in data.medicines
++                for medicine
++                in data.medicines
+ 
+-        ]
++            ]
+ 
+-    )
++        )
++
++    except IntegrityError:
++
++        db.rollback()
++
++        return JSONResponse(
++            status_code=400,
++            content={
++                "success": False,
++                "message": (
++                    "That prescription could not be saved. Please reload the "
++                    "page and try again."
++                )
++            }
++        )
+ 
+ 
+     # -----------------------------------------------------
+diff --git a/src/routers/profile.py b/src/routers/profile.py
+index ea415b6..e0d880a 100644
+--- a/src/routers/profile.py
++++ b/src/routers/profile.py
+@@ -6,10 +6,14 @@ from sqlalchemy.orm import Session
+ from src.database.connection import get_db
+ from src.models.user import User
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ router = APIRouter()
+ 
+-templates = Jinja2Templates(directory="templates")
++templates = Jinja2Templates(
++    directory=str(TEMPLATES_DIR)
++)
+ 
+ 
+ # ==========================================
+@@ -21,6 +25,7 @@ def profile_page(
+     request: Request,
+     db: Session = Depends(get_db)
+ ):
++
+     # Session se logged-in user ki ID nikalo
+     user_id = request.session.get("user_id")
+ 
+diff --git a/src/routers/screening.py b/src/routers/screening.py
+index 16707b6..acb73ce 100644
+--- a/src/routers/screening.py
++++ b/src/routers/screening.py
+@@ -14,11 +14,17 @@ from fastapi.templating import Jinja2Templates
+ from sqlalchemy.orm import Session
+ 
+ from src.database.connection import get_db
+-from src.pipeline.predict_pipeline import CustomData, PredictPipeline
++from src.pipeline.predict_pipeline import (
++    CustomData,
++    PredictPipeline,
++    model_available,
++)
+ from src.services.screening_service import create_screening
+ 
+ from src.models.doctor import Doctor
+ 
++from src.config import TEMPLATES_DIR
++
+ 
+ # =====================================================
+ # ROUTER
+@@ -32,7 +38,7 @@ router = APIRouter()
+ # =====================================================
+ 
+ templates = Jinja2Templates(
+-    directory="templates"
++    directory=str(TEMPLATES_DIR)
+ )
+ 
+ 
+@@ -43,6 +49,7 @@ def _predict_with_model_or_fallback(
+     cough: str,
+     city: str
+ ):
++
+     try:
+         result, probability = PredictPipeline().predict(
+             CustomData(
+@@ -53,7 +60,8 @@ def _predict_with_model_or_fallback(
+                 city=city
+             ).get_data_as_dataframe()
+         )
+-        return result, float(probability or 0.0)
++        # Third value = "the real trained model produced this".
++        return result, float(probability or 0.0), True
+     except Exception:
+         risk_score = 0
+ 
+@@ -71,8 +79,11 @@ def _predict_with_model_or_fallback(
+             risk_score += 5
+ 
+         result = "Positive" if risk_score >= 60 else "Negative"
+-        probability = min(max(risk_score, 50.0), 96.0)
+-        return result, round(probability, 2)
++
++        # The old code clamped this between 50 and 96, which invented a
++        # "Model confidence: 96.0%" figure that had nothing to do with a real
++        # classifier. Report the rule score honestly instead.
++        return result, round(float(risk_score), 2), False
+ 
+ 
+ @router.get("/predict")
+@@ -85,7 +96,8 @@ def predict_page(request: Request):
+             "result": None,
+             "probability": None,
+             "form_data": None,
+-            "error": None
++            "error": None,
++            "model_used": None
+         }
+     )
+ 
+@@ -108,7 +120,7 @@ def submit_predict(
+     }
+ 
+     try:
+-        result, probability = _predict_with_model_or_fallback(
++        result, probability, model_used = _predict_with_model_or_fallback(
+             age=age,
+             gender=gender,
+             fever=fever,
+@@ -123,7 +135,8 @@ def submit_predict(
+                 "result": result,
+                 "probability": probability,
+                 "form_data": form_data,
+-                "error": None
++                "error": None,
++                "model_used": model_used
+             }
+         )
+     except Exception:
+@@ -135,7 +148,8 @@ def submit_predict(
+                 "result": None,
+                 "probability": None,
+                 "form_data": form_data,
+-                "error": "Prediction could not be completed. Please try again."
++                "error": "Prediction could not be completed. Please try again.",
++                "model_used": None
+             }
+         )
+ 
+@@ -594,10 +608,15 @@ def submit_screening(
+ 
+ 
+     # =================================================
+-    # AI RESPONSE
++    # AI ASSESSMENT
+     # =================================================
++    #
++    # Previously this endpoint never called the AI at all - it always returned
++    # the same generated sentence below, so the "AI screening" was really just
++    # keyword matching. We now ask the LLM first and keep the rule-based
++    # result as a clearly-labelled fallback for when no API key is set.
+ 
+-    ai_response = (
++    rule_based_response = (
+ 
+         f"Based on the symptoms provided, "
+ 
+@@ -611,6 +630,38 @@ def submit_screening(
+ 
+     )
+ 
++    ai_response = rule_based_response
++
++    ai_used = False
++
++
++    try:
++
++        from src.services.llm_service import (
++            generate_screening_assessment
++        )
++
++        assessment = generate_screening_assessment(
++            symptoms
++        )
++
++    except Exception:
++
++        assessment = None
++
++
++    if assessment:
++
++        care_category = assessment["care_category"]
++
++        recommended_specialist = assessment["recommended_specialist"]
++
++        severity = assessment["severity"]
++
++        ai_response = assessment["guidance"]
++
++        ai_used = True
++
+ 
+     # =================================================
+     # SAVE SCREENING IN DATABASE
+@@ -686,7 +737,11 @@ def submit_screening(
+             recommended_specialist,
+ 
+         "severity":
+-            severity
++            severity,
++
++        # True = real AI assessment, False = built-in rule-based fallback
++        "ai_used":
++            ai_used
+ 
+     }
+ 
+diff --git a/src/routers/treatment_review.py b/src/routers/treatment_review.py
+index 63a7615..7b8a3e1 100644
+--- a/src/routers/treatment_review.py
++++ b/src/routers/treatment_review.py
+@@ -1,10 +1,14 @@
+ from fastapi import APIRouter, Depends, Request
+ from fastapi.responses import JSONResponse
++from sqlalchemy.exc import IntegrityError
+ from sqlalchemy.orm import Session
+ from pydantic import BaseModel, Field
+ 
+ from src.database.connection import get_db
+ 
++from src.models.doctor import Doctor
++from src.models.treatment import Treatment
++
+ from src.services.treatment_review_service import (
+     create_treatment_review,
+     get_patient_reviews,
+@@ -71,30 +75,100 @@ def create_review(
+             }
+         )
+ 
+-    review = create_treatment_review(
++    # ---------------------------------------------------------
++    # VALIDATE REFERENCES
++    # ---------------------------------------------------------
++    #
++    # treatment_reviews has foreign keys to treatments, doctors and users.
++    # Previously an unknown treatment_id / doctor_id raised an unhandled
++    # IntegrityError and the endpoint returned a 500 Internal Server Error.
++    # Now it returns a clear 400 the frontend can show.
++
++    if data.treatment_id is not None:
++
++        treatment_exists = (
++            db.query(Treatment.id)
++            .filter(
++                Treatment.id == data.treatment_id,
++                Treatment.patient_id == user_id
++            )
++            .first()
++        )
+ 
+-        db=db,
++        if treatment_exists is None:
++
++            return JSONResponse(
++                status_code=400,
++                content={
++                    "success": False,
++                    "message": (
++                        "That treatment could not be found. It may have been "
++                        "removed - please reload the page and try again."
++                    )
++                }
++            )
++
++    if data.doctor_id is not None:
++
++        doctor_exists = (
++            db.query(Doctor.id)
++            .filter(Doctor.id == data.doctor_id)
++            .first()
++        )
+ 
+-        patient_id=user_id,
++        if doctor_exists is None:
+ 
+-        treatment_id=data.treatment_id,
++            return JSONResponse(
++                status_code=400,
++                content={
++                    "success": False,
++                    "message": "That doctor could not be found."
++                }
++            )
+ 
+-        doctor_id=data.doctor_id,
++    try:
+ 
+-        outcome=data.outcome,
++        review = create_treatment_review(
+ 
+-        current_condition=data.current_condition,
++            db=db,
+ 
+-        experience=data.experience,
++            patient_id=user_id,
+ 
+-        follow_up_preference=data.follow_up_preference,
++            treatment_id=data.treatment_id,
+ 
+-        change_reason=data.change_reason,
++            doctor_id=data.doctor_id,
+ 
+-        rating=data.rating,
++            outcome=data.outcome,
+ 
+-        comment=data.comment
+-    )
++            current_condition=data.current_condition,
++
++            experience=data.experience,
++
++            follow_up_preference=data.follow_up_preference,
++
++            change_reason=data.change_reason,
++
++            rating=data.rating,
++
++            comment=data.comment
++        )
++
++    except IntegrityError:
++
++        # Should be unreachable now that references are validated above, but
++        # never let a database constraint turn into an opaque 500.
++        db.rollback()
++
++        return JSONResponse(
++            status_code=400,
++            content={
++                "success": False,
++                "message": (
++                    "That review could not be saved. Please reload the page "
++                    "and try again."
++                )
++            }
++        )
+ 
+     second_opinion = should_offer_second_opinion(
+         data.outcome,
+diff --git a/src/services/appointment_service.py b/src/services/appointment_service.py
+index 5737003..0abee31 100644
+--- a/src/services/appointment_service.py
++++ b/src/services/appointment_service.py
+@@ -120,6 +120,37 @@ def book_dynamic_appointment(
+         ).total_seconds() / 60
+     )
+ 
++    # Store the human-readable visit type name (e.g. "General Consultation")
++    # rather than the raw id. The column is a VARCHAR, so storing "3" made
++    # every appointment record unreadable and impossible to match against
++    # visit_types.name.
++    visit_type_name = None
++
++    try:
++
++        from src.models.visit_type import VisitType
++
++        visit_type_row = (
++            db.query(VisitType)
++            .filter(VisitType.id == visit_type_id)
++            .first()
++        )
++
++        if visit_type_row is not None:
++
++            visit_type_name = visit_type_row.name
++
++    except Exception:
++
++        visit_type_name = None
++
++    # Fall back to the id if the lookup fails, so booking never breaks.
++    visit_type_value = (
++        visit_type_name
++        if visit_type_name
++        else str(visit_type_id)
++    )
++
+ 
+     appointment = Appointment(
+ 
+@@ -133,7 +164,7 @@ def book_dynamic_appointment(
+ 
+         end_time=end_time,
+ 
+-        visit_type=str(visit_type_id),
++        visit_type=visit_type_value,
+ 
+         duration_minutes=duration,
+ 
+diff --git a/src/services/groq_client.py b/src/services/groq_client.py
+new file mode 100644
+index 0000000..38de175
+--- /dev/null
++++ b/src/services/groq_client.py
+@@ -0,0 +1,81 @@
++"""Shared Groq client that connects lazily and never crashes the app on import.
++
++Why this module exists
++----------------------
++``groq.Groq(api_key=None)`` raises ``GroqError`` immediately, and
++``src/services/llm_service.py`` used to raise ``ValueError`` when
++``GROQ_API_KEY`` was missing. Because both happened at *import* time, a missing
++key took down the entire application: FastAPI could not even start, so pages
++that need no AI at all (login, dashboard, doctors, booking, appointments)
++were unusable too.
++
++This module defers client construction until an AI function is actually
++called, and raises a clear, actionable error at that point instead.
++"""
++
++import os
++
++from dotenv import load_dotenv
++
++load_dotenv()
++
++
++GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
++
++MISSING_KEY_MESSAGE = (
++    "AI features are unavailable because GROQ_API_KEY is not set. "
++    "Create a file named .env in the project root containing "
++    "GROQ_API_KEY=your_key_here and restart the app. "
++    "Free keys: https://console.groq.com/keys"
++)
++
++
++class GroqNotConfigured(RuntimeError):
++    """Raised when an AI feature runs without a configured GROQ_API_KEY."""
++
++
++class LazyGroqClient:
++    """Drop-in stand-in for ``groq.Groq`` that connects on first use.
++
++    Any attribute access (``client.chat``, ``client.audio`` ...) is forwarded to
++    a real client created on demand. If no API key is configured, a
++    ``GroqNotConfigured`` error is raised with a human-readable explanation.
++    """
++
++    def __init__(self, api_key: str | None = None) -> None:
++        self._api_key = (
++            GROQ_API_KEY if api_key is None else (api_key or "").strip()
++        )
++        self._client = None
++
++    @property
++    def configured(self) -> bool:
++        return bool(self._api_key)
++
++    def _connect(self):
++        if not self._api_key:
++            raise GroqNotConfigured(MISSING_KEY_MESSAGE)
++
++        if self._client is None:
++            from groq import Groq  # imported here so a missing SDK is not fatal
++
++            self._client = Groq(api_key=self._api_key)
++
++        return self._client
++
++    def __getattr__(self, name: str):
++        return getattr(self._connect(), name)
++
++    def __repr__(self) -> str:  # pragma: no cover - debugging aid
++        state = "configured" if self.configured else "NOT configured"
++        return f"<LazyGroqClient ({state})>"
++
++
++def get_groq_client(api_key: str | None = None) -> LazyGroqClient:
++    """Return a lazily-connecting Groq client."""
++    return LazyGroqClient(api_key=api_key)
++
++
++def ai_is_configured() -> bool:
++    """True when a Groq API key is present."""
++    return bool(GROQ_API_KEY)
+diff --git a/src/services/injury_service.py b/src/services/injury_service.py
+index c11f51b..624c598 100644
+--- a/src/services/injury_service.py
++++ b/src/services/injury_service.py
+@@ -2,9 +2,10 @@ import os
+ import base64
+ import json
+ 
+-from groq import Groq
+ from dotenv import load_dotenv
+ 
++from src.services.groq_client import get_groq_client
++
+ 
+ # =========================================================
+ # LOAD ENVIRONMENT VARIABLES
+@@ -28,9 +29,10 @@ GROQ_VISION_MODEL = os.getenv(
+ # GROQ CLIENT
+ # =========================================================
+ 
+-client = Groq(
+-    api_key=GROQ_API_KEY
+-)
++# Lazily connected: a missing GROQ_API_KEY must not stop the app from
++# starting, it should only affect the injury-analysis feature.
++
++client = get_groq_client()
+ 
+ 
+ # =========================================================
+diff --git a/src/services/llm_service.py b/src/services/llm_service.py
+index 048e361..54154e0 100644
+--- a/src/services/llm_service.py
++++ b/src/services/llm_service.py
+@@ -1,7 +1,13 @@
+ import os
+ 
+ from dotenv import load_dotenv
+-from groq import Groq
++
++from src.services.groq_client import (
++    GROQ_API_KEY,
++    MISSING_KEY_MESSAGE,
++    GroqNotConfigured,
++    get_groq_client,
++)
+ 
+ 
+ # =========================================================
+@@ -11,27 +17,16 @@ from groq import Groq
+ load_dotenv()
+ 
+ 
+-# =========================================================
+-# GROQ API KEY
+-# =========================================================
+-
+-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+-
+-
+-if not GROQ_API_KEY:
+-
+-    raise ValueError(
+-        "GROQ_API_KEY not found in .env file."
+-    )
+-
+-
+ # =========================================================
+ # GROQ CLIENT
+ # =========================================================
+ 
+-client = Groq(
+-    api_key=GROQ_API_KEY
+-)
++# NOTE: this used to be `Groq(api_key=GROQ_API_KEY)` guarded by a
++# `raise ValueError` at import time. That made a missing key crash the whole
++# application on startup (even non-AI pages). The client now connects lazily,
++# so the app always boots and only AI calls report the missing key.
++
++client = get_groq_client()
+ 
+ 
+ # =========================================================
+@@ -796,4 +791,170 @@ def generate_ai_response(
+         return (
+             "Sorry, I'm having trouble connecting to "
+             "the AI service right now. Please try again."
+-        )
+\ No newline at end of file
++        )
++
++# =========================================================
++# SCREENING ASSESSMENT (AI)
++# =========================================================
++
++# The AI is only allowed to route to specialisations that actually exist in
++# the clinic's `doctors` table, otherwise the "matching doctors" list on the
++# screening result page would be empty.
++ALLOWED_SPECIALISATIONS = [
++    "Cardiology",
++    "Dentistry",
++    "Dermatology",
++    "ENT",
++    "General Medicine",
++    "Gynecology",
++    "Neurology",
++    "Ophthalmology",
++    "Orthopedics",
++    "Pediatrics",
++]
++
++ALLOWED_SEVERITIES = ["Mild", "Moderate", "Urgent"]
++
++
++SCREENING_PROMPT = """
++You are a careful medical triage assistant for Sanjeevani Clinic.
++
++The patient describes their symptoms. Produce a PRELIMINARY triage assessment.
++
++You MUST reply with ONLY a JSON object, no markdown, no extra text:
++
++{
++  "care_category": "<one of the allowed specialisations>",
++  "recommended_specialist": "<short human readable specialist title>",
++  "severity": "<Mild | Moderate | Urgent>",
++  "guidance": "<2 to 4 sentences of safe, general guidance in simple English>"
++}
++
++SAFETY RULES:
++- This is preliminary triage only, never a diagnosis.
++- Do NOT prescribe medicine names or dosages.
++- If red-flag symptoms are described (chest pain, difficulty breathing,
++  fainting, severe bleeding, stroke signs, very high fever, suicidal
++  thoughts), set severity to "Urgent" and clearly advise immediate
++  in-person or emergency care.
++- Otherwise prefer "Mild" or "Moderate". Do not over-use "Urgent".
++
++Care category MUST be exactly one of:
++{specialisations}
++"""
++
++
++def generate_screening_assessment(symptoms: str):
++    """Return an AI triage assessment, or None if AI is unavailable.
++
++    Callers should fall back to their own rule-based assessment when this
++    returns None, and tell the user that the AI was not used.
++    """
++
++    import json
++
++    if not client.configured:
++
++        return None
++
++    prompt = SCREENING_PROMPT.format(
++        specialisations=", ".join(ALLOWED_SPECIALISATIONS)
++    )
++
++    try:
++
++        response = client.chat.completions.create(
++
++            model=MODEL_NAME,
++
++            messages=[
++                {
++                    "role": "system",
++                    "content": prompt
++                },
++                {
++                    "role": "user",
++                    "content": (
++                        "Patient symptoms: "
++                        f"{symptoms}"
++                    )
++                }
++            ],
++
++            temperature=0.2,
++
++            max_tokens=500
++        )
++
++        raw = (
++            response
++            .choices[0]
++            .message
++            .content
++            or ""
++        ).strip()
++
++        # Tolerate ```json fences if the model adds them.
++        if raw.startswith("```"):
++
++            raw = raw.strip("`")
++
++            if raw.lower().startswith("json"):
++
++                raw = raw[4:]
++
++            raw = raw.strip()
++
++        data = json.loads(raw)
++
++    except Exception as e:
++
++        print(f"Screening AI error: {str(e)}")
++
++        return None
++
++    care_category = str(
++        data.get("care_category", "")
++    ).strip()
++
++    severity = str(
++        data.get("severity", "")
++    ).strip().title()
++
++    guidance = str(
++        data.get("guidance", "")
++    ).strip()
++
++    # Reject anything that would break the doctor-matching step.
++    if care_category not in ALLOWED_SPECIALISATIONS:
++
++        return None
++
++    if severity not in ALLOWED_SEVERITIES:
++
++        severity = "Moderate"
++
++    if not guidance:
++
++        return None
++
++    return {
++
++        "care_category":
++            care_category,
++
++        "recommended_specialist":
++            str(
++                data.get(
++                    "recommended_specialist",
++                    "Specialist"
++                )
++            ).strip() or "Specialist",
++
++        "severity":
++            severity,
++
++        "guidance":
++            guidance
++
++    }
+diff --git a/start.bat b/start.bat
+new file mode 100644
+index 0000000..6323269
+--- /dev/null
++++ b/start.bat
+@@ -0,0 +1,23 @@
++@echo off
++REM Start the Sanjeevani Clinic app (Windows).
++cd /d "%~dp0"
++
++if not exist .env (
++    echo No .env found - copying .env.example to .env
++    copy .env.example .env >nul
++    echo Open .env and set DB_PASSWORD ^(and GROQ_API_KEY if you want AI^).
++)
++
++REM Train if the model is missing OR cannot be loaded (scikit-learn pickles
++REM are not portable between scikit-learn versions).
++python -c "import sys; sys.path.insert(0,'.'); from src.pipeline.predict_pipeline import model_available; ok,_ = model_available(); sys.exit(0 if ok else 1)" 2>nul
++if errorlevel 1 (
++    echo Training the screening model ^(missing or incompatible artifacts^)...
++    python train_model.py
++)
++
++echo.
++echo Starting on http://127.0.0.1:8000   ^(press Ctrl+C to stop^)
++echo.
++python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++pause
+diff --git a/start.sh b/start.sh
+new file mode 100755
+index 0000000..2de6b08
+--- /dev/null
++++ b/start.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# Start the Sanjeevani Clinic app (Linux / macOS / Git Bash).
++set -e
++cd "$(dirname "$0")"
++
++if [ ! -f .env ]; then
++  echo "No .env found - copying .env.example to .env"
++  cp .env.example .env
++  echo ">> Open .env and set DB_PASSWORD (and GROQ_API_KEY if you want AI)."
++fi
++
++# Train if the model is missing OR cannot be loaded (scikit-learn pickles are
++# not portable between scikit-learn versions, so a shipped model.pkl can be
++# unusable on your machine until it is retrained).
++if ! python -c "import sys; sys.path.insert(0,'.'); from src.pipeline.predict_pipeline import model_available; ok,_ = model_available(); sys.exit(0 if ok else 1)" 2>/dev/null; then
++  echo "Training the screening model (missing or incompatible artifacts)..."
++  python train_model.py
++fi
++
++echo
++echo "Starting on http://127.0.0.1:8000   (press Ctrl+C to stop)"
++echo
++exec python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+diff --git a/static/style.css b/static/style.css
+index db4a413..6a61303 100644
+--- a/static/style.css
++++ b/static/style.css
+@@ -339,4 +339,35 @@ main { flex: 1; }
+   .reasons { grid-template-columns: 1fr; padding: 10px 24px 60px; }
+   .field-grid { grid-template-columns: 1fr; }
+   .site-header { padding: 20px 24px; }
+-}
+\ No newline at end of file
++}
++/* ------------------------------------------------------------------
++   Covid screening page: shown when the trained ML model could not be
++   loaded (e.g. artifacts saved with a different scikit-learn version),
++   so the result on screen came from the rule-based fallback instead.
++   ------------------------------------------------------------------ */
++.model-warning {
++  margin-top: 18px;
++  padding: 14px 18px;
++  border-radius: 10px;
++  background: #fffbeb;
++  border: 1px solid #fde68a;
++  color: #92400e;
++  font-size: 13.5px;
++  line-height: 1.6;
++}
++
++.model-warning code {
++  background: rgba(0, 0, 0, 0.07);
++  padding: 2px 6px;
++  border-radius: 4px;
++  font-size: 12.5px;
++}
++
++.model-warning pre {
++  background: rgba(0, 0, 0, 0.07);
++  padding: 8px 12px;
++  margin: 8px 0 0;
++  border-radius: 6px;
++  font-size: 12.5px;
++  overflow-x: auto;
++}
+diff --git a/steps.txt b/steps.txt
+index 7dcf3e8..8748534 100644
+--- a/steps.txt
++++ b/steps.txt
+@@ -1,77 +1,558 @@
++========================================================================
++  SANJEEVANI CLINIC  -  COMPLETE SETUP IN VS CODE, START TO FINISH
++========================================================================
+ 
+-venv  ---> Activate 
++  Follow these in order, top to bottom. Every command is typed into the
++  VS Code terminal. After each step there is a "YOU SHOULD SEE" line so
++  you know it worked before moving on.
+ 
+-requirements --> Install 
++  Total time: about 10 minutes.
+ 
+-src ---> package 
++  CONTENTS
++    PART 1  -  Open the project in VS Code
++    PART 2  -  Create the virtual environment (venv)
++    PART 3  -  Install the dependencies
++    PART 4  -  Create the MySQL database
++    PART 5  -  Create your .env file
++    PART 6  -  ML PIPELINE: data ingestion
++    PART 7  -  ML PIPELINE: data transformation
++    PART 8  -  ML PIPELINE: model training
++    PART 9  -  Run the complete project
++    PART 10 -  Log in and use it
++    PART 11 -  Troubleshooting
++    PART 12 -  Project structure reference
+ 
+-src --> logger.py  ---> for logs 
++========================================================================
++  PART 1  -  OPEN THE PROJECT IN VS CODE
++========================================================================
+ 
+-src ---> exception.py ---> for error handling 
++1.1  Unzip the project folder somewhere easy, e.g.
++        C:\Users\YourName\Desktop\sanjeevani_clinic
+ 
+-src ---> utils.py ---> for model import , export and performance evalaution 
++1.2  Open VS Code.
+ 
+-notebook folder --> data folder ---> covid_toy.csv 
++1.3  File  ->  Open Folder...  ->  select the "sanjeevani_clinic" folder.
++     (Open the folder that has main.py directly inside it.)
+ 
+-src ---> compoents ---> __init__.py 
++1.4  Open a terminal inside VS Code:
++        Menu:  Terminal  ->  New Terminal
++     or press  Ctrl + `  (the backtick key, under Esc)
+ 
+-src ----> compoents ---> data_ingestion.py 
++1.5  Check the terminal is in the right folder:
+ 
+-src ---> compoents ---> data_transformation.py 
++        Windows:   dir
++        Mac/Linux: ls
+ 
+-src ---> components ---> model_trainer.py 
++     YOU SHOULD SEE:  main.py, requirements.txt, database_setup.sql, src, templates
+ 
+-src ---> pipeline ---> train_pipeline.py
++     If you do NOT see main.py, you opened the wrong folder.
++     Fix it with:   cd "C:\Users\YourName\Desktop\sanjeevani_clinic"
+ 
++1.6  Check Python is installed (need 3.11 or newer):
+ 
+-src ---> pipeline ---> predict_pipeline.py
++        python --version
+ 
+-Main.py  --> for fastapi backend
++     YOU SHOULD SEE:  Python 3.13.x  (or 3.11 / 3.12)
+ 
+-templates/index.html ---> home page 
+-templates/predict.html ---> form page 
++     If it says "not recognized", install Python from python.org and
++     TICK "Add python.exe to PATH" during installation.
+ 
+-static/style.css 
+ 
+-for running the server on terminal 
++========================================================================
++  PART 2  -  CREATE THE VIRTUAL ENVIRONMENT (venv)
++========================================================================
+ 
+-uvicorn main:app --reload --host 0.0.0.0 --port 8000
++  A venv is a private copy of Python for this project, so its packages
++  never clash with other projects on your PC.
+ 
+-NLP Pretrained folder 
++2.1  Create it:
+ 
+-download_data
++        python -m venv .venv
+ 
+-ner_tagger
++     YOU SHOULD SEE: nothing (it just takes ~20 seconds).
++     A new ".venv" folder appears in the VS Code file list on the left.
+ 
+-embeddings
++2.2  Activate it:
+ 
+-sentiment_analyzer 
++        Windows (PowerShell):   .venv\Scripts\activate
++        Windows (cmd):          .venv\Scripts\activate.bat
++        Mac / Linux:            source .venv/bin/activate
+ 
+-demo.py 
++     YOU SHOULD SEE:  (.venv)  at the very start of your terminal line.
+ 
+-templates ---> pretraine_nlp.html
++     ** This is important. Every step below assumes you can see (.venv). **
++     If you close the terminal, you must activate it again (step 2.2).
+ 
+-Add tools in main.py 
++     If PowerShell refuses with "running scripts is disabled", run this
++     once in that terminal and then repeat step 2.2:
+ 
+-------------------------------------------------------
++        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+ 
+-tool add ---> New folder ---> package ---> modular code logic setup --> test ---> main.py (oruting, render) , templates folder-->html add 
++2.3  Tell VS Code to use this venv:
++        Ctrl + Shift + P  ->  type:  Python: Select Interpreter
++        ->  choose the one showing  .\.venv\Scripts\python.exe
+ 
+-login page / logput page 
+ 
+-Chatbot ---> create in home page ---> prompting with LLM(groq,gemini) 
++========================================================================
++  PART 3  -  INSTALL THE DEPENDENCIES
++========================================================================
+ 
+-Chatbot : hi, what can i help you?
+-you: disease, symptoms ---> recommand --> LLM ---> Suggestion problem ---> safety 
+-you : neurologist --> Availablity slots ---> Random doctor select ---> Timeslot book --> db add and update (sqlite, mysql)
+-User --> Already login 
++3.1  Upgrade pip first (avoids odd install errors):
+ 
+-Mohit Patient ---> First time ---> Stomach Alsar ---> Doctor meeting(Suresh), treatment  
+-Mohit Patient ---> Doctor(Suresh) 
++        python -m pip install --upgrade pip
+ 
+-User ---> Injury photo ---> LLM decide ---> 
+-Normal injury --> OPD ---> OPD DB --> Doctos list --> Doctor Assign with their avilable time 
+-Imjury specific ---> LLM see which body part effect ---> Doctor suggest ---> booking 
++3.2  Install everything the project needs:
+ 
++        pip install -r requirements.txt
+ 
+-User ALready login ---> User HI , LLM db--> summmmary pick --> 
+\ No newline at end of file
++     YOU SHOULD SEE: a long list ending with
++                     "Successfully installed fastapi-... sqlalchemy-... pymysql-... cryptography-..."
++     Takes 2-3 minutes. The yellow "new release of pip" notice is harmless.
++
++     NOTE: "cryptography" is in that list on purpose. MySQL 8 needs it, and
++     without it the app silently falls back to SQLite. Do not remove it.
++
++3.3  Confirm it worked:
++
++        python -c "import fastapi, sqlalchemy, pymysql, cryptography; print('dependencies OK')"
++
++     YOU SHOULD SEE:  dependencies OK
++
++
++========================================================================
++  PART 4  -  CREATE THE MYSQL DATABASE
++========================================================================
++
++4.1  Make sure MySQL is running.
++
++        Windows: open "Services" and check MySQL80 is Running, or run
++                 (as Administrator):   net start MySQL80
++        Mac:     brew services start mysql
++        Linux:   sudo systemctl start mysql
++
++4.2  Open MySQL Workbench and connect to your local instance
++     (usually "Local instance MySQL80", user root).
++
++4.3  In Workbench:  File  ->  Open SQL Script...
++     -> choose   database_setup.sql   from this project folder.
++
++4.4  Run the whole script:
++        Press the lightning-bolt icon  (or Ctrl + Shift + Enter).
++     If Workbench asks, pick "Execute all statements".
++
++     YOU SHOULD SEE: in the Output panel, no red errors, and at the bottom
++     a result grid like this:
++
++        what               total   note
++        users              2       expect 2
++        doctors            20      expect 20
++        doctor_schedules   140     expect 140
++        visit_types        5       expect 5
++        appointments       0       starts at 0
++        TABLES IN DB       15      expect 15
++
++     If those numbers match, your database is ready.
++
++     The script already created two logins for you:
++        patient@demo.com  /  Demo@1234
++        admin@demo.com    /  Admin@1234
++
++4.5  Know your MySQL password ---- you will need it in the next step.
++     If you use a special app user instead of root, create it now in
++     Workbench:
++
++        CREATE USER 'sanjeevani'@'localhost' IDENTIFIED BY 'YourPassword';
++        GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'sanjeevani'@'localhost';
++        FLUSH PRIVILEGES;
++
++
++========================================================================
++  PART 5  -  CREATE YOUR .env FILE
++========================================================================
++
++  The .env file holds your passwords. It is NOT uploaded to git.
++
++5.1  Copy the template:
++
++        Windows:   copy .env.example .env
++        Mac/Linux: cp .env.example .env
++
++5.2  Open it in VS Code:
++
++        code .env
++     or just double-click .env in the file list on the left.
++
++5.3  Fill in your MySQL password (this is the main thing to change):
++
++        DB_USER=root
++        DB_PASSWORD=your_actual_mysql_password_here
++        DB_HOST=localhost
++        DB_PORT=3306
++        DB_NAME=sanjeevani_clinic
++        USE_SQLITE=false
++
++     IMPORTANT:  USE_SQLITE=false  (or delete that line).
++     If it is true, the app ignores MySQL completely.
++
++5.4  Optional - turn on the AI features. Leave it blank if you don't have
++     a key yet; the app works fine without it.
++
++        GROQ_API_KEY=
++
++5.5  Set a session secret (any long random string):
++
++        SESSION_SECRET=change_this_to_something_long_and_random
++
++5.6  Save the file (Ctrl + S).
++
++5.7  Test the connection BEFORE running the app:
++
++        python -c "import pymysql,os;from dotenv import load_dotenv;load_dotenv();c=pymysql.connect(host=os.getenv('DB_HOST'),user=os.getenv('DB_USER'),password=os.getenv('DB_PASSWORD'),database=os.getenv('DB_NAME'));print('MySQL connection OK');c.close()"
++
++     YOU SHOULD SEE:  MySQL connection OK
++
++     If it fails, do NOT continue ---- fix it now using PART 11. If you
++     continue, the app will quietly run on SQLite instead and it will look
++     like your data vanished.
++
++
++========================================================================
++  PART 6  -  ML PIPELINE: DATA INGESTION
++========================================================================
++
++  This is the ML side of the project (the /predict Covid screening page).
++  Three stages: ingestion -> transformation -> training.
++
++  Already-done models are included in the artifacts/ folder, so this part
++  is optional if you just want to run the website. Do it anyway the first
++  time so you see the whole pipeline work.
++
++6.1  Run it:
++
++        python -m src.components.data_ingestion
++
++     YOU SHOULD SEE: many "INFO ... " log lines, and finally
++
++        Data Ingestion started....
++        Data read successfullywith shape: (100, 6)
++        Performing train-test-split
++        Data Ingestion completed successfully...
++
++     WHAT IT DID: read notebook/data/covid_toy.csv (100 rows), split it
++     80/20 into a train and a test set, and wrote:
++
++        artifacts/raw.csv     artifacts/train.csv     artifacts/test.csv
++
++6.2  Check the files exist:
++
++        Windows:   dir artifacts
++        Mac/Linux: ls artifacts
++
++     YOU SHOULD SEE:  raw.csv  test.csv  train.csv
++
++
++========================================================================
++  PART 7  -  ML PIPELINE: DATA TRANSFORMATION
++========================================================================
++
++7.1  Run it:
++
++        python -m src.components.data_transformation
++
++     YOU SHOULD SEE:
++
++        Train and test data loaded for transformation
++        preprocessor object created successfully...
++        Applying preprocessing oon train and test data
++        Object saved successfully at : <...>/artifacts/preprocessor.pkl
++
++     WHAT IT DID: filled missing numbers with the mean, encoded "cough"
++     as an ordered value (Mild < Strong), one-hot encoded "gender" and
++     "city", then saved that whole recipe to artifacts/preprocessor.pkl
++     so the prediction page applies the exact same steps later.
++
++7.2  Check:
++
++        Windows:   dir artifacts
++        Mac/Linux: ls artifacts
++
++     YOU SHOULD SEE:  preprocessor.pkl  is now there too.
++
++
++========================================================================
++  PART 8  -  ML PIPELINE: MODEL TRAINING
++========================================================================
++
++8.1  Run it:
++
++        python -m src.pipeline.train_pipeline
++
++     YOU SHOULD SEE: accuracy lines for four models and then
++
++        LogisiticRegression -> Test Accuracy: 0.35
++        DecisionTree        -> Test Accuracy: 0.35
++        RandomForest        -> Test Accuracy: 0.35
++        KNeighboursClassifier -> Test Accuracy: 0.40
++        Best Model saved as model.pkl ::: KNeighboursClassifier
++        TRAINING PIPELINE COMPLETED | BEST MODEL: KNeighboursClassifier, Accuracy: 0.40
++
++     WHAT IT DID: tried 4 classifiers, kept the most accurate one, and saved
++     it to artifacts/model.pkl. The /predict page loads this file.
++
++8.2  Check:
++
++        Windows:   dir artifacts
++        Mac/Linux: ls artifacts
++
++     YOU SHOULD SEE:  model.pkl  and  preprocessor.pkl
++
++     NOTE: 40% accuracy is EXPECTED. covid_toy.csv is a 100-row practice
++     dataset, not real clinical data. This demonstrates the ML plumbing;
++     it is not a medical test.
++
++     ALTERNATIVE: steps 6, 7 and 8 in a single command:
++        python train_model.py
++
++8.3  WHY YOU SHOULD REALLY DO THIS STEP
++
++     A file saved by scikit-learn (model.pkl / preprocessor.pkl) is NOT
++     portable between scikit-learn versions. The model.pkl shipped in this
++     project was saved with one version; if your pip installs a different
++     one, loading it fails.
++
++     If that happens, the /predict page now shows a yellow warning box
++     saying the ML model could not be loaded, instead of quietly showing a
++     rule-based number labelled "Model confidence".
++
++     Retraining (step 8.1) always fixes it, because then the model is saved
++     with YOUR installed version. It takes a few seconds.
++
++     start.sh / start.bat also do this automatically: if the model cannot be
++     loaded, they run train_model.py before starting the server.
++
++
++========================================================================
++  PART 9  -  RUN THE COMPLETE PROJECT
++========================================================================
++
++9.1  Start the web server (make sure (.venv) is still showing):
++
++        python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++
++     YOU SHOULD SEE:
++
++        INFO:     Started server process [1234]
++        INFO:     Application startup complete.
++        INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
++
++     Leave this terminal running. It IS the website.
++
++     If you see the big "ACTIVE DATABASE: SQLite" warning block, your MySQL
++     settings are wrong ---- go to PART 11.
++
++9.2  Open your browser at:
++
++        http://127.0.0.1:8000
++
++9.3  FIRST - check the health page:
++
++        http://127.0.0.1:8000/health
++
++     YOU SHOULD SEE:
++
++        {
++          "status": "healthy",
++          "database": "ready",
++          "database_backend": "mysql",
++          "database_target": "MySQL (localhost:3306/sanjeevani_clinic)",
++          "ai_features": "disabled (GROQ_API_KEY not set)"
++        }
++
++     The important line is "database_backend": "mysql".
++     If it says "sqlite", you are NOT on MySQL. Fix it (PART 11) before
++     going further.
++
++
++========================================================================
++  PART 10  -  LOG IN AND USE IT
++========================================================================
++
++10.1  Click "Login" and sign in with:
++
++         patient@demo.com   /   Demo@1234
++
++      (Or click "Sign up" to make your own account.)
++
++10.2  Things to try, in this order, to prove everything works:
++
++        [ ] Doctors        -> 20 doctors listed
++        [ ] Click a doctor -> profile page opens
++        [ ] Book Appointment -> pick a date -> time slots appear -> book
++        [ ] My Appointments -> your booking is listed
++        [ ] Reschedule      -> change the date/time
++        [ ] Cancel          -> status becomes CANCELLED
++        [ ] Health Screening -> type symptoms, get a care category
++        [ ] Covid Screening (/predict) -> fill the form, get a result
++        [ ] Chatbot         -> send a message
++        [ ] Medical Reports -> upload a PDF
++        [ ] Profile         -> edit and save
++        [ ] Notifications   -> opens without error
++
++10.3  Confirm the data really landed in MySQL. In MySQL Workbench:
++
++         USE sanjeevani_clinic;
++         SELECT id, appointment_date, start_time, end_time,
++                visit_type, status, payment_amount
++         FROM appointments;
++
++      YOU SHOULD SEE: your booked appointment, with visit_type saving as
++      "General Consultation" (not a number like "1").
++
++10.4  To stop the server:  click the terminal and press  Ctrl + C
++
++
++========================================================================
++  PART 11  -  TROUBLESHOOTING
++========================================================================
++
++  START HERE if something breaks: read the VS Code terminal. The app now
++  prints the exact reason it could not reach MySQL.
++
++  +----------------------------------------------------------------------+
++  | "ACTIVE DATABASE: SQLite"  warning block in the terminal             |
++  +----------------------------------------------------------------------+
++  The app could not reach MySQL, so it quietly used a local file instead.
++  The line right below says why:
++
++    "Reason for fallback: MySQL connection failed (...) -- <REASON>"
++
++      REASON says                                        ->  DO THIS
++      ----------------------------------------------------------------
++      "MySQL rejected the username or password"          ->  Fix DB_USER / DB_PASSWORD in .env
++      "Nothing is listening on that MySQL host/port"     ->  Start MySQL (4.1), or fix DB_PORT
++      "The database 'x' is missing, or user 'y' has       ->  Re-run database_setup.sql,
++        no privileges on it"                                 or GRANT privileges (4.5)
++      "'cryptography' package is required for             ->  pip install cryptography
++        sha256_password or caching_sha2_password"
++      "user authenticates via the operating-system        ->  Create a password user (4.5)
++        socket (auth_socket)"
++      "Could not reach the MySQL server"                 ->  MySQL is not running
++
++  +----------------------------------------------------------------------+
++  | Other common errors                                                  |
++  +----------------------------------------------------------------------+
++
++  "'python' is not recognized"
++     ->  Try  py -3.13  instead of python, or reinstall Python with
++         "Add python.exe to PATH" ticked.
++
++  "No module named 'fastapi'" / "'uvicorn' is not recognized"
++     ->  Your venv is not active. You must see (.venv) in the terminal.
++         Re-run step 2.2.
++
++  "running scripts is disabled on this system"  (PowerShell)
++     ->  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
++         then activate again.
++
++  "Access denied for user 'root'@'localhost'"
++     ->  Wrong DB_PASSWORD in .env. This is your MySQL password, not
++         your PC login password.
++
++  "Can't connect to MySQL server on 'localhost'"
++     ->  MySQL service is not running. See 4.1.
++
++  "Unknown database 'sanjeevani_clinic'"
++     ->  You did not run database_setup.sql, or you are connected to a
++         different MySQL server. Go back to PART 4.
++
++  jinja2.exceptions.TemplateNotFound
++     ->  You started uvicorn from the wrong folder. cd into the folder
++         that contains main.py and start again.
++
++  "Port 8000 is already in use"
++     ->  Use a different port:  --port 8001
++         then open http://127.0.0.1:8001
++         (on Windows:  netstat -ano | findstr :8000  to see what holds it)
++
++  AI pages say "not enabled"
++     ->  GROQ_API_KEY is blank in .env. The app is fine; only the AI
++         features are off. Add a free key from console.groq.com/keys.
++
++  Medical report upload says OCR failed
++     ->  Tesseract is a separate program, not a pip package. Text and
++         normal PDFs work without it.
++
++  +----------------------------------------------------------------------+
++  | Start completely over                                               |
++  +----------------------------------------------------------------------+
++  Rebuild the database:  re-run database_setup.sql in Workbench.
++  Rebuild the venv:
++        Windows:   rmdir /s /q .venv
++        Mac/Linux: rm -rf .venv
++  then repeat PART 2 and PART 3.
++  Retrain the model:     python train_model.py
++
++
++========================================================================
++  PART 12  -  PROJECT STRUCTURE REFERENCE
++========================================================================
++
++  ROOT FILES
++    main.py                 -> FastAPI app, entry point, mounts all routers
++    database_setup.sql      -> MySQL schema + seed data (PART 4)
++    steps.txt               -> this file
++    README.md               -> project overview
++    MYSQL_SETUP.md          -> extra MySQL help
++    requirements.txt        -> Python dependencies (PART 3)
++    .env.example            -> template for your .env (PART 5)
++    start.sh / start.bat    -> one-command launchers
++    train_model.py          -> runs the full ML pipeline in one go
++    seed_sqlite_demo.py     -> only for the SQLite fallback route
++
++  src/
++    config.py               -> all absolute paths, one place
++    database/connection.py  -> MySQL engine + session, SQLite fallback
++    models/                 -> 15 SQLAlchemy models (tables)
++    schemas/                -> Pydantic request/response models
++    security/password.py    -> Argon2 password hashing
++    services/               -> business logic (appointments, doctors, ...)
++    routers/                -> HTTP routes (auth, doctor, appointment, ...)
++    components/
++      data_ingestion.py       -> PART 6
++      data_transformation.py  -> PART 7
++      model_trainer.py        -> used by PART 8
++    pipeline/
++      train_pipeline.py       -> PART 8 entry point (all 3 stages)
++      predict_pipeline.py     -> loads model.pkl for the /predict page
++    exception.py            -> custom error handling
++    logger.py               -> logging setup
++    utils.py                -> save/load pickle, evaluate models
++
++  OTHER FOLDERS
++    templates/              -> 24 Jinja2 HTML pages
++    static/style.css        -> stylesheet
++    notebook/data/          -> covid_toy.csv (training data, 100 rows)
++    artifacts/              -> model.pkl, preprocessor.pkl, train/test/raw csv
++    uploads/medical_reports/-> uploaded patient documents
++    logs/                   -> app logs (created at runtime)
++    _deprecated/            -> unused backup files, safe to delete
++
++  USEFUL URLS while running
++    http://127.0.0.1:8000          -> home page
++    http://127.0.0.1:8000/login    -> login
++    http://127.0.0.1:8000/health   -> database + AI status
++    http://127.0.0.1:8000/docs     -> interactive API documentation
++
++  RUN COMMANDS CHEAT SHEET
++    activate venv      :  .venv\Scripts\activate        (source .venv/bin/activate)
++    install deps       :  pip install -r requirements.txt
++    ML: ingestion      :  python -m src.components.data_ingestion
++    ML: transform      :  python -m src.components.data_transformation
++    ML: train          :  python -m src.pipeline.train_pipeline
++    ML: all in one     :  python train_model.py
++    run website        :  python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
++    stop website       :  Ctrl + C
++
++========================================================================
++  END
++========================================================================
+diff --git a/templates/predict.html b/templates/predict.html
+index 88b8a1d..6e50ecd 100644
+--- a/templates/predict.html
++++ b/templates/predict.html
+@@ -89,10 +89,32 @@
+               {% if result == 'Positive' %}Likely Covid Positive{% else %}Likely Covid Negative{% endif %}
+             </p>
+             <p class="result-sub">
++              {% if model_used %}
+               Model confidence: {{ probability }}% — this is a screening estimate, please consult the doctor for confirmation.
++              {% else %}
++              Rule-based risk points: {{ probability|int }} of 110 (higher = more risk factors) — this is not a model output.
++              {% endif %}
+             </p>
+           </div>
+         </div>
++
++        <!--
++          Say plainly when the trained model was NOT used. Previously this
++          page silently substituted a rule-based score and still labelled it
++          "Model confidence", which was misleading - a scikit-learn pickle
++          saved with one version can fail to load with another.
++        -->
++        {% if not model_used %}
++        <div class="model-warning">
++          <strong>The trained ML model could not be loaded</strong>, so the result
++          above comes from a built-in rule-based estimate instead.
++          <br />
++          This usually means the files in <code>artifacts/</code> were saved with a
++          different scikit-learn version than the one installed. Fix it by
++          retraining &mdash; it takes a few seconds:
++          <pre>python train_model.py</pre>
++        </div>
++        {% endif %}
+         {% endif %}
+       </div>
+     </div>
+diff --git a/templates/screening.html b/templates/screening.html
+index 0bea8f6..dd7c855 100644
+--- a/templates/screening.html
++++ b/templates/screening.html
+@@ -292,6 +292,33 @@
+            SEVERITY
+         ===================================================== */
+ 
++        .ai-note {
++            margin-top: 12px;
++            padding: 10px 14px;
++            border-radius: 8px;
++            font-size: 13px;
++            line-height: 1.5;
++        }
++
++        .ai-note-on {
++            background: #ecfdf5;
++            color: #065f46;
++            border: 1px solid #a7f3d0;
++        }
++
++        .ai-note-off {
++            background: #fffbeb;
++            color: #92400e;
++            border: 1px solid #fde68a;
++        }
++
++        .ai-note code {
++            background: rgba(0,0,0,0.07);
++            padding: 1px 5px;
++            border-radius: 4px;
++            font-size: 12px;
++        }
++
+         .severity {
+ 
+             display: inline-block;
+@@ -783,6 +810,36 @@
+                 </div>
+ 
+ 
++                <!--
++
++                    Be explicit about whether this came from the AI or from the
++                    built-in keyword rules. Silently showing canned text as if
++                    it were an AI assessment was misleading.
++
++                -->
++
++                {% if result.ai_used %}
++
++                <p class="ai-note ai-note-on">
++
++                    Assessed by the AI assistant.
++
++                </p>
++
++                {% else %}
++
++                <p class="ai-note ai-note-off">
++
++                    AI assistant is not enabled, so this result comes
++                    from the clinic's built-in symptom rules. To turn on
++                    AI assessments, add <code>GROQ_API_KEY</code> to your
++                    <code>.env</code> file and restart the app.
++
++                </p>
++
++                {% endif %}
++
++
+                 <!-- DISCLAIMER -->
+ 
+                 <div class="disclaimer">
+diff --git a/train_model.py b/train_model.py
+new file mode 100644
+index 0000000..688dbc6
+--- /dev/null
++++ b/train_model.py
+@@ -0,0 +1,71 @@
++"""Rebuild the ML artifacts used by the /predict (Covid screening) page.
++
++The app reads ``artifacts/model.pkl`` and ``artifacts/preprocessor.pkl``. Those
++files are git-ignored, so a fresh clone has none and the prediction page used to
++silently fall back to a hand-written scoring rule while still displaying a
++"Model confidence" percentage.
++
++Run this once after cloning (it takes a few seconds):
++
++    python train_model.py
++
++It is also safe to run again at any time.
++"""
++
++import sys
++from pathlib import Path
++
++BASE_DIR = Path(__file__).resolve().parent
++sys.path.insert(0, str(BASE_DIR))
++
++from src.components.data_ingestion import DataIngestion
++from src.components.data_transformation import DataTransformation
++from src.components.model_trainer import ModelTrainer
++
++
++def main() -> int:
++    print("=" * 70)
++    print("Training the Covid screening model")
++    print("=" * 70)
++
++    print("\n[1/3] Data ingestion ...")
++    train_path, test_path = DataIngestion().initiate_data_ingestion()
++    print(f"      train: {train_path}")
++    print(f"      test : {test_path}")
++
++    print("\n[2/3] Data transformation ...")
++    train_arr, test_arr, preprocessor_path = (
++        DataTransformation().initiate_data_transformation(
++            train_path, test_path
++        )
++    )
++    print(f"      preprocessor saved: {preprocessor_path}")
++
++    print("\n[3/3] Model training ...")
++    best_name, best_score = ModelTrainer().initiate_model_trainer(
++        train_arr, test_arr
++    )
++
++    print("\n" + "=" * 70)
++    print(f"Best model : {best_name}")
++    print(f"Accuracy   : {float(best_score):.4f}")
++    print(
++        "Artifacts  : "
++        f"{BASE_DIR / 'artifacts' / 'model.pkl'} , "
++        f"{BASE_DIR / 'artifacts' / 'preprocessor.pkl'}"
++    )
++    print("=" * 70)
++
++    if float(best_score) < 0.7:
++        print(
++            "\nNOTE: accuracy is low. That is expected here - "
++            "notebook/data/covid_toy.csv is a tiny 100-row practice "
++            "dataset, not real clinical data. Do not treat this model's "
++            "output as a medical test."
++        )
++
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

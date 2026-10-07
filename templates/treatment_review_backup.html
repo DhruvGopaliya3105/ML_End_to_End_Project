@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Doctor Feedback | Sanjeevani Clinic</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .top h1 {
+            font-size: 32px;
+        }
+
+        .back {
+            text-decoration: none;
+            color: #2563eb;
+            font-weight: bold;
+        }
+
+        .card {
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 7px;
+            font-weight: bold;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .rating {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .rating label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .rating input {
+            margin-right: 4px;
+        }
+
+        .submit-btn {
+            margin-top: 25px;
+            border: none;
+            padding: 13px 24px;
+            border-radius: 9px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .review {
+            padding: 18px;
+            border-radius: 12px;
+            background: #f8fafc;
+            margin-top: 15px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .stars {
+            color: #f59e0b;
+            font-size: 18px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #e0f2fe;
+            color: #0369a1;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .empty {
+            color: #6b7280;
+            padding: 15px 0;
+        }
+
+        @media(max-width:700px) {
+
+            .top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="top">
+
+        <h1>
+            Doctor Feedback ⭐
+        </h1>
+
+        <a
+            href="/dashboard"
+            class="back"
+        >
+            ← Dashboard
+        </a>
+
+    </div>
+
+
+    <!-- FEEDBACK FORM -->
+
+    <div class="card">
+
+        <h2>
+            Share Your Experience
+        </h2>
+
+        <form
+            method="post"
+            action="/treatment-review/submit"
+        >
+
+
+            <label>
+                Doctor
+            </label>
+
+            <select
+                name="doctor_id"
+                required
+            >
+
+                <option value="">
+                    Select Doctor
+                </option>
+
+                {% for doctor in doctors %}
+
+                <option value="{{ doctor.id }}">
+
+                    {{ doctor.name }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+
+
+            <label>
+                Rating
+            </label>
+
+            <div class="rating">
+
+                <label>
+                    <input
+                        type="radio"
+                        name="rating"
+                        value="1"
+                        required
+                    >
+                    ⭐ 1
+                </label>
+
+                <label>
+                    <input
+                        type="radio"
+                        name="rating"
+                        value="2"
+                    >
+                    ⭐⭐ 2
+                </label>
+
+                <label>
+                    <input
+                        type="radio"
+                        name="rating"
+                        value="3"
+                    >
+                    ⭐⭐⭐ 3
+                </label>
+
+                <label>
+                    <input
+                        type="radio"
+                        name="rating"
+                        value="4"
+                    >
+                    ⭐⭐⭐⭐ 4
+                </label>
+
+                <label>
+                    <input
+                        type="radio"
+                        name="rating"
+                        value="5"
+                    >
+                    ⭐⭐⭐⭐⭐ 5
+                </label>
+
+            </div>
+
+
+
+            <label>
+                Treatment Progress
+            </label>
+
+            <select
+                name="outcome"
+                required
+            >
+
+                <option value="">
+                    Select Progress
+                </option>
+
+                <option value="Improved">
+                    Improved
+                </option>
+
+                <option value="No Improvement">
+                    No Improvement
+                </option>
+
+                <option value="Condition Worse">
+                    Condition Worse
+                </option>
+
+            </select>
+
+
+
+            <label>
+                Current Condition
+            </label>
+
+            <textarea
+                name="current_condition"
+                placeholder="Describe your current condition..."
+            ></textarea>
+
+
+
+            <label>
+                Treatment Experience
+            </label>
+
+            <textarea
+                name="experience"
+                placeholder="How was your treatment experience?"
+            ></textarea>
+
+
+
+            <label>
+                Follow-up Preference
+            </label>
+
+            <select
+                name="follow_up_preference"
+            >
+
+                <option value="">
+                    Select
+                </option>
+
+                <option value="Continue treatment">
+                    Continue treatment
+                </option>
+
+                <option value="Need doctor review">
+                    Need doctor review
+                </option>
+
+                <option value="Need urgent review">
+                    Need urgent review
+                </option>
+
+            </select>
+
+
+
+            <label>
+                Reason / Change
+            </label>
+
+            <textarea
+                name="change_reason"
+                placeholder="Any change in symptoms or treatment..."
+            ></textarea>
+
+
+
+            <label>
+                Additional Feedback
+            </label>
+
+            <textarea
+                name="comment"
+                placeholder="Write your feedback..."
+            ></textarea>
+
+
+
+            <button
+                type="submit"
+                class="submit-btn"
+            >
+                Submit Feedback
+            </button>
+
+
+        </form>
+
+    </div>
+
+
+
+    <!-- HISTORY -->
+
+    <div class="card">
+
+        <h2>
+            My Previous Feedback
+        </h2>
+
+
+        {% if reviews %}
+
+
+            {% for review in reviews %}
+
+            <div class="review">
+
+                <div class="review-header">
+
+                    <strong>
+                        Doctor ID: {{ review.doctor_id }}
+                    </strong>
+
+                    <span class="stars">
+
+                        {% for i in range(review.rating or 0) %}
+                            ⭐
+                        {% endfor %}
+
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <span class="badge">
+                        {{ review.outcome }}
+                    </span>
+
+                </div>
+
+
+                {% if review.current_condition %}
+
+                <p style="margin-top:12px;">
+                    <strong>
+                        Current Condition:
+                    </strong>
+
+                    {{ review.current_condition }}
+
+                </p>
+
+                {% endif %}
+
+
+                {% if review.experience %}
+
+                <p style="margin-top:8px;">
+
+                    <strong>
+                        Experience:
+                    </strong>
+
+                    {{ review.experience }}
+
+                </p>
+
+                {% endif %}
+
+
+                {% if review.comment %}
+
+                <p style="margin-top:8px;">
+
+                    <strong>
+                        Feedback:
+                    </strong>
+
+                    {{ review.comment }}
+
+                </p>
+
+                {% endif %}
+
+
+            </div>
+
+            {% endfor %}
+
+
+        {% else %}
+
+            <p class="empty">
+                No feedback submitted yet.
+            </p>
+
+        {% endif %}
+
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>

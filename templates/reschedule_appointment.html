@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Reschedule Appointment</title>
+
+
+    <style>
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background: #f5f7fb;
+
+            margin: 0;
+
+            padding: 40px;
+
+        }
+
+
+        .container {
+
+            max-width: 600px;
+
+            margin: auto;
+
+            background: white;
+
+            padding: 30px;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0, 0, 0, 0.08);
+
+        }
+
+
+        h1 {
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .info {
+
+            background: #f1f5f9;
+
+            padding: 15px;
+
+            border-radius: 8px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .form-group {
+
+            margin-bottom: 18px;
+
+        }
+
+
+        label {
+
+            display: block;
+
+            font-weight: bold;
+
+            margin-bottom: 7px;
+
+        }
+
+
+        input {
+
+            width: 100%;
+
+            padding: 10px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #ccc;
+
+            border-radius: 6px;
+
+        }
+
+
+        button {
+
+            width: 100%;
+
+            padding: 12px;
+
+            border: none;
+
+            border-radius: 6px;
+
+            background: #2563eb;
+
+            color: white;
+
+            font-size: 16px;
+
+            cursor: pointer;
+
+        }
+
+
+        button:hover {
+
+            background: #1d4ed8;
+
+        }
+
+
+        .error {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            padding: 12px;
+
+            border-radius: 6px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .success {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+            padding: 12px;
+
+            border-radius: 6px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .back {
+
+            display: block;
+
+            text-align: center;
+
+            margin-top: 15px;
+
+            text-decoration: none;
+
+            color: #2563eb;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <h1>
+
+        Reschedule Appointment
+
+    </h1>
+
+
+    <!-- =====================================
+         ERROR MESSAGE
+    ====================================== -->
+
+    {% if error %}
+
+        <div class="error">
+
+            {{ error }}
+
+        </div>
+
+    {% endif %}
+
+
+
+    <!-- =====================================
+         APPOINTMENT EXISTS
+    ====================================== -->
+
+    {% if appointment %}
+
+
+        <!-- =================================
+             CURRENT APPOINTMENT INFORMATION
+        ================================== -->
+
+        <div class="info">
+
+
+            <p>
+
+                <strong>
+                    Doctor:
+                </strong>
+
+
+                {% if appointment.doctor %}
+
+                    {{ appointment.doctor.name }}
+
+                {% else %}
+
+                    Doctor
+
+                {% endif %}
+
+            </p>
+
+
+
+            <p>
+
+                <strong>
+                    Current Date:
+                </strong>
+
+
+                {{ appointment.appointment_date }}
+
+            </p>
+
+
+
+            <p>
+
+                <strong>
+                    Current Time:
+                </strong>
+
+
+                {{ appointment.start_time }}
+
+                -
+
+                {{ appointment.end_time }}
+
+            </p>
+
+
+        </div>
+
+
+
+        <!-- =================================
+             RESCHEDULE FORM
+        ================================== -->
+
+        <form
+            method="POST"
+            action="/appointments/{{ appointment.id }}/reschedule"
+        >
+
+
+            <!-- =============================
+                 NEW DATE
+            ============================== -->
+
+            <div class="form-group">
+
+
+                <label
+                    for="appointment_date"
+                >
+
+                    New Appointment Date
+
+                </label>
+
+
+                <input
+
+                    type="date"
+
+                    id="appointment_date"
+
+                    name="appointment_date"
+
+                    required
+
+                >
+
+            </div>
+
+
+
+            <!-- =============================
+                 NEW START TIME
+            ============================== -->
+
+            <div class="form-group">
+
+
+                <label
+                    for="start_time"
+                >
+
+                    New Start Time
+
+                </label>
+
+
+                <input
+
+                    type="time"
+
+                    id="start_time"
+
+                    name="start_time"
+
+                    required
+
+                >
+
+            </div>
+
+
+
+            <!-- =============================
+                 NEW END TIME
+            ============================== -->
+
+            <div class="form-group">
+
+
+                <label
+                    for="end_time"
+                >
+
+                    New End Time
+
+                </label>
+
+
+                <input
+
+                    type="time"
+
+                    id="end_time"
+
+                    name="end_time"
+
+                    required
+
+                >
+
+            </div>
+
+
+
+            <!-- =============================
+                 CONFIRM BUTTON
+            ============================== -->
+
+            <button
+                type="submit"
+            >
+
+                Confirm Reschedule
+
+            </button>
+
+
+        </form>
+
+
+    {% else %}
+
+
+        <!-- =============================
+             APPOINTMENT NOT FOUND
+        ============================== -->
+
+        <div class="error">
+
+            Appointment not found.
+
+        </div>
+
+
+    {% endif %}
+
+
+
+    <!-- =====================================
+         BACK BUTTON
+    ====================================== -->
+
+    <a
+        href="/appointments"
+        class="back"
+    >
+
+        ← Back to My Appointments
+
+    </a>
+
+
+</div>
+
+
+</body>
+
+</html>

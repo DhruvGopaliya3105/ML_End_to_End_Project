@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Doctor Feedback | Sanjeevani Healthcare
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f0fdfa,
+                    #f8fafc,
+                    #ecfdf5
+                );
+
+            color: #334155;
+
+        }
+
+
+        .container {
+
+            width: 100%;
+
+            max-width: 1050px;
+
+            margin: 0 auto;
+
+            padding: 35px 20px 60px;
+
+        }
+
+
+        .back {
+
+            display: inline-block;
+
+            margin-bottom: 20px;
+
+            color: #0f766e;
+
+            text-decoration: none;
+
+            font-weight: 700;
+
+        }
+
+
+        .main-card {
+
+            background: white;
+
+            border-radius: 24px;
+
+            padding: 35px;
+
+            box-shadow:
+                0 15px 45px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.10
+                );
+
+            border:
+                1px solid #ccfbf1;
+
+        }
+
+
+        h1 {
+
+            margin: 0;
+
+            color: #0f766e;
+
+            font-size: 34px;
+
+        }
+
+
+        .subtitle {
+
+            margin-top: 8px;
+
+            color: #64748b;
+
+            font-size: 16px;
+
+            line-height: 1.6;
+
+        }
+
+
+        /* ==================================================
+           DOCTOR APPOINTMENT CARDS
+        ================================================== */
+
+        .section-title {
+
+            margin-top: 35px;
+
+            margin-bottom: 15px;
+
+            color: #0f172a;
+
+            font-size: 22px;
+
+        }
+
+
+        .doctor-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(300px, 1fr)
+                );
+
+            gap: 18px;
+
+        }
+
+
+        .doctor-card {
+
+            position: relative;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #ffffff,
+                    #f8fffd
+                );
+
+            border:
+                1px solid #d1fae5;
+
+            border-radius: 20px;
+
+            padding: 24px;
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+
+        }
+
+
+        .doctor-card:hover {
+
+            transform:
+                translateY(-3px);
+
+            border-color:
+                #5eead4;
+
+            box-shadow:
+                0 12px 30px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.12
+                );
+
+        }
+
+
+        .doctor-top {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+            margin-bottom: 18px;
+
+        }
+
+
+        .doctor-avatar {
+
+            width: 60px;
+
+            height: 60px;
+
+            border-radius: 50%;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ccfbf1,
+                    #d1fae5
+                );
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 28px;
+
+        }
+
+
+        .doctor-name {
+
+            margin: 0;
+
+            color: #0f766e;
+
+            font-size: 20px;
+
+        }
+
+
+        .specialization {
+
+            margin-top: 5px;
+
+            color: #64748b;
+
+            font-size: 14px;
+
+        }
+
+
+        .appointment-info {
+
+            background: #f8fafc;
+
+            border-radius: 14px;
+
+            padding: 15px;
+
+            margin-bottom: 17px;
+
+        }
+
+
+        .info-row {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            gap: 10px;
+
+            padding: 7px 0;
+
+            font-size: 14px;
+
+        }
+
+
+        .info-label {
+
+            color: #64748b;
+
+        }
+
+
+        .info-value {
+
+            color: #334155;
+
+            font-weight: 700;
+
+            text-align: right;
+
+        }
+
+
+        .payment-line {
+
+            margin-top: 8px;
+
+            padding-top: 10px;
+
+            border-top:
+                1px solid #e2e8f0;
+
+            font-weight: 700;
+
+        }
+
+
+        .paid {
+
+            color: #16a34a;
+
+        }
+
+
+        .pending {
+
+            color: #ca8a04;
+
+        }
+
+
+        .feedback-button {
+
+            width: 100%;
+
+            border: 0;
+
+            padding: 13px 18px;
+
+            border-radius: 11px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0f766e,
+                    #0d9488
+                );
+
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+
+        }
+
+
+        .feedback-button:hover {
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 8px 20px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.22
+                );
+
+        }
+
+
+        /* ==================================================
+           FEEDBACK FORM
+        ================================================== */
+
+        .feedback-form {
+
+            margin-top: 35px;
+
+            padding-top: 30px;
+
+            border-top:
+                1px solid #e2e8f0;
+
+        }
+
+
+        .selected-doctor {
+
+            background:
+                #ecfdf5;
+
+            border:
+                1px solid #a7f3d0;
+
+            border-radius: 16px;
+
+            padding: 18px;
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .selected-doctor-title {
+
+            color: #0f766e;
+
+            font-weight: 800;
+
+            font-size: 18px;
+
+        }
+
+
+        .field {
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .field-title {
+
+            display: block;
+
+            margin-bottom: 10px;
+
+            color: #0f172a;
+
+            font-size: 17px;
+
+            font-weight: 700;
+
+        }
+
+
+        textarea {
+
+            width: 100%;
+
+            min-height: 120px;
+
+            resize: vertical;
+
+            border:
+                1px solid #cbd5e1;
+
+            border-radius: 12px;
+
+            padding: 14px;
+
+            font-size: 15px;
+
+            outline: none;
+
+        }
+
+
+        textarea:focus {
+
+            border-color:
+                #0f766e;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.08
+                );
+
+        }
+
+
+        /* ==================================================
+           STARS
+        ================================================== */
+
+        .rating-box {
+
+            background: #f8fafc;
+
+            border:
+                1px solid #dbe5ef;
+
+            border-radius: 20px;
+
+            padding: 30px 20px;
+
+            text-align: center;
+
+        }
+
+
+        .stars {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 7px;
+
+        }
+
+
+        .star-option {
+
+            position: relative;
+
+        }
+
+
+        .star-option input {
+
+            position: absolute;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+        }
+
+
+        .star-option label {
+
+            display: block;
+
+            font-size: 52px;
+
+            line-height: 1;
+
+            color: #cbd5e1;
+
+            cursor: pointer;
+
+            transition:
+                color 0.15s ease,
+                transform 0.15s ease;
+
+        }
+
+
+        .star-option label.active {
+
+            color: #f59e0b;
+
+            transform:
+                scale(1.05);
+
+        }
+
+
+        .star-option label:hover {
+
+            transform:
+                scale(1.12);
+
+        }
+
+
+        .rating-text {
+
+            margin-top: 15px;
+
+            color: #0f766e;
+
+            font-size: 19px;
+
+            font-weight: 800;
+
+            min-height: 28px;
+
+        }
+
+
+        /* ==================================================
+           ACTION OPTIONS
+        ================================================== */
+
+        .action-box {
+
+            display: none;
+
+            margin-top: 20px;
+
+            padding: 20px;
+
+            background: #f8fafc;
+
+            border-radius: 16px;
+
+            border:
+                1px solid #e2e8f0;
+
+        }
+
+
+        .action-option {
+
+            display: block;
+
+            margin: 10px 0;
+
+            padding: 13px 15px;
+
+            background: white;
+
+            border:
+                1px solid #e2e8f0;
+
+            border-radius: 10px;
+
+            cursor: pointer;
+
+        }
+
+
+        .action-option:hover {
+
+            border-color:
+                #5eead4;
+
+            background:
+                #f0fdfa;
+
+        }
+
+
+        .action-option input {
+
+            margin-right: 10px;
+
+        }
+
+
+        .days-box {
+
+            display: none;
+
+            margin-top: 12px;
+
+        }
+
+
+        .days-box input {
+
+            width: 180px;
+
+            padding: 11px;
+
+            border:
+                1px solid #cbd5e1;
+
+            border-radius: 9px;
+
+        }
+
+
+        .submit-button {
+
+            width: 100%;
+
+            padding: 15px;
+
+            border: 0;
+
+            border-radius: 12px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0f766e,
+                    #10b981
+                );
+
+            color: white;
+
+            font-size: 17px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            margin-top: 10px;
+
+        }
+
+
+        .submit-button:hover {
+
+            box-shadow:
+                0 10px 25px
+                rgba(
+                    16,
+                    185,
+                    129,
+                    0.20
+                );
+
+        }
+
+
+        .empty {
+
+            padding: 35px;
+
+            text-align: center;
+
+            background: white;
+
+            border-radius: 18px;
+
+            color: #64748b;
+
+            border:
+                1px dashed #cbd5e1;
+
+        }
+
+
+        /* ==================================================
+           MOBILE
+        ================================================== */
+
+        @media (max-width: 600px) {
+
+            .container {
+
+                padding:
+                    20px 12px 40px;
+
+            }
+
+
+            .main-card {
+
+                padding: 22px 17px;
+
+            }
+
+
+            h1 {
+
+                font-size: 27px;
+
+            }
+
+
+            .doctor-grid {
+
+                grid-template-columns: 1fr;
+
+            }
+
+
+            .star-option label {
+
+                font-size: 42px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <a
+        href="/appointments"
+        class="back"
+    >
+        ← Back to My Appointments
+    </a>
+
+
+    <div class="main-card">
+
+
+        <h1>
+
+            🩺 Doctor Feedback
+
+        </h1>
+
+
+        <div class="subtitle">
+
+            Your feedback helps us improve
+            the quality of care at
+            Sanjeevani Healthcare.
+
+        </div>
+
+
+        <!-- =================================================
+             DOCTOR APPOINTMENTS
+        ================================================== -->
+
+        <h2 class="section-title">
+
+            Your Recent Appointments
+
+        </h2>
+
+
+        {% if doctor_appointments %}
+
+
+        <div class="doctor-grid">
+
+
+            {% for item in doctor_appointments %}
+
+            {% set doctor = item.doctor %}
+
+            {% set appointment = item.appointment %}
+
+
+            <div class="doctor-card">
+
+
+                <div class="doctor-top">
+
+
+                    <div class="doctor-avatar">
+
+                        👨‍⚕️
+
+                    </div>
+
+
+                    <div>
+
+                        <h3 class="doctor-name">
+
+                            {% if doctor.name.startswith("Dr.") %}
+
+                                {{ doctor.name }}
+
+                            {% else %}
+
+                                Dr. {{ doctor.name }}
+
+                            {% endif %}
+
+                        </h3>
+
+
+                        <div class="specialization">
+
+                            {{ doctor.specialization }}
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="appointment-info">
+
+
+                    <div class="info-row">
+
+                        <span class="info-label">
+
+                            📅 Appointment
+
+                        </span>
+
+                        <span class="info-value">
+
+                            {{ appointment.appointment_date }}
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="info-row">
+
+                        <span class="info-label">
+
+                            🕐 Time
+
+                        </span>
+
+                        <span class="info-value">
+
+                            {{ appointment.start_time }}
+
+                            {% if appointment.end_time %}
+
+                                -
+
+                                {{ appointment.end_time }}
+
+                            {% endif %}
+
+                        </span>
+
+                    </div>
+
+
+                    {% if appointment.visit_type %}
+
+                    <div class="info-row">
+
+                        <span class="info-label">
+
+                            🏥 Visit Type
+
+                        </span>
+
+                        <span class="info-value">
+
+                            {{ appointment.visit_type.name }}
+
+                        </span>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <div class="info-row">
+
+                        <span class="info-label">
+
+                            💰 Consultation
+
+                        </span>
+
+                        <span class="info-value">
+
+                            ₹{{ appointment.amount or doctor.consultation_fee or 0 }}
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="payment-line">
+
+
+                        {% if appointment.payment_method %}
+
+                            {% if appointment.payment_method == "ONLINE" %}
+
+                                💳 UPI
+
+                            {% else %}
+
+                                💵 Cash at Clinic
+
+                            {% endif %}
+
+                        {% else %}
+
+                            💳 Payment
+
+                        {% endif %}
+
+
+                        {% if appointment.payment_status == "PAID" %}
+
+                            •
+                            <span class="paid">
+
+                                🟢 PAID
+
+                            </span>
+
+                        {% else %}
+
+                            •
+                            <span class="pending">
+
+                                🟡 PAYMENT PENDING
+
+                            </span>
+
+                        {% endif %}
+
+
+                    </div>
+
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="feedback-button"
+                  <button
+    type="button"
+    class="feedback-button"
+    onclick='selectDoctor({{ doctor.id }}, {{ doctor.name|tojson }})'
+>
+    ⭐ Give Feedback
+</button>"
+                >
+
+                    ⭐ Give Feedback
+
+                </button>
+
+
+            </div>
+
+
+            {% endfor %}
+
+
+        </div>
+
+
+        {% else %}
+
+
+        <div class="empty">
+
+            <div style="font-size:40px;">
+                🩺
+            </div>
+
+            <h3>
+                No eligible appointments found
+            </h3>
+
+            <p>
+                You can give feedback after
+                having an appointment with a doctor.
+            </p>
+
+        </div>
+
+
+        {% endif %}
+
+
+        <!-- =================================================
+             FEEDBACK FORM
+        ================================================== -->
+
+        <div
+            id="feedbackSection"
+            class="feedback-form"
+            style="display:none;"
+        >
+
+
+            <div class="selected-doctor">
+
+                <div class="selected-doctor-title">
+
+                    Reviewing:
+
+                    <span id="selectedDoctorName">
+
+                    </span>
+
+                </div>
+
+                <div
+                    style="
+                    margin-top:6px;
+                    color:#64748b;
+                    font-size:14px;
+                    "
+                >
+
+                    This feedback will be recorded
+                    against your selected appointment doctor.
+
+                </div>
+
+            </div>
+
+
+            <form
+                action="/treatment-review/submit"
+                method="post"
+                id="feedbackForm"
+            >
+
+
+                <input
+                    type="hidden"
+                    name="doctor_id"
+                    id="doctorId"
+                >
+
+
+                <!-- Old fields kept hidden for DB compatibility -->
+
+                <input
+                    type="hidden"
+                    name="outcome"
+                    id="outcome"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    name="current_condition"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    name="experience"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    name="follow_up_preference"
+                    id="followUpPreference"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    name="change_reason"
+                    id="changeReason"
+                    value=""
+                >
+
+
+                <!-- =================================================
+                     RATING
+                ================================================== -->
+
+                <div class="field">
+
+                    <label class="field-title">
+
+                        How was your experience?
+
+                    </label>
+
+
+                    <div class="rating-box">
+
+
+                        <div class="stars">
+
+
+                            {% for i in range(1, 6) %}
+
+                            <div class="star-option">
+
+                                <input
+                                    type="radio"
+                                    name="rating"
+                                    id="rating{{ i }}"
+                                    value="{{ i }}"
+                                    required
+                                >
+
+                                <label
+                                    for="rating{{ i }}"
+                                >
+                                    ★
+                                </label>
+
+                            </div>
+
+                            {% endfor %}
+
+
+                        </div>
+
+
+                        <div
+                            id="ratingText"
+                            class="rating-text"
+                        >
+
+                            Select your rating
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     CONDITION BASED ACTIONS
+                ================================================== -->
+
+                <div
+                    id="actionBox"
+                    class="action-box"
+                >
+
+                    <label class="field-title">
+
+                        What would you like to do?
+
+                    </label>
+
+
+                    <div id="actionOptions"></div>
+
+
+                    <div
+                        id="daysBox"
+                        class="days-box"
+                    >
+
+                        <label class="field-title">
+
+                            For how many days?
+
+                        </label>
+
+                        <input
+                            type="number"
+                            name="follow_up_days"
+                            id="followUpDays"
+                            min="1"
+                            max="365"
+                            placeholder="Enter number of days"
+                        >
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- =================================================
+                     COMMENT
+                ================================================== -->
+
+                <div
+                    class="field"
+                    style="margin-top:25px;"
+                >
+
+                    <label class="field-title">
+
+                        Comment
+                        <span
+                            style="
+                            color:#94a3b8;
+                            font-weight:400;
+                            "
+                        >
+                            (Optional)
+                        </span>
+
+                    </label>
+
+
+                    <textarea
+                        name="comment"
+                        placeholder="Share anything else about your experience..."
+                    ></textarea>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="submit-button"
+                >
+
+                    ✓ Submit Feedback
+
+                </button>
+
+
+            </form>
+
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+/* ============================================================
+   RATING DATA
+============================================================ */
+
+const ratingData = {
+
+    5: [
+
+        {
+            value: "NO_FURTHER_TREATMENT",
+            text: "No further treatment needed"
+        },
+
+        {
+            value: "FURTHER_TREATMENT",
+            text: "I need further treatment"
+        }
+
+    ],
+
+    4: [
+
+        {
+            value: "CONTINUE_TREATMENT",
+            text: "Continue treatment for further days"
+        },
+
+        {
+            value: "CHANGE_MEDICINES",
+            text: "Change tablets/medicines for better improvement"
+        },
+
+        {
+            value: "STOP_TREATMENT",
+            text: "I do not want further treatment"
+        }
+
+    ],
+
+    3: [
+
+        {
+            value: "SAME_DOCTOR",
+            text: "I want to continue with the same doctor"
+        },
+
+        {
+            value: "CHANGE_DOCTOR",
+            text: "I want to change the doctor"
+        },
+
+        {
+            value: "NO_IMPROVEMENT",
+            text: "No improvement is being seen"
+        }
+
+    ],
+
+    2: [
+
+        {
+            value: "UNSATISFACTORY",
+            text: "Treatment was not satisfactory"
+        },
+
+        {
+            value: "NOT_RECOMMEND",
+            text: "I would not recommend this treatment"
+        },
+
+        {
+            value: "STOP_HOSPITAL",
+            text: "I do not want to continue with this hospital anymore"
+        }
+
+    ],
+
+    1: [
+
+        {
+            value: "UNSATISFACTORY",
+            text: "Treatment was not satisfactory"
+        },
+
+        {
+            value: "NOT_RECOMMEND",
+            text: "I would not recommend this treatment"
+        },
+
+        {
+            value: "STOP_HOSPITAL",
+            text: "I do not want to continue with this hospital anymore"
+        }
+
+    ]
+
+};
+
+
+/* ============================================================
+   RATING TEXT
+============================================================ */
+
+const ratingTextData = {
+
+    1: "Very poor experience 😞",
+
+    2: "Poor experience 😕",
+
+    3: "Average experience 😐",
+
+    4: "Good experience 😊",
+
+    5: "Excellent experience 🌟"
+
+};
+
+
+/* ============================================================
+   SELECT DOCTOR
+============================================================ */
+
+function selectDoctor(
+    doctorId,
+    doctorName
+) {
+
+    document
+        .getElementById("doctorId")
+        .value = doctorId;
+
+
+    document
+        .getElementById("selectedDoctorName")
+        .textContent =
+            doctorName.startsWith("Dr.")
+                ? doctorName
+                : "Dr. " + doctorName;
+
+
+    const section =
+        document.getElementById(
+            "feedbackSection"
+        );
+
+
+    section.style.display = "block";
+
+
+    section.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+}
+
+
+/* ============================================================
+   UPDATE STARS
+============================================================ */
+
+function updateStars(rating) {
+
+    const labels =
+        document.querySelectorAll(
+            ".star-option label"
+        );
+
+
+    labels.forEach(
+        function(label, index) {
+
+            if (index < rating) {
+
+                label.classList.add(
+                    "active"
+                );
+
+            } else {
+
+                label.classList.remove(
+                    "active"
+                );
+
+            }
+
+        }
+    );
+
+
+    document
+        .getElementById("ratingText")
+        .textContent =
+            ratingTextData[rating];
+
+
+    renderActions(rating);
+
+}
+
+
+/* ============================================================
+   RENDER ACTIONS
+============================================================ */
+
+function renderActions(rating) {
+
+    const actionBox =
+        document.getElementById(
+            "actionBox"
+        );
+
+    const actionOptions =
+        document.getElementById(
+            "actionOptions"
+        );
+
+    const daysBox =
+        document.getElementById(
+            "daysBox"
+        );
+
+
+    actionOptions.innerHTML = "";
+
+
+    daysBox.style.display = "none";
+
+
+    const actions =
+        ratingData[rating] || [];
+
+
+    if (!actions.length) {
+
+        actionBox.style.display = "none";
+
+        return;
+
+    }
+
+
+    actionBox.style.display = "block";
+
+
+    actions.forEach(
+        function(action, index) {
+
+
+            const label =
+                document.createElement(
+                    "label"
+                );
+
+
+            label.className =
+                "action-option";
+
+
+            label.innerHTML = `
+
+                <input
+                    type="radio"
+                    name="care_action"
+                    value="${action.value}"
+                    ${index === 0 ? "required" : ""}
+                >
+
+                ${action.text}
+
+            `;
+
+
+            actionOptions.appendChild(
+                label
+            );
+
+        }
+    );
+
+
+    const actionInputs =
+        actionOptions.querySelectorAll(
+            'input[name="care_action"]'
+        );
+
+
+    actionInputs.forEach(
+        function(input) {
+
+            input.addEventListener(
+                "change",
+                function() {
+
+                    handleAction(
+                        this.value
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   ACTION HANDLER
+============================================================ */
+
+function handleAction(action) {
+
+    const daysBox =
+        document.getElementById(
+            "daysBox"
+        );
+
+
+    const followUpPreference =
+        document.getElementById(
+            "followUpPreference"
+        );
+
+
+    const outcome =
+        document.getElementById(
+            "outcome"
+        );
+
+
+    const changeReason =
+        document.getElementById(
+            "changeReason"
+        );
+
+
+    followUpPreference.value =
+        action;
+
+
+    outcome.value =
+        action;
+
+
+    changeReason.value = "";
+
+
+    if (
+        action ===
+        "FURTHER_TREATMENT"
+    ) {
+
+        daysBox.style.display =
+            "block";
+
+    } else {
+
+        daysBox.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* ============================================================
+   STAR EVENTS
+============================================================ */
+
+document
+    .querySelectorAll(
+        '.star-option input[name="rating"]'
+    )
+    .forEach(
+        function(input) {
+
+            input.addEventListener(
+                "change",
+                function() {
+
+                    updateStars(
+                        parseInt(
+                            this.value
+                        )
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+/* ============================================================
+   FORM VALIDATION
+============================================================ */
+
+document
+    .getElementById("feedbackForm")
+    .addEventListener(
+        "submit",
+        function(event) {
+
+            const rating =
+                document.querySelector(
+                    'input[name="rating"]:checked'
+                );
+
+
+            const action =
+                document.querySelector(
+                    'input[name="care_action"]:checked'
+                );
+
+
+            if (!rating) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please select a rating."
+                );
+
+                return;
+
+            }
+
+
+            if (!action) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please select what you would like to do."
+                );
+
+                return;
+
+            }
+
+
+            if (
+                action.value ===
+                "FURTHER_TREATMENT"
+            ) {
+
+                const days =
+                    document.getElementById(
+                        "followUpDays"
+                    ).value;
+
+
+                if (!days) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Please enter the number of days."
+                    );
+
+                    return;
+
+                }
+
+            }
+
+        }
+    );
+
+</script>
+
+
+</body>
+
+</html>

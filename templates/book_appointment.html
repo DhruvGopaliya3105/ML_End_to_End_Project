@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Book Appointment - Sanjeevani AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #0f766e;
+        }
+
+        .doctor {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+        }
+
+        .doctor h2 {
+            margin: 0 0 8px;
+        }
+
+        .field {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        input[type="date"] {
+            cursor: pointer;
+            background: white;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .info {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .duration {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .times {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .time-button {
+            padding: 13px;
+            border: 1px solid #2563eb;
+            background: white;
+            color: #2563eb;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .time-button:hover {
+            background: #eff6ff;
+        }
+
+        .time-button.selected {
+            background: #2563eb;
+            color: white;
+        }
+
+        .submit {
+            width: 100%;
+            border: 0;
+            background: #16a34a;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .submit:hover {
+            background: #15803d;
+        }
+
+        .submit:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            color: #64748b;
+        }
+
+        .error {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        .back:hover {
+            text-decoration: underline;
+        }
+
+        /* =========================================
+           PAYMENT SECTION
+        ========================================= */
+
+        .payment-section {
+            margin-top: 28px;
+            padding: 22px;
+            border: 1px solid #dbe4ee;
+            border-radius: 16px;
+            background: #f8fafc;
+        }
+
+        .payment-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .payment-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e0f2fe;
+            border-radius: 12px;
+            font-size: 22px;
+        }
+
+        .payment-header h3 {
+            margin: 0 0 4px;
+            font-size: 20px;
+            color: #172033;
+        }
+
+        .payment-header p {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .fee-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .fee-box span {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .fee-box strong {
+            color: #0f766e;
+            font-size: 22px;
+        }
+
+        .payment-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .payment-option {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .payment-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .payment-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 17px;
+            min-height: 105px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .payment-option:hover .payment-card {
+            border-color: #93c5fd;
+            transform: translateY(-1px);
+        }
+
+        .payment-option input:checked + .payment-card {
+            border-color: #2563eb;
+            background: #eff6ff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.10);
+        }
+
+        .payment-card-icon {
+            width: 45px;
+            height: 45px;
+            min-width: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 23px;
+        }
+
+        .payment-card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .payment-card-content strong {
+            font-size: 16px;
+            color: #172033;
+        }
+
+        .payment-card-content span {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .payment-card-content small {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .online-payment-box {
+            margin-top: 18px;
+            padding: 22px;
+            background: white;
+            border: 1px solid #bfdbfe;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .qr-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .qr-title > span {
+            font-size: 24px;
+        }
+
+        .qr-title div {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .qr-title strong {
+            color: #172033;
+            font-size: 17px;
+        }
+
+        .qr-title small {
+            margin-top: 3px;
+            color: #64748b;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .payment-qr {
+            width: 190px;
+            height: 190px;
+            object-fit: contain;
+            padding: 10px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
+
+        .qr-amount {
+            margin-top: 10px;
+            color: #475569;
+            font-size: 16px;
+        }
+
+        .qr-amount strong {
+            color: #0f766e;
+            font-size: 20px;
+        }
+
+        .qr-note {
+            margin: 8px 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .payment-processing {
+            margin-top: 14px;
+            padding: 10px;
+            background: #fffbeb;
+            color: #92400e;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 700px) {
+            .container {
+                margin: 20px auto;
+                padding: 12px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .times {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-options {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-section {
+                padding: 16px;
+            }
+
+            .payment-qr {
+                width: 170px;
+                height: 170px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <a href="/screening" class="back">
+        ← Back
+    </a>
+
+    <div class="card">
+
+        <h1>Book Appointment</h1>
+
+        <p>
+            Select your appointment date,
+            visit type and available time.
+        </p>
+
+
+        <!-- =========================================
+             DOCTOR
+        ========================================== -->
+
+        <div class="doctor">
+
+            <h2>
+                Dr. {{ doctor.name }}
+            </h2>
+
+            <p>
+                <strong>Specialization:</strong>
+                {{ doctor.specialization }}
+            </p>
+
+            <p>
+                <strong>Consultation Fee:</strong>
+                ₹{{ doctor.consultation_fee or 0 }}
+            </p>
+
+        </div>
+
+
+        <div class="info">
+            📅 Please select your preferred
+            appointment date.
+        </div>
+
+
+        <!-- =========================================
+             FORM
+        ========================================== -->
+
+        <form
+            action="/book-appointment"
+            method="post"
+            id="appointmentForm"
+        >
+
+            <!-- Doctor -->
+
+            <input
+                type="hidden"
+                name="doctor_id"
+                value="{{ doctor.id }}"
+            >
+
+
+            <!-- =====================================
+                 DATE
+            ====================================== -->
+
+            <div class="field">
+
+                <label for="appointmentDate">
+                    Appointment Date
+                </label>
+
+                <input
+                    type="date"
+                    id="appointmentDate"
+                    name="appointment_date"
+                    min="{{ today }}"
+                    required
+                >
+
+            </div>
+
+
+            <!-- =====================================
+                 VISIT TYPE
+            ====================================== -->
+
+            <div class="field">
+
+                <label for="visitType">
+                    Visit Type
+                </label>
+
+                <select
+                    name="visit_type_id"
+                    id="visitType"
+                    required
+                >
+
+                    <option value="">
+                        Select Visit Type
+                    </option>
+
+                    {% for visit in visit_types %}
+
+                    <option
+                        value="{{ visit.id }}"
+                        data-duration="{{ visit.default_duration_minutes }}"
+                    >
+                        {{ visit.name }}
+                        -
+                        {{ visit.default_duration_minutes }}
+                        min
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- Duration -->
+
+            <div
+                class="duration"
+                id="durationBox"
+            >
+                Select date and visit type first.
+            </div>
+
+
+            <!-- Available slots -->
+
+            <div class="field">
+
+                <label>
+                    Available Times
+                </label>
+
+                <div
+                    class="times"
+                    id="times"
+                >
+                    Select date and visit type first.
+                </div>
+
+            </div>
+
+
+            <!-- Selected start -->
+
+            <input
+                type="hidden"
+                name="start_time"
+                id="startTime"
+            >
+
+
+            <!-- Selected end -->
+
+            <input
+                type="hidden"
+                name="end_time"
+                id="endTime"
+            >
+
+
+            <!-- =====================================
+                 REASON
+            ====================================== -->
+
+            <div class="field">
+
+                <label for="reason">
+                    Reason for Visit
+                </label>
+
+                <textarea
+                    name="reason"
+                    id="reason"
+                    placeholder="Describe your reason for consultation..."
+                ></textarea>
+
+            </div>
+
+
+            <!-- =========================================
+                 PAYMENT SECTION
+            ========================================= -->
+
+            <div class="payment-section">
+
+                <div class="payment-header">
+
+                    <span class="payment-icon">
+                        💳
+                    </span>
+
+                    <div>
+
+                        <h3>
+                            Payment
+                        </h3>
+
+                        <p>
+                            Choose your preferred payment method
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="fee-box">
+
+                    <span>
+                        Consultation Fee
+                    </span>
+
+                    <strong>
+                        ₹{{ doctor.consultation_fee or 0 }}
+                    </strong>
+
+                </div>
+
+
+                <div class="payment-options">
+
+                    <!-- CASH -->
+
+                    <label class="payment-option">
+
+                        <input
+                            type="radio"
+                            name="payment_method"
+                            value="CASH"
+                            checked
+                            required
+                        >
+
+                        <div class="payment-card">
+
+                            <div class="payment-card-icon">
+                                💵
+                            </div>
+
+                            <div class="payment-card-content">
+
+                                <strong>
+                                    Cash at Clinic
+                                </strong>
+
+                                <span>
+                                    Pay directly at the clinic
+                                </span>
+
+                                <small>
+                                    🟡 Payment will be pending
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                    </label>
+
+
+                    <!-- ONLINE -->
+
+                    <label class="payment-option">
+
+                        <input
+                            type="radio"
+                            name="payment_method"
+                            value="ONLINE"
+                        >
+
+                        <div class="payment-card">
+
+                            <div class="payment-card-icon">
+                                📱
+                            </div>
+
+                            <div class="payment-card-content">
+
+                                <strong>
+                                    Online Payment
+                                </strong>
+
+                                <span>
+                                    Pay using UPI / QR
+                                </span>
+
+                                <small>
+                                    🟢 Instant payment confirmation
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                    </label>
+
+                </div>
+
+
+                <!-- =====================================
+                     ONLINE PAYMENT / QR
+                ====================================== -->
+
+                <div
+                    id="onlinePaymentBox"
+                    class="online-payment-box"
+                    style="display: none;"
+                >
+
+                    <div class="qr-title">
+
+                        <span>
+                            📱
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                Scan & Pay
+                            </strong>
+
+                            <small>
+                                Complete your payment using any UPI app
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="qr-container">
+
+                        <img
+                            src="/static/images/dummy_payment_qr.png"
+                            alt="Dummy UPI QR Code"
+                            class="payment-qr"
+                        >
+
+                    </div>
+
+
+                    <div class="qr-amount">
+
+                        Pay
+
+                        <strong>
+                            ₹{{ doctor.consultation_fee or 0 }}
+                        </strong>
+
+                    </div>
+
+
+                    <p class="qr-note">
+
+                        Scan the QR code using Google Pay,
+                        PhonePe, Paytm or any UPI app.
+
+                    </p>
+
+
+                    <div class="payment-processing">
+
+                        🟡 Online payment will be confirmed
+                        with your appointment.
+
+                    </div>
+
+                </div>
+
+
+                <!-- Amount -->
+
+                <input
+                    type="hidden"
+                    name="payment_amount"
+                    value="{{ doctor.consultation_fee or 0 }}"
+                >
+
+            </div>
+
+
+            <!-- =========================================
+                 CONFIRM
+            ========================================== -->
+
+            <button
+                type="submit"
+                class="submit"
+                id="submitButton"
+                disabled
+            >
+                Confirm Appointment
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /* =====================================================
+       ELEMENTS
+    ===================================================== */
+
+    const appointmentDateInput =
+        document.getElementById(
+            "appointmentDate"
+        );
+
+    const visitType =
+        document.getElementById(
+            "visitType"
+        );
+
+    const times =
+        document.getElementById(
+            "times"
+        );
+
+    const durationBox =
+        document.getElementById(
+            "durationBox"
+        );
+
+    const startTime =
+        document.getElementById(
+            "startTime"
+        );
+
+    const endTime =
+        document.getElementById(
+            "endTime"
+        );
+
+    const submitButton =
+        document.getElementById(
+            "submitButton"
+        );
+
+    const doctorId =
+        "{{ doctor.id }}";
+
+
+    /* =====================================================
+       PAYMENT
+    ===================================================== */
+
+    const paymentMethods =
+        document.querySelectorAll(
+            'input[name="payment_method"]'
+        );
+
+    const onlinePaymentBox =
+        document.getElementById(
+            "onlinePaymentBox"
+        );
+
+
+    paymentMethods.forEach(
+        function (method) {
+
+            method.addEventListener(
+                "change",
+                function () {
+
+                    if (
+                        this.value === "ONLINE"
+                    ) {
+
+                        onlinePaymentBox.style.display =
+                            "block";
+
+                    } else {
+
+                        onlinePaymentBox.style.display =
+                            "none";
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    /* =====================================================
+       LOAD AVAILABLE TIMES
+    ===================================================== */
+
+    async function loadAvailableTimes() {
+
+        const appointmentDate =
+            appointmentDateInput.value;
+
+        const visitId =
+            visitType.value;
+
+
+        /* Reset selected slot */
+
+        startTime.value = "";
+        endTime.value = "";
+
+        submitButton.disabled = true;
+
+
+        /* Date required */
+
+        if (!appointmentDate) {
+
+            times.innerHTML =
+                "<span class='error'>" +
+                "Please select appointment date." +
+                "</span>";
+
+            return;
+        }
+
+
+        /* Visit type required */
+
+        if (!visitId) {
+
+            times.innerHTML =
+                "Select visit type first.";
+
+            return;
+        }
+
+
+        /* Duration */
+
+        const selected =
+            visitType.options[
+                visitType.selectedIndex
+            ];
+
+        const duration =
+            selected.dataset.duration;
+
+
+        durationBox.innerHTML =
+            "⏱ Estimated Duration: " +
+            duration +
+            " minutes";
+
+
+        /* Loading */
+
+        times.innerHTML =
+            "<span class='loading'>" +
+            "Loading available times..." +
+            "</span>";
+
+
+        /* API */
+
+        const url =
+            "/api/appointment-times" +
+            "?doctor_id=" +
+            encodeURIComponent(
+                doctorId
+            ) +
+            "&appointment_date=" +
+            encodeURIComponent(
+                appointmentDate
+            ) +
+            "&visit_type_id=" +
+            encodeURIComponent(
+                visitId
+            );
+
+
+        try {
+
+            const response =
+                await fetch(url);
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "HTTP " +
+                    response.status
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            if (!data.success) {
+
+                times.innerHTML =
+                    "<span class='error'>" +
+                    (
+                        data.message ||
+                        "Unable to load available times."
+                    ) +
+                    "</span>";
+
+                return;
+            }
+
+
+            if (
+                !data.times ||
+                data.times.length === 0
+            ) {
+
+                times.innerHTML =
+                    "<span class='error'>" +
+                    "No available slots for selected date." +
+                    "</span>";
+
+                return;
+            }
+
+
+            times.innerHTML = "";
+
+
+            /* Create slot buttons */
+
+            data.times.forEach(
+                function (item) {
+
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    button.type =
+                        "button";
+
+                    button.className =
+                        "time-button";
+
+
+                    button.innerText =
+                        formatTime(
+                            item.start_time
+                        ) +
+                        " - " +
+                        formatTime(
+                            item.end_time
+                        );
+
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+
+                            document
+                                .querySelectorAll(
+                                    ".time-button"
+                                )
+                                .forEach(
+                                    function (btn) {
+
+                                        btn.classList
+                                            .remove(
+                                                "selected"
+                                            );
+
+                                    }
+                                );
+
+
+                            button.classList.add(
+                                "selected"
+                            );
+
+
+                            startTime.value =
+                                item.start_time;
+
+
+                            endTime.value =
+                                item.end_time;
+
+
+                            submitButton.disabled =
+                                false;
+
+                        }
+                    );
+
+
+                    times.appendChild(
+                        button
+                    );
+
+                }
+            );
+
+        }
+
+
+        catch (error) {
+
+            console.error(
+                "Slot loading error:",
+                error
+            );
+
+
+            times.innerHTML =
+                "<span class='error'>" +
+                "Unable to load available times." +
+                "</span>";
+
+        }
+
+    }
+
+
+    /* =====================================================
+       DATE CHANGE
+    ===================================================== */
+
+    appointmentDateInput.addEventListener(
+        "change",
+        function () {
+
+            startTime.value = "";
+            endTime.value = "";
+
+            submitButton.disabled = true;
+
+
+            if (!this.value) {
+
+                times.innerHTML =
+                    "Select appointment date.";
+
+                return;
+            }
+
+
+            if (!visitType.value) {
+
+                times.innerHTML =
+                    "Select visit type to load slots.";
+
+                return;
+            }
+
+
+            loadAvailableTimes();
+
+        }
+    );
+
+
+    /* =====================================================
+       VISIT TYPE CHANGE
+    ===================================================== */
+
+    visitType.addEventListener(
+        "change",
+        function () {
+
+            startTime.value = "";
+            endTime.value = "";
+
+            submitButton.disabled = true;
+
+
+            if (!this.value) {
+
+                durationBox.innerHTML =
+                    "Select date and visit type first.";
+
+                times.innerHTML =
+                    "Select date and visit type first.";
+
+                return;
+            }
+
+
+            if (!appointmentDateInput.value) {
+
+                durationBox.innerHTML =
+                    "Select appointment date first.";
+
+                times.innerHTML =
+                    "Select appointment date first.";
+
+                return;
+            }
+
+
+            loadAvailableTimes();
+
+        }
+    );
+
+
+    /* =====================================================
+       FORMAT TIME
+    ===================================================== */
+
+    function formatTime(
+        timeString
+    ) {
+
+        if (!timeString) {
+            return "";
+        }
+
+
+        const parts =
+            timeString.split(":");
+
+
+        const hour =
+            parseInt(
+                parts[0],
+                10
+            );
+
+
+        const minute =
+            parseInt(
+                parts[1],
+                10
+            );
+
+
+        const date =
+            new Date();
+
+
+        date.setHours(
+            hour,
+            minute,
+            0,
+            0
+        );
+
+
+        return date.toLocaleTimeString(
+            [],
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    }
+
+
+    /* =====================================================
+       FINAL FORM VALIDATION
+    ===================================================== */
+
+    document
+        .getElementById(
+            "appointmentForm"
+        )
+        .addEventListener(
+            "submit",
+            function (event) {
+
+                if (
+                    !appointmentDateInput.value
+                ) {
+
+                    event.preventDefault();
+
+                    times.innerHTML =
+                        "<span class='error'>" +
+                        "Please select appointment date." +
+                        "</span>";
+
+                    return;
+                }
+
+
+                if (
+                    !startTime.value ||
+                    !endTime.value
+                ) {
+
+                    event.preventDefault();
+
+                    times.innerHTML =
+                        "<span class='error'>" +
+                        "Please select an available time slot." +
+                        "</span>";
+
+                    return;
+                }
+
+
+                const selectedPayment =
+                    document.querySelector(
+                        'input[name="payment_method"]:checked'
+                    );
+
+
+                if (!selectedPayment) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Please select a payment method."
+                    );
+
+                    return;
+                }
+
+            }
+        );
+
+</script>
+
+</body>
+
+</html>

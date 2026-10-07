@@ -1,0 +1,20 @@
+pandas
+numpy
+scikit-learn  # version-sensitive: retrain with 'python train_model.py' if /predict warns
+fastapi
+uvicorn
+Jinja2
+python-multipart
+itsdangerous
+sqlalchemy
+python-dotenv
+pymysql
+cryptography  # REQUIRED by PyMySQL for MySQL 8's caching_sha2_password auth
+email-validator
+groq
+nltk
+pdf2image
+Pillow
+pypdf
+pwdlib[argon2]
+pytesseract

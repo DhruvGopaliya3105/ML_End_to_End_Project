@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Medical Report Analysis | Sanjeevani Clinic
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .navbar {
+            background: #0f766e;
+            color: white;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h2 {
+            margin: 0;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #6b7280;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: #0f766e;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(220px, 1fr)
+            );
+
+            gap: 15px;
+        }
+
+        .info-box {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #ccfbf1;
+            color: #115e59;
+            padding: 6px 10px;
+            border-radius: 20px;
+            margin: 4px;
+            font-size: 14px;
+        }
+
+        .warning-tag {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .summary {
+            line-height: 1.7;
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 10px;
+        }
+
+        .recommendation {
+            line-height: 1.7;
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 18px;
+            border-radius: 10px;
+            border-left: 5px solid #f97316;
+        }
+
+        .text-box {
+            background: #111827;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            background: #0f766e;
+            color: white;
+            text-decoration: none;
+            padding: 11px 18px;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            background: #115e59;
+        }
+
+        .disclaimer {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- NAVBAR -->
+
+    <div class="navbar">
+
+        <h2>
+            Sanjeevani Clinic
+        </h2>
+
+        <div>
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/medical-reports">
+                Medical Reports
+            </a>
+
+            <a href="/logout">
+                Logout
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- MAIN -->
+
+    <div class="container">
+
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <h1>
+                Medical Report Analysis
+            </h1>
+
+            <p>
+                AI-assisted analysis of the extracted
+                medical report text.
+            </p>
+
+        </div>
+
+
+        <!-- ERROR -->
+
+        {% if error %}
+
+        <div class="error">
+
+            <strong>
+                Error:
+            </strong>
+
+            {{ error }}
+
+        </div>
+
+        {% endif %}
+
+
+        {% if analysis %}
+
+
+        <!-- DOCUMENT INFORMATION -->
+
+        <div class="card">
+
+            <h2>
+                Report Information
+            </h2>
+
+            <div class="info-grid">
+
+
+                <div class="info-box">
+
+                    <strong>
+                        Document
+                    </strong>
+
+                    {{ document.document_name }}
+
+                </div>
+
+
+                <div class="info-box">
+
+                    <strong>
+                        Document Type
+                    </strong>
+
+                    {{ document.document_type
+                       or "Not specified" }}
+
+                </div>
+
+
+                <div class="info-box">
+
+                    <strong>
+                        Patient
+                    </strong>
+
+                    {{ analysis.patient_information.patient_name
+                       or "Not detected" }}
+
+                </div>
+
+
+                <div class="info-box">
+
+                    <strong>
+                        Report Status
+                    </strong>
+
+                    {{ analysis.patient_information.report_status
+                       or "Not detected" }}
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- SUMMARY -->
+
+        <div class="card">
+
+            <h2>
+                Summary
+            </h2>
+
+            <div class="summary">
+
+                {{ analysis.summary }}
+
+            </div>
+
+        </div>
+
+
+        <!-- MEDICAL KEYWORDS -->
+
+        <div class="card">
+
+            <h2>
+                Medical Information Detected
+            </h2>
+
+
+            {% if analysis.medical_keywords %}
+
+                {% for keyword
+                   in analysis.medical_keywords %}
+
+                    <span class="tag">
+                        {{ keyword }}
+                    </span>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p>
+                    No standard medical parameters
+                    were detected.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- WARNING TERMS -->
+
+        <div class="card">
+
+            <h2>
+                Warning / Review Terms
+            </h2>
+
+
+            {% if analysis.warning_terms %}
+
+                {% for term
+                   in analysis.warning_terms %}
+
+                    <span class="tag warning-tag">
+                        {{ term }}
+                    </span>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p>
+                    No warning keywords were detected
+                    by this basic analysis.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- RECOMMENDATION -->
+
+        <div class="card">
+
+            <h2>
+                Recommendation
+            </h2>
+
+            <div class="recommendation">
+
+                {{ analysis.recommendation }}
+
+            </div>
+
+        </div>
+
+
+        <!-- EXTRACTED TEXT -->
+
+        <div class="card">
+
+            <h2>
+                Extracted Report Text
+            </h2>
+
+            <div class="text-box">
+
+                {{ analysis.extracted_text }}
+
+            </div>
+
+        </div>
+
+
+        <!-- BUTTONS -->
+
+        <div class="card">
+
+            <div class="buttons">
+
+                <a
+                    href="/medical-reports"
+                    class="button"
+                >
+                    Back to Medical Reports
+                </a>
+
+
+                <a
+                    href="/medical-reports/{{ document.id }}/view"
+                    class="button"
+                >
+                    View Original Report
+                </a>
+
+
+                <a
+                    href="/medical-reports/{{ document.id }}/download"
+                    class="button"
+                >
+                    Download Report
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- DISCLAIMER -->
+
+        <div class="card">
+
+            <p class="disclaimer">
+
+                <strong>
+                    Important:
+                </strong>
+
+                This is an AI-assisted text analysis
+                intended for informational purposes only.
+                It does not provide a medical diagnosis
+                or replace professional medical advice.
+                Always consult a qualified healthcare
+                professional for clinical interpretation.
+
+            </p>
+
+        </div>
+
+
+        {% endif %}
+
+
+    </div>
+
+
+</body>
+
+</html>

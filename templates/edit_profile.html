@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Edit Profile | Sanjeevani AI
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial, sans-serif;
+
+            background: #f5f3eb;
+
+            color: #173f3a;
+        }
+
+
+        .container {
+
+            max-width: 700px;
+
+            margin: 50px auto;
+
+            padding: 0 20px;
+        }
+
+
+        .card {
+
+            background: white;
+
+            padding: 40px;
+
+            border-radius: 25px;
+
+            box-shadow:
+                0 10px 30px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        h1 {
+
+            font-family: Georgia, serif;
+
+            margin-top: 0;
+
+            margin-bottom: 8px;
+        }
+
+
+        .subtitle {
+
+            color: #71817e;
+
+            margin-bottom: 30px;
+        }
+
+
+        .form-group {
+
+            margin-bottom: 20px;
+        }
+
+
+        label {
+
+            display: block;
+
+            font-weight: bold;
+
+            margin-bottom: 8px;
+        }
+
+
+        input,
+        select {
+
+            width: 100%;
+
+            padding: 13px;
+
+            border:
+                1px solid #d9dfdc;
+
+            border-radius: 10px;
+
+            font-size: 15px;
+        }
+
+
+        input:focus,
+        select:focus {
+
+            outline: none;
+
+            border-color: #20584f;
+        }
+
+
+        .readonly {
+
+            background: #eeeeee;
+
+            cursor: not-allowed;
+        }
+
+
+        .save-btn {
+
+            width: 100%;
+
+            padding: 14px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #20584f;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .save-btn:hover {
+
+            background: #17483f;
+        }
+
+
+        .back {
+
+            display: block;
+
+            text-align: center;
+
+            margin-top: 20px;
+
+            color: #20584f;
+
+            text-decoration: none;
+
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="card">
+
+
+        <h1>
+
+            Edit Profile
+
+        </h1>
+
+
+        <p class="subtitle">
+
+            Update your personal information
+
+        </p>
+
+
+        <form
+            action="/profile/update"
+            method="POST"
+        >
+
+
+            <!-- NAME -->
+
+            <div class="form-group">
+
+                <label for="name">
+
+                    Full Name
+
+                </label>
+
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value="{{ user.name }}"
+                    required
+                >
+
+            </div>
+
+
+
+            <!-- EMAIL -->
+
+            <div class="form-group">
+
+                <label for="email">
+
+                    Email
+
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    value="{{ user.email }}"
+                    class="readonly"
+                    readonly
+                >
+
+            </div>
+
+
+
+            <!-- PHONE -->
+
+            <div class="form-group">
+
+                <label for="phone">
+
+                    Phone
+
+                </label>
+
+                <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value="{{ user.phone or '' }}"
+                >
+
+            </div>
+
+
+
+            <!-- AGE -->
+
+            <div class="form-group">
+
+                <label for="age">
+
+                    Age
+
+                </label>
+
+                <input
+                    type="number"
+                    id="age"
+                    name="age"
+                    value="{{ user.age or '' }}"
+                    min="1"
+                    max="120"
+                >
+
+            </div>
+
+
+
+            <!-- GENDER -->
+
+            <div class="form-group">
+
+                <label for="gender">
+
+                    Gender
+
+                </label>
+
+                <select
+                    id="gender"
+                    name="gender"
+                >
+
+                    <option value="">
+
+                        Select Gender
+
+                    </option>
+
+
+                    <option
+                        value="Male"
+                        {% if user.gender == "Male" %}
+                        selected
+                        {% endif %}
+                    >
+
+                        Male
+
+                    </option>
+
+
+                    <option
+                        value="Female"
+                        {% if user.gender == "Female" %}
+                        selected
+                        {% endif %}
+                    >
+
+                        Female
+
+                    </option>
+
+
+                    <option
+                        value="Other"
+                        {% if user.gender == "Other" %}
+                        selected
+                        {% endif %}
+                    >
+
+                        Other
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- SAVE -->
+
+            <button
+                type="submit"
+                class="save-btn"
+            >
+
+                💾 Save Changes
+
+            </button>
+
+
+        </form>
+
+
+        <a
+            href="/profile"
+            class="back"
+        >
+
+            ← Back to Profile
+
+        </a>
+
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>{{ doctor.name }} - Sanjeevani AI</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f8fc;
+            color: #173b67;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 25px;
+            text-decoration: none;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .doctor-header {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+        }
+
+        .doctor-top {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .doctor-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #2563eb;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            font-weight: bold;
+        }
+
+        .doctor-name {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .specialization {
+            margin-top: 8px;
+            color: #2563eb;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .info-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 22px;
+        }
+
+        .info-label {
+            color: #64748b;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .info-value {
+            font-size: 19px;
+            font-weight: 700;
+            color: #173b67;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            margin-top: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        .section h2 {
+            margin-top: 0;
+            font-size: 28px;
+        }
+
+        .about {
+            color: #475569;
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        .booking-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            max-width: 400px;
+            padding: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 10px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .fee {
+            color: #059669;
+        }
+
+        @media (max-width: 800px) {
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .doctor-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <a href="/doctors" class="back">
+        ← Back to Doctors
+    </a>
+
+
+    <!-- Doctor Header -->
+
+    <div class="doctor-header">
+
+        <div class="doctor-top">
+
+            <div class="doctor-avatar">
+                {{ doctor.name[3] if doctor.name|length > 3 else doctor.name[0] }}
+            </div>
+
+            <div>
+
+                <h1 class="doctor-name">
+                    {{ doctor.name }}
+                </h1>
+
+                <div class="specialization">
+                    {{ doctor.specialization }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Doctor Information -->
+
+        <div class="info-grid">
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Qualification
+                </div>
+
+                <div class="info-value">
+                    {{ doctor.qualification or "Not available" }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Experience
+                </div>
+
+                <div class="info-value">
+                    {{ doctor.experience_years or 0 }} years
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Languages
+                </div>
+
+                <div class="info-value">
+                    {{ doctor.languages or "Not available" }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Consultation Fee
+                </div>
+
+                <div class="info-value fee">
+                    ₹{{ doctor.consultation_fee or 0 }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Phone
+                </div>
+
+                <div class="info-value">
+                    {{ doctor.phone or "Not available" }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Email
+                </div>
+
+                <div class="info-value">
+                    {{ doctor.email }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- About Doctor -->
+
+    <div class="section">
+
+        <h2>
+            About Doctor
+        </h2>
+
+        <p class="about">
+            {{ doctor.bio or
+            "Experienced healthcare professional providing
+            quality medical consultation and care." }}
+        </p>
+
+    </div>
+
+
+    <!-- Dynamic Appointment -->
+
+    <div class="section">
+
+        <h2>
+            Book an Appointment
+        </h2>
+
+        <p class="about">
+            Select your preferred date to check the doctor's
+            available appointment timings.
+        </p>
+
+
+        <div class="booking-box">
+
+            <form
+                action="/book-appointment"
+                method="get"
+            >
+
+                <input
+                    type="hidden"
+                    name="doctor_id"
+                    value="{{ doctor.id }}"
+                >
+
+
+                <label for="appointment_date">
+                    Select Appointment Date
+                </label>
+
+
+                <input
+                    type="date"
+                    id="appointment_date"
+                    name="appointment_date"
+                    required
+                >
+
+
+                <br>
+
+
+                <button
+                    type="submit"
+                    class="btn"
+                >
+                    Check Availability
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

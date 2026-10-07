@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Appointment Confirmed - Sanjeevani AI</title>
+
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background: #f4f7fb;
+
+            min-height: 100vh;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 20px;
+
+        }
+
+
+        .card {
+
+            width: 100%;
+
+            max-width: 600px;
+
+            background: white;
+
+            padding: 45px;
+
+            border-radius: 22px;
+
+            text-align: center;
+
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.08);
+
+        }
+
+
+        /* SUCCESS ICON */
+
+        .success-icon {
+
+            width: 85px;
+
+            height: 85px;
+
+            margin: 0 auto 20px;
+
+            border-radius: 50%;
+
+            background: #dcfce7;
+
+            color: #16a34a;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 45px;
+
+            font-weight: bold;
+
+        }
+
+
+        h1 {
+
+            color: #166534;
+
+            margin-bottom: 12px;
+
+        }
+
+
+        .message {
+
+            color: #6b7280;
+
+            margin-bottom: 30px;
+
+            line-height: 1.6;
+
+        }
+
+
+        /* APPOINTMENT DETAILS */
+
+        .details {
+
+            background: #f8fafc;
+
+            border-radius: 15px;
+
+            padding: 25px;
+
+            text-align: left;
+
+            margin-bottom: 30px;
+
+            border: 1px solid #e5e7eb;
+
+        }
+
+
+        .detail-row {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            gap: 20px;
+
+            padding: 14px 0;
+
+            border-bottom: 1px solid #e5e7eb;
+
+        }
+
+
+        .detail-row:last-child {
+
+            border-bottom: none;
+
+        }
+
+
+        .label {
+
+            color: #6b7280;
+
+        }
+
+
+        .value {
+
+            font-weight: 600;
+
+            color: #111827;
+
+            text-align: right;
+
+        }
+
+
+        /* STATUS */
+
+        .status {
+
+            color: #15803d;
+
+            background: #dcfce7;
+
+            padding: 5px 10px;
+
+            border-radius: 20px;
+
+        }
+
+
+        /* BUTTONS */
+
+        .buttons {
+
+            display: flex;
+
+            gap: 12px;
+
+            justify-content: center;
+
+            flex-wrap: wrap;
+
+        }
+
+
+        .btn {
+
+            padding: 12px 22px;
+
+            border-radius: 10px;
+
+            text-decoration: none;
+
+            font-weight: 600;
+
+        }
+
+
+        .primary {
+
+            background: #2563eb;
+
+            color: white;
+
+        }
+
+
+        .secondary {
+
+            background: #e5e7eb;
+
+            color: #374151;
+
+        }
+
+
+        .primary:hover {
+
+            background: #1d4ed8;
+
+        }
+
+
+        .secondary:hover {
+
+            background: #d1d5db;
+
+        }
+
+
+        /* MOBILE */
+
+        @media (max-width: 600px) {
+
+            .card {
+
+                padding: 25px;
+
+            }
+
+
+            .detail-row {
+
+                flex-direction: column;
+
+                gap: 5px;
+
+            }
+
+
+            .value {
+
+                text-align: left;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="card">
+
+
+        <!-- SUCCESS -->
+
+        <div class="success-icon">
+
+            ✓
+
+        </div>
+
+
+        <h1>
+
+            Appointment Confirmed!
+
+        </h1>
+
+
+        <p class="message">
+
+            Your appointment has been successfully booked.
+
+            Please keep these details for your reference.
+
+        </p>
+
+
+        <!-- DETAILS -->
+
+        <div class="details">
+
+
+            <!-- DOCTOR -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Doctor
+
+                </span>
+
+                <span class="value">
+
+                    {{ doctor.name }}
+
+                </span>
+
+            </div>
+
+
+            <!-- SPECIALIZATION -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Specialization
+
+                </span>
+
+                <span class="value">
+
+                    {{ doctor.specialization }}
+
+                </span>
+
+            </div>
+
+
+            <!-- DATE -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Appointment Date
+
+                </span>
+
+                <span class="value">
+
+                    {{ appointment.appointment_date }}
+
+                </span>
+
+            </div>
+
+
+            <!-- TIME -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Appointment Time
+
+                </span>
+
+                <span class="value">
+
+                    {{ appointment.start_time.strftime("%I:%M %p") }}
+
+                    -
+
+                    {{ appointment.end_time.strftime("%I:%M %p") }}
+
+                </span>
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Status
+
+                </span>
+
+                <span class="value">
+
+                    <span class="status">
+
+                        {{ appointment.status }}
+
+                    </span>
+
+                </span>
+
+            </div>
+
+
+            <!-- REASON -->
+
+            <div class="detail-row">
+
+                <span class="label">
+
+                    Reason
+
+                </span>
+
+                <span class="value">
+
+                    {{ appointment.reason or "General consultation" }}
+
+                </span>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- BUTTONS -->
+
+        <div class="buttons">
+
+
+            <a
+                href="/dashboard"
+                class="btn primary"
+            >
+
+                🏠 Go to Dashboard
+
+            </a>
+
+
+            <a
+                href="/doctors"
+                class="btn secondary"
+            >
+
+                👨‍⚕️ Find Another Doctor
+
+            </a>
+
+
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

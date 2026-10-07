@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Feedback Submitted | Sanjeevani Healthcare
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ecfdf5 0%,
+                    #f0fdfa 45%,
+                    #eff6ff 100%
+                );
+
+            color: #334155;
+
+            min-height: 100vh;
+
+            display: flex;
+
+            align-items: flex-start;
+
+            justify-content: center;
+
+            padding:
+                45px 20px;
+        }
+
+
+        /* ================================
+           MAIN SUCCESS CARD
+        ================================= */
+
+        .success-wrapper {
+
+            width: 100%;
+
+            max-width: 850px;
+
+            background: #ffffff;
+
+            border-radius: 28px;
+
+            padding:
+                45px 50px 40px;
+
+            text-align: center;
+
+            border:
+                1px solid #bbf7d0;
+
+            box-shadow:
+                0 25px 70px
+                rgba(
+                    15,
+                    23,
+                    42,
+                    0.12
+                );
+
+            position: relative;
+
+            overflow: hidden;
+
+            animation:
+                cardAppear
+                0.55s
+                ease;
+        }
+
+
+        /* TOP GREEN LINE */
+
+        .success-wrapper::before {
+
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+
+            height: 6px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #059669,
+                    #10b981,
+                    #14b8a6
+                );
+        }
+
+
+        /* ================================
+           ANIMATION
+        ================================= */
+
+        @keyframes cardAppear {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateY(18px)
+                    scale(0.98);
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateY(0)
+                    scale(1);
+            }
+        }
+
+
+        /* ================================
+           SUCCESS ICON
+        ================================= */
+
+        .success-icon {
+
+            width: 92px;
+
+            height: 92px;
+
+            margin:
+                5px auto 22px;
+
+            border-radius: 50%;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #dcfce7,
+                    #bbf7d0
+                );
+
+            border:
+                5px solid #86efac;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            color: #16a34a;
+
+            font-size: 50px;
+
+            font-weight: 800;
+
+            box-shadow:
+                0 12px 30px
+                rgba(
+                    22,
+                    163,
+                    74,
+                    0.18
+                );
+
+            animation:
+                successPop
+                0.65s
+                ease;
+        }
+
+
+        @keyframes successPop {
+
+            0% {
+
+                transform:
+                    scale(0.5);
+
+                opacity: 0;
+            }
+
+            70% {
+
+                transform:
+                    scale(1.08);
+            }
+
+            100% {
+
+                transform:
+                    scale(1);
+
+                opacity: 1;
+            }
+        }
+
+
+        /* ================================
+           CONFIRMED BADGE
+        ================================= */
+
+        .confirmed-badge {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 6px;
+
+            padding:
+                8px 17px;
+
+            margin-bottom: 17px;
+
+            border-radius: 999px;
+
+            background:
+                #f0fdf4;
+
+            border:
+                1px solid #bbf7d0;
+
+            color:
+                #15803d;
+
+            font-size: 14px;
+
+            font-weight: 800;
+        }
+
+
+        /* ================================
+           MAIN HEADING
+        ================================= */
+
+        h1 {
+
+            margin:
+                0 0 14px;
+
+            color:
+                #166534;
+
+            font-size:
+                34px;
+
+            line-height:
+                1.25;
+
+            font-weight:
+                800;
+        }
+
+
+        /* ================================
+           MAIN MESSAGE
+        ================================= */
+
+        .main-message {
+
+            max-width:
+                680px;
+
+            margin:
+                0 auto;
+
+            font-size:
+                18px;
+
+            line-height:
+                1.7;
+
+            color:
+                #475569;
+        }
+
+
+        .main-message strong {
+
+            color:
+                #166534;
+        }
+
+
+        /* ================================
+           DIVIDER
+        ================================= */
+
+        .divider {
+
+            width:
+                100%;
+
+            max-width:
+                620px;
+
+            height:
+                1px;
+
+            margin:
+                28px auto;
+
+            background:
+                #e2e8f0;
+        }
+
+
+        /* ================================
+           THANK YOU MESSAGE
+        ================================= */
+
+        .thank-you-title {
+
+            color:
+                #0f766e;
+
+            font-size:
+                21px;
+
+            font-weight:
+                800;
+
+            margin-bottom:
+                10px;
+        }
+
+
+        .thank-you-text {
+
+            max-width:
+                650px;
+
+            margin:
+                0 auto;
+
+            color:
+                #64748b;
+
+            font-size:
+                16px;
+
+            line-height:
+                1.7;
+        }
+
+
+        /* ================================
+           HIGHLIGHT BOX
+        ================================= */
+
+        .highlight-box {
+
+            max-width:
+                650px;
+
+            margin:
+                25px auto 0;
+
+            padding:
+                16px 20px;
+
+            border-radius:
+                14px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f0fdf4,
+                    #ecfdf5
+                );
+
+            border:
+                1px solid #bbf7d0;
+
+            color:
+                #166534;
+
+            font-size:
+                15px;
+
+            font-weight:
+                700;
+        }
+
+
+        /* ================================
+           DASHBOARD BUTTON
+        ================================= */
+
+        .dashboard-button {
+
+            display:
+                inline-block;
+
+            margin-top:
+                25px;
+
+            padding:
+                13px 27px;
+
+            border-radius:
+                12px;
+
+            text-decoration:
+                none;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0f766e,
+                    #0d9488
+                );
+
+            color:
+                #ffffff;
+
+            font-size:
+                16px;
+
+            font-weight:
+                800;
+
+            box-shadow:
+                0 8px 20px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.18
+                );
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        .dashboard-button:hover {
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 12px 25px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.25
+                );
+        }
+
+
+        /* ================================
+           BRAND
+        ================================= */
+
+        .brand {
+
+            margin-top:
+                25px;
+
+            color:
+                #64748b;
+
+            font-size:
+                14px;
+        }
+
+
+        .brand strong {
+
+            color:
+                #0f766e;
+        }
+
+
+        /* ================================
+           MOBILE
+        ================================= */
+
+        @media (max-width: 600px) {
+
+            body {
+
+                padding:
+                    25px 14px;
+            }
+
+
+            .success-wrapper {
+
+                padding:
+                    38px 22px 32px;
+
+                border-radius:
+                    22px;
+            }
+
+
+            .success-icon {
+
+                width:
+                    78px;
+
+                height:
+                    78px;
+
+                font-size:
+                    42px;
+            }
+
+
+            h1 {
+
+                font-size:
+                    27px;
+            }
+
+
+            .main-message {
+
+                font-size:
+                    16px;
+            }
+
+
+            .thank-you-title {
+
+                font-size:
+                    19px;
+            }
+
+
+            .thank-you-text {
+
+                font-size:
+                    15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <main class="success-wrapper">
+
+
+        <!-- ================================
+             SUCCESS ICON
+        ================================= -->
+
+        <div class="success-icon">
+            ✓
+        </div>
+
+
+        <!-- ================================
+             CONFIRMATION BADGE
+        ================================= -->
+
+        <div class="confirmed-badge">
+
+            ✓ Feedback Confirmed
+
+        </div>
+
+
+        <!-- ================================
+             MAIN HEADING
+        ================================= -->
+
+        <h1>
+
+            Thank You for Your Feedback!
+
+        </h1>
+
+
+        <!-- ================================
+             MAIN MESSAGE
+        ================================= -->
+
+        <div class="main-message">
+
+            Your feedback has been
+
+            <strong>
+                submitted successfully.
+            </strong>
+
+            <br>
+
+            We truly appreciate you taking
+            the time to share your experience
+            with us.
+
+        </div>
+
+
+        <!-- ================================
+             DIVIDER
+        ================================= -->
+
+        <div class="divider"></div>
+
+
+        <!-- ================================
+             THANK YOU SECTION
+        ================================= -->
+
+        <div class="thank-you-title">
+
+            Thank You for Choosing
+            Sanjeevani Healthcare 💚
+
+        </div>
+
+
+        <div class="thank-you-text">
+
+            Your health, comfort and trust
+            are very important to us.
+
+            We value your feedback and use
+            it to continuously improve the
+            quality of care and services
+            we provide.
+
+        </div>
+
+
+        <!-- ================================
+             HIGHLIGHT
+        ================================= -->
+
+        <div class="highlight-box">
+
+            🌿 Your voice helps us provide
+            better healthcare.
+
+        </div>
+
+
+        <!-- ================================
+             DASHBOARD BUTTON
+        ================================= -->
+
+        <a
+            href="/dashboard"
+            class="dashboard-button"
+        >
+
+            ← Back to Dashboard
+
+        </a>
+
+
+        <!-- ================================
+             BRAND
+        ================================= -->
+
+        <div class="brand">
+
+            Stay Healthy. Stay Well. 🌿
+
+            <br>
+
+            <strong>
+                Team Sanjeevani Healthcare
+            </strong>
+
+        </div>
+
+
+    </main>
+
+
+</body>
+
+</html>

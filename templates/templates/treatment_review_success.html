@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Feedback Submitted | Sanjeevani Healthcare
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+
+            font-family:
+                "Segoe UI",
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #eefaf7 0%,
+                    #f7fbfc 48%,
+                    #eef6ff 100%
+                );
+
+            color: #263746;
+
+            min-height: 100vh;
+        }
+
+
+        /* =========================================
+           FULL SUCCESS PAGE
+        ========================================= */
+
+        .success-page {
+
+            min-height: 100vh;
+
+            width: 100%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 35px 20px;
+        }
+
+
+        /* =========================================
+           MAIN CONTAINER
+        ========================================= */
+
+        .success-container {
+
+            width: 100%;
+
+            max-width: 820px;
+
+            text-align: center;
+        }
+
+
+        /* =========================================
+           BRAND
+        ========================================= */
+
+        .brand {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 11px;
+
+            margin-bottom: 20px;
+
+            color: #0f766e;
+
+            font-size: 18px;
+
+            font-weight: 700;
+
+            letter-spacing: 0.2px;
+        }
+
+
+        .brand-icon {
+
+            width: 38px;
+
+            height: 38px;
+
+            border-radius: 11px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background: #e4f6f2;
+
+            color: #0f766e;
+
+            font-size: 21px;
+
+            font-weight: 800;
+        }
+
+
+        /* =========================================
+           SUCCESS CARD
+        ========================================= */
+
+        .success-card {
+
+            position: relative;
+
+            width: 100%;
+
+            background: #ffffff;
+
+            border-radius: 28px;
+
+            padding:
+                52px 55px 48px;
+
+            border:
+                1px solid #d8ebe7;
+
+            box-shadow:
+                0 24px 65px
+                rgba(
+                    15,
+                    70,
+                    64,
+                    0.11
+                );
+
+            overflow: hidden;
+
+            animation:
+                cardAppear 0.55s ease;
+        }
+
+
+        @keyframes cardAppear {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateY(18px)
+                    scale(0.98);
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateY(0)
+                    scale(1);
+            }
+        }
+
+
+        /* =========================================
+           TOP ACCENT
+        ========================================= */
+
+        .success-card::before {
+
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+
+            left: 0;
+
+            right: 0;
+
+            height: 5px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #0f766e,
+                    #24a892,
+                    #0f766e
+                );
+        }
+
+
+        /* =========================================
+           GREEN SUCCESS ICON
+        ========================================= */
+
+        .success-icon {
+
+            width: 105px;
+
+            height: 105px;
+
+            margin:
+                0 auto 24px;
+
+            border-radius: 50%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #f0fcf5,
+                    #e3f8ec
+                );
+
+            border:
+                5px solid #bdebd1;
+
+            color: #159447;
+
+            font-size: 54px;
+
+            font-weight: 800;
+
+            box-shadow:
+                0 12px 32px
+                rgba(
+                    21,
+                    148,
+                    71,
+                    0.13
+                );
+
+            animation:
+                successPop 0.65s ease;
+        }
+
+
+        @keyframes successPop {
+
+            0% {
+
+                opacity: 0;
+
+                transform:
+                    scale(0.55);
+            }
+
+            65% {
+
+                transform:
+                    scale(1.08);
+            }
+
+            100% {
+
+                opacity: 1;
+
+                transform:
+                    scale(1);
+            }
+        }
+
+
+        /* =========================================
+           SUCCESS BADGE
+        ========================================= */
+
+        .success-badge {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 7px;
+
+            padding:
+                8px 17px;
+
+            margin-bottom: 17px;
+
+            border-radius: 999px;
+
+            background: #f0faf6;
+
+            border:
+                1px solid #ccebdd;
+
+            color: #19764c;
+
+            font-size: 13px;
+
+            font-weight: 750;
+
+            letter-spacing: 0.2px;
+        }
+
+
+        /* =========================================
+           MAIN HEADING
+        ========================================= */
+
+        h1 {
+
+            margin:
+                0 0 15px;
+
+            color: #173f3c;
+
+            font-size: 38px;
+
+            line-height: 1.2;
+
+            font-weight: 800;
+
+            letter-spacing: -0.6px;
+        }
+
+
+        /* =========================================
+           MAIN DESCRIPTION
+        ========================================= */
+
+        .main-message {
+
+            max-width: 620px;
+
+            margin:
+                0 auto;
+
+            color: #61727b;
+
+            font-size: 17px;
+
+            line-height: 1.75;
+        }
+
+
+        .main-message strong {
+
+            color: #0f766e;
+
+            font-weight: 750;
+        }
+
+
+        /* =========================================
+           CONFIRMATION BOX
+        ========================================= */
+
+        .confirmation-box {
+
+            max-width: 620px;
+
+            margin:
+                30px auto 0;
+
+            padding:
+                21px 23px;
+
+            display: flex;
+
+            align-items: flex-start;
+
+            gap: 14px;
+
+            text-align: left;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f5fbf9,
+                    #f8fcfb
+                );
+
+            border:
+                1px solid #d6ebe6;
+
+            border-radius: 17px;
+        }
+
+
+        .confirmation-icon {
+
+            width: 34px;
+
+            height: 34px;
+
+            flex-shrink: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 50%;
+
+            background: #dff5e8;
+
+            color: #158548;
+
+            font-size: 17px;
+
+            font-weight: 800;
+        }
+
+
+        .confirmation-content {
+
+            flex: 1;
+        }
+
+
+        .confirmation-title {
+
+            margin-bottom: 5px;
+
+            color: #225c54;
+
+            font-size: 15px;
+
+            font-weight: 750;
+        }
+
+
+        .confirmation-text {
+
+            color: #6b7c83;
+
+            font-size: 14px;
+
+            line-height: 1.65;
+        }
+
+
+        /* =========================================
+           DIVIDER
+        ========================================= */
+
+        .divider {
+
+            width: 65px;
+
+            height: 2px;
+
+            border: 0;
+
+            margin:
+                30px auto 25px;
+
+            border-radius: 5px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #9ccfc5,
+                    #0f766e
+                );
+        }
+
+
+        /* =========================================
+           FINAL THANK YOU
+        ========================================= */
+
+        .thank-you {
+
+            max-width: 620px;
+
+            margin:
+                0 auto;
+
+            color: #566871;
+
+            font-size: 15.5px;
+
+            line-height: 1.8;
+        }
+
+
+        .thank-you-title {
+
+            display: block;
+
+            margin-bottom: 7px;
+
+            color: #0f766e;
+
+            font-size: 20px;
+
+            font-weight: 750;
+        }
+
+
+        .priority {
+
+            margin-top: 12px;
+
+            color: #3f625f;
+
+            font-size: 14px;
+
+            font-weight: 650;
+        }
+
+
+        /* =========================================
+           DASHBOARD BUTTON
+        ========================================= */
+
+        .dashboard-button {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            margin-top: 30px;
+
+            padding:
+                13px 27px;
+
+            border-radius: 11px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0f766e,
+                    #0d8f84
+                );
+
+            color: #ffffff;
+
+            text-decoration: none;
+
+            font-size: 15px;
+
+            font-weight: 700;
+
+            box-shadow:
+                0 8px 20px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.18
+                );
+
+            transition:
+                all 0.2s ease;
+        }
+
+
+        .dashboard-button:hover {
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0b655f,
+                    #08776f
+                );
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 11px 25px
+                rgba(
+                    15,
+                    118,
+                    110,
+                    0.23
+                );
+        }
+
+
+        /* =========================================
+           FOOTER
+        ========================================= */
+
+        .footer {
+
+            margin-top: 18px;
+
+            color: #87969c;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+
+        .footer strong {
+
+            color: #557571;
+
+            font-weight: 700;
+        }
+
+
+        /* =========================================
+           MOBILE
+        ========================================= */
+
+        @media (max-width: 700px) {
+
+            .success-page {
+
+                padding:
+                    20px 12px;
+            }
+
+
+            .success-card {
+
+                padding:
+                    42px 22px 36px;
+
+                border-radius: 23px;
+            }
+
+
+            .success-icon {
+
+                width: 85px;
+
+                height: 85px;
+
+                font-size: 43px;
+            }
+
+
+            h1 {
+
+                font-size: 29px;
+            }
+
+
+            .main-message {
+
+                font-size: 16px;
+            }
+
+
+            .confirmation-box {
+
+                padding:
+                    17px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="success-page">
+
+
+        <div class="success-container">
+
+
+            <!-- =====================================
+                 BRAND
+            ====================================== -->
+
+            <div class="brand">
+
+                <div class="brand-icon">
+
+                    +
+
+                </div>
+
+                <span>
+
+                    Sanjeevani Healthcare
+
+                </span>
+
+            </div>
+
+
+            <!-- =====================================
+                 SUCCESS CARD
+            ====================================== -->
+
+            <div class="success-card">
+
+
+                <!-- GREEN CHECK -->
+
+                <div class="success-icon">
+
+                    ✓
+
+                </div>
+
+
+                <!-- STATUS -->
+
+                <div class="success-badge">
+
+                    <span>●</span>
+
+                    Feedback Submitted Successfully
+
+                </div>
+
+
+                <!-- HEADING -->
+
+                <h1>
+
+                    Thank You for Your Feedback
+
+                </h1>
+
+
+                <!-- MAIN MESSAGE -->
+
+                <div class="main-message">
+
+                    Your valuable feedback has been
+
+                    <strong>
+                        successfully recorded.
+                    </strong>
+
+                    <br>
+
+                    We truly appreciate you taking
+                    the time to share your experience
+                    with Sanjeevani Healthcare.
+
+                </div>
+
+
+                <!-- CONFIRMATION -->
+
+                <div class="confirmation-box">
+
+
+                    <div class="confirmation-icon">
+
+                        ✓
+
+                    </div>
+
+
+                    <div class="confirmation-content">
+
+
+                        <div class="confirmation-title">
+
+                            Feedback Confirmed
+
+                        </div>
+
+
+                        <div class="confirmation-text">
+
+                            Your response has been successfully
+                            submitted and securely recorded in
+                            our system. Your feedback will help
+                            us continue improving our quality
+                            of care.
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- DIVIDER -->
+
+                <hr class="divider">
+
+
+                <!-- FINAL THANK YOU -->
+
+                <div class="thank-you">
+
+
+                    <span class="thank-you-title">
+
+                        Thank You for Choosing
+                        Sanjeevani Healthcare
+
+                    </span>
+
+
+                    Your health, comfort and trust
+                    are important to us. We are
+                    committed to providing you with
+                    better healthcare and a better
+                    patient experience.
+
+
+                    <div class="priority">
+
+                        Your health and well-being
+                        are our priority.
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- DASHBOARD -->
+
+                <a
+                    href="/dashboard"
+                    class="dashboard-button"
+                >
+
+                    ← Back to Dashboard
+
+                </a>
+
+
+            </div>
+
+
+            <!-- FOOTER -->
+
+            <div class="footer">
+
+                <strong>
+                    Sanjeevani Healthcare
+                </strong>
+
+                <br>
+
+                Quality Care • Compassion • Trust
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

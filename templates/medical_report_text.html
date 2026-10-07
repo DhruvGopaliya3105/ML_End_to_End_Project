@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Read Medical Report | Sanjeevani Clinic
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .navbar {
+            background: #0f766e;
+            color: white;
+            padding: 18px 40px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h2 {
+            margin: 0;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 14px;
+
+            box-shadow:
+                0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h1 {
+            margin-top: 0;
+        }
+
+        .info {
+            background: #f0fdfa;
+            padding: 18px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .info p {
+            margin: 8px 0;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .report-text {
+            background: #f9fafb;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 10px;
+
+            padding: 20px;
+
+            white-space: pre-wrap;
+
+            line-height: 1.7;
+
+            min-height: 200px;
+
+            font-family:
+                Consolas,
+                "Courier New",
+                monospace;
+
+            overflow-x: auto;
+        }
+
+        .empty {
+            color: #6b7280;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .back-btn {
+            display: inline-block;
+
+            margin-top: 25px;
+
+            background: #0f766e;
+
+            color: white;
+
+            padding: 11px 18px;
+
+            border-radius: 7px;
+
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: #115e59;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         NAVBAR
+    ====================================================== -->
+
+    <div class="navbar">
+
+        <h2>
+            Sanjeevani Clinic
+        </h2>
+
+        <div>
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/medical-reports">
+                Medical Reports
+            </a>
+
+            <a href="/logout">
+                Logout
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN CONTAINER
+    ====================================================== -->
+
+    <div class="container">
+
+        <div class="card">
+
+
+            <h1>
+                Read Medical Report
+            </h1>
+
+
+            <!-- =================================================
+                 DOCUMENT INFORMATION
+            ================================================== -->
+
+            <div class="info">
+
+                <p>
+
+                    <strong>
+                        File:
+                    </strong>
+
+                    {{ document.document_name }}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Type:
+                    </strong>
+
+                    {{ document.document_type or "Not specified" }}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Status:
+                    </strong>
+
+                    {{ document.status }}
+
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 ERROR
+            ================================================== -->
+
+            {% if error %}
+
+                <div class="error">
+
+                    <strong>
+                        Error:
+                    </strong>
+
+                    {{ error }}
+
+                </div>
+
+            {% else %}
+
+
+                <!-- =============================================
+                     EXTRACTED TEXT
+                ============================================== -->
+
+                <h2>
+                    Extracted Text
+                </h2>
+
+
+                {% if text %}
+
+                    <div class="report-text">
+
+                        {{ text }}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty">
+
+                        <p>
+                            No readable text was found
+                            in this document.
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 BACK BUTTON
+            ================================================== -->
+
+            <a
+                href="/medical-reports"
+                class="back-btn"
+            >
+
+                ← Back to Medical Reports
+
+            </a>
+
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

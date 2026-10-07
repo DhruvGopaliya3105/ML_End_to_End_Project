@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Notifications - Sanjeevani AI
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial;
+
+            background: #f4f7fb;
+
+            color: #172033;
+        }
+
+        .container {
+
+            max-width: 900px;
+
+            margin: 50px auto;
+
+            padding: 20px;
+        }
+
+        .notification {
+
+            background: white;
+
+            padding: 25px;
+
+            margin-bottom: 15px;
+
+            border-radius: 15px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.07);
+        }
+
+        .notification h3 {
+
+            margin-top: 0;
+
+            margin-bottom: 10px;
+        }
+
+        .notification p {
+
+            color: #64748b;
+
+            line-height: 1.6;
+        }
+
+        .date {
+
+            color: #94a3b8;
+
+            font-size: 13px;
+        }
+
+        .empty {
+
+            background: white;
+
+            padding: 30px;
+
+            border-radius: 15px;
+
+            text-align: center;
+
+            color: #64748b;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <h1>
+        🔔 Notifications
+    </h1>
+
+
+    {% if notifications %}
+
+
+        {% for notification in notifications %}
+
+
+            <div class="notification">
+
+
+                <h3>
+                    {{ notification.title }}
+                </h3>
+
+
+                <p>
+                    {{ notification.message }}
+                </p>
+
+
+                <div class="date">
+
+                    {{ notification.created_at }}
+
+                </div>
+
+
+            </div>
+
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <div class="empty">
+
+            No notifications yet.
+
+        </div>
+
+
+    {% endif %}
+
+
+</div>
+
+
+</body>
+
+</html>

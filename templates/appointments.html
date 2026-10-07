@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        My Appointments - Sanjeevani Clinic
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f0fdfa,
+                    #f8fafc
+                );
+
+            margin: 0;
+
+            padding: 40px 20px;
+
+            color: #111827;
+
+        }
+
+
+        .container {
+
+            max-width: 1000px;
+
+            margin: auto;
+
+        }
+
+
+        h1 {
+
+            margin-bottom: 8px;
+
+            color: #0f766e;
+
+            font-size: 32px;
+
+        }
+
+
+        .subtitle {
+
+            color: #64748b;
+
+            margin-bottom: 30px;
+
+        }
+
+
+        /* ================================================= */
+        /* MESSAGES */
+        /* ================================================= */
+
+        .message {
+
+            padding: 15px 18px;
+
+            margin-bottom: 20px;
+
+            border-radius: 10px;
+
+            font-weight: bold;
+
+            text-align: center;
+
+        }
+
+
+        .success-message {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+            border: 1px solid #86efac;
+
+        }
+
+
+        .error-message {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            border: 1px solid #fca5a5;
+
+        }
+
+
+        /* ================================================= */
+        /* APPOINTMENT CARD */
+        /* ================================================= */
+
+        .appointment-card {
+
+            background: white;
+
+            padding: 26px;
+
+            margin-bottom: 22px;
+
+            border-radius: 18px;
+
+            border: 1px solid #e2e8f0;
+
+            box-shadow:
+                0 8px 25px
+                rgba(15, 23, 42, 0.08);
+
+        }
+
+
+        .appointment-card p {
+
+            margin: 11px 0;
+
+            color: #475569;
+
+        }
+
+
+        .appointment-card strong {
+
+            color: #1e293b;
+
+        }
+
+
+        /* ================================================= */
+        /* DOCTOR */
+        /* ================================================= */
+
+        .doctor {
+
+            font-size: 21px;
+
+            font-weight: bold;
+
+            margin-bottom: 12px;
+
+            color: #0f172a;
+
+        }
+
+
+        .specialization {
+
+            display: inline-block;
+
+            background: #ecfeff;
+
+            color: #0f766e;
+
+            border: 1px solid #a5f3fc;
+
+            padding: 5px 10px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            font-weight: 600;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        /* ================================================= */
+        /* APPOINTMENT INFO */
+        /* ================================================= */
+
+        .appointment-info {
+
+            background: #f8fafc;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 12px;
+
+            padding: 15px 18px;
+
+            margin-top: 18px;
+
+        }
+
+
+        /* ================================================= */
+        /* STATUS BADGES */
+        /* ================================================= */
+
+        .status-badge {
+
+            display: inline-block;
+
+            padding: 6px 12px;
+
+            border-radius: 20px;
+
+            font-weight: bold;
+
+            font-size: 13px;
+
+        }
+
+
+        .confirmed {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+            border: 1px solid #86efac;
+
+        }
+
+
+        .booked {
+
+            background: #fef3c7;
+
+            color: #92400e;
+
+            border: 1px solid #fcd34d;
+
+        }
+
+
+        .cancelled {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            border: 1px solid #fca5a5;
+
+        }
+
+
+        .default-status {
+
+            background: #e5e7eb;
+
+            color: #374151;
+
+        }
+
+
+        /* ================================================= */
+        /* PAYMENT BOX */
+        /* ================================================= */
+
+        .payment-box {
+
+            margin-top: 20px;
+
+            padding: 20px;
+
+            border-radius: 15px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f8fafc,
+                    #f0fdfa
+                );
+
+            border: 1px solid #cbd5e1;
+
+        }
+
+
+        .payment-heading {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 10px;
+
+            margin-bottom: 14px;
+
+            font-size: 18px;
+
+            font-weight: 700;
+
+            color: #0f172a;
+
+        }
+
+
+        .payment-amount {
+
+            font-size: 22px;
+
+            font-weight: 800;
+
+            color: #0f766e;
+
+        }
+
+
+        .payment-row {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            gap: 15px;
+
+            padding: 9px 0;
+
+            border-bottom:
+                1px solid #e2e8f0;
+
+        }
+
+
+        .payment-row:last-child {
+
+            border-bottom: none;
+
+        }
+
+
+        .payment-label {
+
+            color: #64748b;
+
+            font-weight: 600;
+
+        }
+
+
+        .payment-value {
+
+            color: #1e293b;
+
+            font-weight: 700;
+
+            text-align: right;
+
+        }
+
+
+        /* ================================================= */
+        /* PAYMENT STATUS */
+        /* ================================================= */
+
+        .payment-status {
+
+            display: inline-block;
+
+            padding: 6px 12px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+        }
+
+
+        .payment-paid {
+
+            background: #dcfce7;
+
+            color: #166534;
+
+            border: 1px solid #86efac;
+
+        }
+
+
+        .payment-pending {
+
+            background: #fef3c7;
+
+            color: #92400e;
+
+            border: 1px solid #fcd34d;
+
+        }
+
+
+        /* ================================================= */
+        /* REFUND */
+        /* ================================================= */
+
+        .refund-status {
+
+            display: inline-block;
+
+            padding: 6px 12px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+        }
+
+
+        .refund-pending {
+
+            background: #fef3c7;
+
+            color: #92400e;
+
+            border: 1px solid #fcd34d;
+
+        }
+
+
+        /* ================================================= */
+        /* PAYMENT INFO MESSAGE */
+        /* ================================================= */
+
+        .payment-info {
+
+            margin-top: 14px;
+
+            padding: 11px 13px;
+
+            border-radius: 9px;
+
+            background: #eff6ff;
+
+            color: #1e40af;
+
+            border: 1px solid #bfdbfe;
+
+            font-size: 13px;
+
+        }
+
+
+        /* ================================================= */
+        /* BUTTONS */
+        /* ================================================= */
+
+        .buttons {
+
+            margin-top: 20px;
+
+            display: flex;
+
+            gap: 10px;
+
+            flex-wrap: wrap;
+
+        }
+
+
+        .btn {
+
+            display: inline-block;
+
+            padding: 11px 18px;
+
+            border-radius: 8px;
+
+            text-decoration: none;
+
+            border: none;
+
+            cursor: pointer;
+
+            font-size: 14px;
+
+            font-weight: 700;
+
+            transition:
+                0.2s ease;
+
+        }
+
+
+        .reschedule {
+
+            background: #2563eb;
+
+            color: white;
+
+        }
+
+
+        .reschedule:hover {
+
+            background: #1d4ed8;
+
+        }
+
+
+        .cancel {
+
+            background: #dc2626;
+
+            color: white;
+
+        }
+
+
+        .cancel:hover {
+
+            background: #b91c1c;
+
+        }
+
+
+        /* ================================================= */
+        /* EMPTY */
+        /* ================================================= */
+
+        .empty {
+
+            background: white;
+
+            padding: 45px 30px;
+
+            text-align: center;
+
+            border-radius: 15px;
+
+            border: 1px solid #e2e8f0;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.06);
+
+        }
+
+
+        .empty h3 {
+
+            margin-top: 0;
+
+            color: #334155;
+
+        }
+
+
+        .empty p {
+
+            color: #64748b;
+
+        }
+
+
+        /* ================================================= */
+        /* HOME */
+        /* ================================================= */
+
+        .home-link {
+
+            display: inline-block;
+
+            margin-top: 20px;
+
+            text-decoration: none;
+
+            color: #0f766e;
+
+            font-weight: 700;
+
+        }
+
+
+        .home-link:hover {
+
+            text-decoration: underline;
+
+        }
+
+
+        /* ================================================= */
+        /* MOBILE */
+        /* ================================================= */
+
+        @media (max-width: 600px) {
+
+            body {
+
+                padding: 25px 12px;
+
+            }
+
+
+            h1 {
+
+                font-size: 27px;
+
+            }
+
+
+            .appointment-card {
+
+                padding: 20px;
+
+            }
+
+
+            .payment-row {
+
+                flex-direction: column;
+
+                align-items: flex-start;
+
+                gap: 4px;
+
+            }
+
+
+            .payment-value {
+
+                text-align: left;
+
+            }
+
+
+            .payment-heading {
+
+                flex-direction: column;
+
+                align-items: flex-start;
+
+            }
+
+
+            .buttons {
+
+                flex-direction: column;
+
+            }
+
+
+            .btn {
+
+                width: 100%;
+
+                text-align: center;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <h1>
+        My Appointments
+    </h1>
+
+    <div class="subtitle">
+        View and manage your appointments, payment status and booking details.
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- RESCHEDULE SUCCESS -->
+    <!-- ================================================= -->
+
+    {% if request.query_params.get("rescheduled") == "success" %}
+
+    <div class="message success-message">
+
+        ✓ Appointment Rescheduled Successfully!
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- CANCEL SUCCESS -->
+    <!-- ================================================= -->
+
+    {% if request.query_params.get("cancelled") == "success" %}
+
+    <div class="message success-message">
+
+        ✓ Appointment Cancelled Successfully!
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- CANCEL ERROR -->
+    <!-- ================================================= -->
+
+    {% if request.query_params.get("error") == "cancel_failed" %}
+
+    <div class="message error-message">
+
+        ✕ Appointment could not be cancelled.
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- CONFIRMATION ERROR -->
+    <!-- ================================================= -->
+
+    {% if request.query_params.get("error") == "confirmation_failed" %}
+
+    <div class="message error-message">
+
+        ✕ Appointment was created,
+        but confirmation failed.
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- APPOINTMENTS -->
+    <!-- ================================================= -->
+
+    {% if appointments %}
+
+
+        {% for appointment in appointments %}
+
+
+        <div class="appointment-card">
+
+
+            <!-- ================================================= -->
+            <!-- DOCTOR -->
+            <!-- ================================================= -->
+
+            <div class="doctor">
+
+                🩺 Doctor:
+
+                {% if appointment.doctor %}
+
+                    Dr. {{ appointment.doctor.name }}
+
+                {% else %}
+
+                    Doctor
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- SPECIALIZATION -->
+
+            {% if appointment.doctor
+                and appointment.doctor.specialization %}
+
+            <span class="specialization">
+
+                {{ appointment.doctor.specialization }}
+
+            </span>
+
+            {% endif %}
+
+
+            <!-- ================================================= -->
+            <!-- APPOINTMENT DETAILS -->
+            <!-- ================================================= -->
+
+            <div class="appointment-info">
+
+
+                {% if appointment.reason %}
+
+                <p>
+
+                    <strong>
+                        Reason:
+                    </strong>
+
+                    {{ appointment.reason }}
+
+                </p>
+
+                {% endif %}
+
+
+                <p>
+
+                    <strong>
+                        📅 Date:
+                    </strong>
+
+                    {{ appointment.appointment_date }}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        🕐 Time:
+                    </strong>
+
+                    {{ appointment.start_time }}
+
+                    -
+
+                    {{ appointment.end_time }}
+
+                </p>
+
+
+                <!-- STATUS -->
+
+                <p>
+
+                    <strong>
+                        Appointment Status:
+                    </strong>
+
+
+                    {% if appointment.status == "CONFIRMED" %}
+
+                        <span class="status-badge confirmed">
+
+                            ✓ CONFIRMED
+
+                        </span>
+
+
+                    {% elif appointment.status == "BOOKED" %}
+
+                        <span class="status-badge booked">
+
+                            BOOKED
+
+                        </span>
+
+
+                    {% elif appointment.status == "CANCELLED" %}
+
+                        <span class="status-badge cancelled">
+
+                            ✕ CANCELLED
+
+                        </span>
+
+
+                    {% else %}
+
+                        <span class="status-badge default-status">
+
+                            {{ appointment.status }}
+
+                        </span>
+
+                    {% endif %}
+
+                </p>
+
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- PAYMENT -->
+            <!-- ================================================= -->
+
+            <div class="payment-box">
+
+
+                <div class="payment-heading">
+
+                    <span>
+                        💳 Payment Details
+                    </span>
+
+                    <span class="payment-amount">
+
+                        ₹{{ appointment.payment_amount or 0 }}
+
+                    </span>
+
+                </div>
+
+
+                <!-- AMOUNT -->
+
+                <div class="payment-row">
+
+                    <span class="payment-label">
+                        Consultation Fee
+                    </span>
+
+                    <span class="payment-value">
+
+                        ₹{{ appointment.payment_amount or 0 }}
+
+                    </span>
+
+                </div>
+
+
+                <!-- METHOD -->
+
+                <div class="payment-row">
+
+                    <span class="payment-label">
+                        Payment Method
+                    </span>
+
+                    <span class="payment-value">
+
+                        {% if appointment.payment_method == "ONLINE" %}
+
+                            📱 UPI / Online
+
+                        {% else %}
+
+                            💵 Cash at Clinic
+
+                        {% endif %}
+
+                    </span>
+
+                </div>
+
+
+                <!-- PAYMENT STATUS -->
+
+                <div class="payment-row">
+
+                    <span class="payment-label">
+                        Payment Status
+                    </span>
+
+                    <span class="payment-value">
+
+
+                        {% if appointment.payment_status == "PAID" %}
+
+                            <span class="payment-status payment-paid">
+
+                                🟢 PAID
+
+                            </span>
+
+
+                        {% else %}
+
+                            <span class="payment-status payment-pending">
+
+                                🟡 PAYMENT PENDING
+
+                            </span>
+
+                        {% endif %}
+
+
+                    </span>
+
+                </div>
+
+
+                <!-- REFUND -->
+
+                {% if appointment.refund_status
+                    and appointment.refund_status != "NOT_REQUIRED" %}
+
+                <div class="payment-row">
+
+                    <span class="payment-label">
+                        Refund Status
+                    </span>
+
+                    <span class="payment-value">
+
+
+                        {% if appointment.refund_status == "PENDING" %}
+
+                            <span class="refund-status refund-pending">
+
+                                🟡 REFUND PENDING
+
+                            </span>
+
+                        {% else %}
+
+                            {{ appointment.refund_status }}
+
+                        {% endif %}
+
+
+                    </span>
+
+                </div>
+
+                {% endif %}
+
+
+                <!-- PAYMENT INFORMATION -->
+
+                {% if appointment.payment_status == "PAID" %}
+
+                <div class="payment-info">
+
+                    🟢 Your online payment has been successfully recorded.
+
+                </div>
+
+                {% else %}
+
+                <div class="payment-info">
+
+                    🟡 Payment will be collected at the clinic during your visit.
+
+                </div>
+
+                {% endif %}
+
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- BUTTONS -->
+            <!-- ================================================= -->
+
+            <div class="buttons">
+
+
+                {% if appointment.status not in [
+                    "CANCELLED",
+                    "COMPLETED",
+                    "DOCTOR_CANCELLED"
+                ] %}
+
+
+                    <!-- RESCHEDULE -->
+
+                    <a
+
+                        href="/appointments/{{ appointment.id }}/reschedule"
+
+                        class="btn reschedule"
+
+                    >
+
+                        📅 Reschedule
+
+                    </a>
+
+
+                    <!-- CANCEL -->
+
+                    <form
+
+                        method="POST"
+
+                        action="/appointments/{{ appointment.id }}/cancel"
+
+                        style="display:inline;"
+
+                    >
+
+                        <button
+
+                            type="submit"
+
+                            class="btn cancel"
+
+                            onclick="
+                                return confirm(
+                                    'Are you sure you want to cancel this appointment?'
+                                );
+                            "
+
+                        >
+
+                            ✕ Cancel Appointment
+
+                        </button>
+
+                    </form>
+
+
+                {% endif %}
+
+
+            </div>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <!-- ================================================= -->
+        <!-- EMPTY -->
+        <!-- ================================================= -->
+
+        <div class="empty">
+
+            <h3>
+
+                No appointments found.
+
+            </h3>
+
+            <p>
+
+                You currently have no appointments.
+
+            </p>
+
+        </div>
+
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- BACK DASHBOARD -->
+    <!-- ================================================= -->
+
+    <a
+
+        href="/dashboard"
+
+        class="home-link"
+
+    >
+
+        ← Back to Dashboard
+
+    </a>
+
+
+</div>
+
+
+</body>
+
+</html>

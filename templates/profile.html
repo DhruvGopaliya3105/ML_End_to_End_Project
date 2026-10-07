@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        My Profile | Sanjeevani AI
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial, sans-serif;
+
+            background: #f5f3eb;
+
+            color: #173f3a;
+        }
+
+
+        .container {
+
+            max-width: 800px;
+
+            margin: 50px auto;
+
+            padding: 0 20px;
+        }
+
+
+        .profile-card {
+
+            background: white;
+
+            border-radius: 25px;
+
+            padding: 40px;
+
+            box-shadow:
+                0 10px 30px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        .profile-header {
+
+            text-align: center;
+
+            padding-bottom: 30px;
+
+            border-bottom:
+                1px solid #eeeeee;
+        }
+
+
+        .avatar {
+
+            width: 100px;
+
+            height: 100px;
+
+            margin: auto;
+
+            border-radius: 50%;
+
+            background: #20584f;
+
+            color: white;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 42px;
+
+            font-weight: bold;
+        }
+
+
+        .profile-header h1 {
+
+            font-family: Georgia, serif;
+
+            font-size: 32px;
+
+            margin:
+                20px 0 10px;
+        }
+
+
+        .role {
+
+            display: inline-block;
+
+            background: #dceee9;
+
+            color: #20584f;
+
+            padding:
+                7px 15px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            font-weight: bold;
+        }
+
+
+        /* =========================
+           INFORMATION
+        ========================= */
+
+        .info-section {
+
+            margin-top: 30px;
+        }
+
+
+        .info-section h2 {
+
+            font-family: Georgia, serif;
+
+            margin-bottom: 20px;
+        }
+
+
+        .info-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 20px;
+        }
+
+
+        .info-box {
+
+            background: #f8faf9;
+
+            border:
+                1px solid #e3e8e5;
+
+            border-radius: 14px;
+
+            padding: 18px;
+        }
+
+
+        .info-label {
+
+            font-size: 13px;
+
+            color: #71817e;
+
+            margin-bottom: 7px;
+        }
+
+
+        .info-value {
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            color: #173f3a;
+
+            word-break: break-word;
+        }
+
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        .buttons {
+
+            margin-top: 35px;
+
+            display: flex;
+
+            gap: 15px;
+        }
+
+
+        .btn {
+
+            flex: 1;
+
+            padding: 14px;
+
+            border-radius: 10px;
+
+            text-align: center;
+
+            text-decoration: none;
+
+            font-weight: bold;
+
+            transition: 0.2s;
+        }
+
+
+        .edit-btn {
+
+            background: #20584f;
+
+            color: white;
+        }
+
+
+        .edit-btn:hover {
+
+            background: #17483f;
+        }
+
+
+        .dashboard-btn {
+
+            background: #edf3f1;
+
+            color: #20584f;
+        }
+
+
+        .dashboard-btn:hover {
+
+            background: #dce8e4;
+        }
+
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 600px) {
+
+            .profile-card {
+
+                padding: 25px;
+            }
+
+
+            .info-grid {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .buttons {
+
+                flex-direction: column;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="profile-card">
+
+
+        <!-- =========================
+             PROFILE HEADER
+        ========================= -->
+
+        <div class="profile-header">
+
+
+            <div class="avatar">
+
+                {{ user.name[0] | upper }}
+
+            </div>
+
+
+            <h1>
+
+                {{ user.name }}
+
+            </h1>
+
+
+            <span class="role">
+
+                {{ user.role }}
+
+            </span>
+
+
+        </div>
+
+
+
+        <!-- =========================
+             PERSONAL INFORMATION
+        ========================= -->
+
+        <div class="info-section">
+
+
+            <h2>
+
+                Personal Information
+
+            </h2>
+
+
+            <div class="info-grid">
+
+
+                <!-- NAME -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Full Name
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.name }}
+
+                    </div>
+
+                </div>
+
+
+                <!-- EMAIL -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Email
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.email }}
+
+                    </div>
+
+                </div>
+
+
+                <!-- PHONE -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Phone
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.phone or "Not provided" }}
+
+                    </div>
+
+                </div>
+
+
+                <!-- AGE -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Age
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.age or "Not provided" }}
+
+                    </div>
+
+                </div>
+
+
+                <!-- GENDER -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Gender
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.gender or "Not provided" }}
+
+                    </div>
+
+                </div>
+
+
+                <!-- ROLE -->
+
+                <div class="info-box">
+
+                    <div class="info-label">
+
+                        Account Role
+
+                    </div>
+
+                    <div class="info-value">
+
+                        {{ user.role }}
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =========================
+             BUTTONS
+        ========================= -->
+
+        <div class="buttons">
+
+
+            <!-- EDIT PROFILE -->
+
+            <a
+                href="/profile/edit"
+                class="btn edit-btn"
+            >
+
+                ✏️ Edit Profile
+
+            </a>
+
+
+            <!-- DASHBOARD -->
+
+            <a
+                href="/dashboard"
+                class="btn dashboard-btn"
+            >
+
+                ← Dashboard
+
+            </a>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>
