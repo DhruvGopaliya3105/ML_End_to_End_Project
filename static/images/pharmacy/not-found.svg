@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img" aria-label="No photo yet">
+<rect width="400" height="300" rx="18" fill="#f8fafc"/>
+<rect x="6" y="6" width="388" height="288" rx="14" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="8 8"/>
+<circle cx="200" cy="132" r="34" fill="none" stroke="#94a3b8" stroke-width="4"/>
+<path d="M176 132 h48 M200 108 v48" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+<text x="200" y="212" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#64748b">Photo not added yet</text>
+<text x="200" y="236" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#94a3b8">Pharmacy admin &#8594; Catalog &#8594; Upload photo</text>
+</svg>

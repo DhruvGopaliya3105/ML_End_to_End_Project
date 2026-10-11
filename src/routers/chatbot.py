@@ -58,7 +58,6 @@ from src.database.connection import get_db
 
 from src.models.doctor import Doctor
 
-
 from src.models.visit_type import VisitType
 
 from src.models.appointment import Appointment
@@ -77,6 +76,8 @@ from src.services.appointment_service import (
     get_patient_appointments,
     confirm_appointment
 )
+
+from src.services import clinic_knowledge_service as clinic_knowledge
 
 from src.config import TEMPLATES_DIR
 
@@ -112,7 +113,6 @@ GROQ_API_KEY = os.getenv(
 GROQ_MODEL = os.getenv(
     "GROQ_MODEL"
 )
-
 
 groq_client = None
 
@@ -173,6 +173,21 @@ def format_time(value):
 # DOCTOR NAME
 # ============================================================
 
+def clean_doctor_name(name):
+
+    # doctor names are stored WITH the "Dr." prefix - strip it so replies
+    # that add their own "Dr." label never render "Dr. Dr. ..."
+
+    cleaned = re.sub(
+        r"^dr\.?\s+",
+        "",
+        (name or "").strip(),
+        flags=re.IGNORECASE
+    )
+
+    return cleaned or "Doctor"
+
+
 def get_doctor_name(appointment):
 
     if (
@@ -180,7 +195,9 @@ def get_doctor_name(appointment):
         and appointment.doctor
     ):
 
-        return appointment.doctor.name
+        return clean_doctor_name(
+            appointment.doctor.name
+        )
 
     return "Doctor"
 
@@ -484,7 +501,9 @@ def save_pending_booking(
             doctor.id,
 
         "doctor_name":
-            doctor.name,
+            clean_doctor_name(
+                doctor.name
+            ),
 
         "visit_type_id":
             visit_type.id,
@@ -771,7 +790,7 @@ def handle_doctor_search(
 
     reply = (
 
-        f"Yes! I found Dr. {doctor.name}. 👨‍⚕️\n\n"
+        f"Yes! I found Dr. {clean_doctor_name(doctor.name)}. 👨‍⚕️\n\n"
 
         f"Specialization: "
         f"{doctor.specialization}\n"
@@ -826,7 +845,9 @@ def handle_doctor_search(
             doctor.id,
 
         "doctor_name":
-            doctor.name,
+            clean_doctor_name(
+                doctor.name
+            ),
 
         "appointment_date":
             str(selected_date)
@@ -1147,7 +1168,9 @@ def handle_slot_booking(
     # ========================================================
 
     doctor_name = (
-        appointment.doctor.name
+        clean_doctor_name(
+            appointment.doctor.name
+        )
         if appointment.doctor
         else pending_booking[
             "doctor_name"
@@ -1180,7 +1203,7 @@ def handle_slot_booking(
             f"Time: "
             f"{format_time(appointment.start_time)}"
             f" - "
-            f"{format_time(appointment.end_time)}\n"
+            f"{format_time(appointment.end_time)}\\n"
 
             f"Status: "
             f"{appointment.status}\n\n"
@@ -1270,7 +1293,7 @@ def handle_confirmation(
                         f"Time: "
                         f"{format_time(appointment.start_time)}"
                         f" - "
-                        f"{format_time(appointment.end_time)}\n"
+                        f"{format_time(appointment.end_time)}\\n"
 
                         "Status: CONFIRMED"
 
@@ -1359,7 +1382,7 @@ def handle_confirmation(
             f"Time: "
             f"{format_time(confirmed_appointment.start_time)}"
             f" - "
-            f"{format_time(confirmed_appointment.end_time)}\n"
+            f"{format_time(confirmed_appointment.end_time)}\\n"
 
             "Status: CONFIRMED\n\n"
 
@@ -1602,17 +1625,29 @@ def chatbot_message(
     # HELLO
     # ========================================================
 
-    if user_message in [
+    is_greeting = (
 
-        "hi",
-        "hello",
-        "hey",
-        "hii",
-        "good morning",
-        "good afternoon",
-        "good evening"
+        user_message in [
 
-    ]:
+            "hi",
+            "hello",
+            "hey",
+            "hii",
+            "good morning",
+            "good afternoon",
+            "good evening"
+
+        ]
+
+        or re.fullmatch(
+            r"h+[ei]*l+[o0]+[!.]*",
+            user_message
+        )
+
+    )
+
+
+    if is_greeting:
 
         return {
 
@@ -1627,13 +1662,15 @@ def chatbot_message(
 
                 "I can help you with:\n"
 
-                "• Health questions\n"
-                "• Symptoms\n"
+                "• Medicine prices, stock, dosage\n"
+                "• Medicines for a disease\n"
+                "• Doctors and consultation fees\n"
+                "• Nearby chemist shops\n"
+                "• Clinic timings and services\n"
                 "• Finding a doctor\n"
-                "• Checking available slots\n"
                 "• Booking appointments\n"
-                "• Confirming appointments\n"
-                "• Checking your appointment\n\n"
+                "• Checking your appointment\n"
+                "• General symptom guidance\n\n"
 
                 "How can I help you today?"
 
@@ -1657,19 +1694,27 @@ def chatbot_message(
 
                 "I can help you with:\n\n"
 
-                "• General health questions\n"
-                "• Symptoms\n"
+                "• Medicine price, stock, dosage, side effects\n"
+                "• Medicines for a disease\n"
+                "• Doctors, specializations, fees\n"
+                "• Nearby chemist shops\n"
+                "• Clinic timings, services, booking, cancellation\n"
                 "• Find a specialist\n"
-                "• Check doctor availability\n"
                 "• Book an appointment\n"
                 "• Confirm an appointment\n"
-                "• Check your appointment\n\n"
+                "• Check your appointment\n"
+                "• General symptom guidance\n\n"
 
                 "Examples:\n\n"
 
+                "\"Price of Dolo 650\"\n"
+                "\"Medicine for diabetes\"\n"
+                "\"Cardiologist\"\n"
+                "\"Chemist near me\"\n"
+                "\"Clinic timings\"\n"
                 "\"I have a cough\"\n"
+                "\"I have chest pain\"\n"
                 "\"I need a neurologist\"\n"
-                "\"Show available slots\"\n"
                 "\"Book 10 AM\"\n"
                 "\"What is my appointment time?\"\n"
                 "\"Confirm my appointment\""
@@ -1844,7 +1889,7 @@ def chatbot_message(
                 f"Time: "
                 f"{format_time(appointment.start_time)}"
                 f" - "
-                f"{format_time(appointment.end_time)}\n"
+                f"{format_time(appointment.end_time)}\\n"
 
                 f"Status: "
                 f"{appointment.status}"
@@ -1881,7 +1926,7 @@ def chatbot_message(
 
                         f"Your appointment is "
                         f"with Dr. "
-                        f"{appointment.doctor.name}.\n\n"
+                        f"{clean_doctor_name(appointment.doctor.name)}.\n\n"
 
                         f"Specialization: "
                         f"{appointment.doctor.specialization}"
@@ -2064,7 +2109,99 @@ def chatbot_message(
 
 
     # ========================================================
-    # GROQ HEALTH AI
+    # EMERGENCY SYMPTOMS FIRST
+    # Safety: a medical emergency must never be answered with a
+    # medicine card - always the urgent local message, with or
+    # without an AI key configured.
+    # ========================================================
+
+    emergency = clinic_knowledge.emergency_reply(
+        user_message
+    )
+
+
+    if emergency:
+
+        return {
+
+            "success": True,
+
+            "reply": emergency
+
+        }
+
+
+    # ========================================================
+    # LOCAL KNOWLEDGE (works with NO api key - answers come
+    # from the clinic's own database, so they are always real)
+    # ========================================================
+
+    for handler in (
+
+        clinic_knowledge.medicine_reply,
+        clinic_knowledge.disease_reply,
+        clinic_knowledge.pharmacy_reply,
+        clinic_knowledge.clinic_info_reply,
+
+    ):
+
+        reply = handler(db, user_message)
+
+        if reply:
+
+            return {
+
+                "success": True,
+
+                "reply": reply
+
+            }
+
+
+    # ========================================================
+    # SAFE LOCAL SYMPTOM GUIDANCE (always runs)
+    # The medical disclaimer and specialist guidance are a
+    # safety feature - they must never depend on whether an
+    # AI key is configured or not.
+    # ========================================================
+
+    symptom = clinic_knowledge.symptom_reply(
+
+        db,
+        user_message
+
+    )
+
+    if symptom:
+
+        return {
+
+            "success": True,
+
+            "reply": symptom
+
+        }
+
+
+    # ========================================================
+    # NO AI KEY -> helpful local fallback
+    # ========================================================
+
+    if groq_client is None or not GROQ_MODEL:
+
+        return {
+
+            "success": True,
+
+            "reply": clinic_knowledge.general_reply()
+
+        }
+
+
+    # ========================================================
+    # GROQ HEALTH AI (key configured, nothing local matched).
+    # A short capabilities footer keeps every AI answer helpful
+    # and points users at the clinic's real records.
     # ========================================================
 
     ai_reply = get_groq_response(
@@ -2073,11 +2210,17 @@ def chatbot_message(
 
     )
 
+    footer = (
+        "\n\n---\n"
+        "💡 I can also look up 💊 medicines & prices, 🩺 diseases, "
+        "👨‍⚕️ doctors, 🏪 nearby chemists, 📅 appointments and "
+        "🕒 clinic timings - straight from the clinic's records."
+    )
 
     return {
 
         "success": True,
 
-        "reply": ai_reply
+        "reply": ai_reply + footer
 
     }

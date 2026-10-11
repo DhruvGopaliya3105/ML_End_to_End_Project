@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Cart - Sanjeevani Pharmacy" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    <div class="ph-section-title">
+
+        <h2>&#128722; Your cart ({{ cart.count }} pack{{ 's' if cart.count != 1 }})</h2>
+
+        {% if cart.lines %}
+            <div class="ph-row">
+                <a class="ph-btn ghost small" href="/pharmacy">Keep shopping</a>
+                <button class="ph-btn ghost small" data-ph="clear">Empty cart</button>
+            </div>
+        {% endif %}
+
+    </div>
+
+    {% if error %}
+        <div class="ph-alert danger">{{ error }}</div>
+    {% endif %}
+
+    {% if cart.problems %}
+        <div class="ph-alert warn">
+            <strong>Fix before paying:</strong>
+            <ul style="margin:6px 0 0 18px">
+                {% for problem in cart.problems %}
+                    <li>{{ problem }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <div class="ph-split">
+
+        <!-- ============================= LEFT: lines + payment ============================= -->
+
+        <div>
+
+            <section class="ph-panel">
+
+                {% if not cart.lines %}
+
+                    <div class="ph-empty">
+                        <strong>Cart is empty</strong>
+                        Add medicines from the
+                        <a href="/pharmacy">pharmacy shelf</a>, or buy the
+                        tablets your doctor prescribed from the
+                        <a href="/pharmacy/prescriptions">Doctor&#39;s Rx</a> tab.
+                    </div>
+
+                {% else %}
+
+                    {% for line in cart.lines %}
+
+                        <div class="ph-cart-line" data-line="{{ line.item_id }}">
+
+                            <img src="{{ line.image }}"
+                                 alt="{{ line.name }}"
+                                 onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';">
+
+                            <div>
+
+                                <strong>{{ line.name }}</strong>
+
+                                <div class="ph-small ph-muted">
+                                    {{ line.generic_name or '' }}
+                                    {% if line.pack_size %} &middot; {{ line.pack_size }}{% endif %}
+                                </div>
+
+                                {% if line.source == 'PRESCRIPTION' %}
+                                    <div class="ph-small" style="margin-top:4px">
+                                        <span class="ph-tag rx">&#129658; Prescribed
+                                            {% if line.prescription_id %}#{{ line.prescription_id }}{% endif %}
+                                        </span>
+                                        {% if line.dosage or line.frequency or line.duration %}
+                                            <span class="ph-muted">
+                                                {{ line.dosage or '' }}
+                                                {{ line.frequency or '' }}
+                                                {{ line.duration or '' }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if line.price_changed %}
+                                    <div class="ph-small" style="color:#b45309">
+                                        Price updated from {{ inr(line.old_unit_price) }}
+                                        to {{ inr(line.unit_price) }}
+                                    </div>
+                                {% endif %}
+
+                                {% if not line.available %}
+                                    <div class="ph-small" style="color:#b91c1c">
+                                        Only {{ line.stock }} in stock -
+                                        <a href="/pharmacy/nearby?medicine_id={{ line.medicine_id }}">
+                                            find it at a nearby shop
+                                        </a>
+                                    </div>
+                                {% endif %}
+
+                            </div>
+
+                            <div class="ph-qty">
+                                <button type="button" data-ph="qty" data-step="-1"
+                                        aria-label="One less">&minus;</button>
+                                <input type="number" min="1" max="{{ line.max_qty }}"
+                                       value="{{ line.quantity }}" data-qty
+                                       aria-label="Quantity">
+                                <button type="button" data-ph="qty" data-step="1"
+                                        aria-label="One more">+</button>
+                            </div>
+
+                            <div style="text-align:right">
+                                <strong>{{ inr(line.line_total) }}</strong>
+                                <div class="ph-small ph-muted">{{ inr(line.unit_price) }} each</div>
+                            </div>
+
+                            <button class="ph-btn ghost small" type="button"
+                                    data-ph="remove" data-id="{{ line.item_id }}"
+                                    title="Remove from cart"
+                                    style="padding:6px 8px">&times;</button>
+
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            </section>
+
+
+            <!-- ============================= PAYMENT ============================= -->
+
+            {% if cart.lines %}
+
+            <form id="ph-checkout-form" method="post" action="/pharmacy/checkout">
+
+                <section class="ph-panel">
+
+                    <h2>&#128179; Payment</h2>
+                    <p class="hint">
+                        Cash = pay at the pharmacy counter when you collect.
+                        Online = UPI / QR (or the gateway if your
+                        <code>.env</code> has Razorpay keys).
+                    </p>
+
+                    <div class="ph-pay-options">
+
+                        <label class="ph-pay-option">
+                            <input type="radio" name="payment_method" value="CASH" checked>
+                            <div class="ph-pay-card">
+                                <strong>&#128176; Cash at counter</strong>
+                                <span>Order is confirmed immediately, pay when
+                                    you collect. Payment shows as
+                                    <em>Pending</em> until staff marks it paid.</span>
+                            </div>
+                        </label>
+
+                        <label class="ph-pay-option">
+                            <input type="radio" name="payment_method" value="ONLINE">
+                            <div class="ph-pay-card">
+                                <strong>&#128241; Online (UPI / QR)</strong>
+                                <span>Pay from any UPI app on the next screen.
+                                    Stock is held for you until the payment lands.</span>
+                            </div>
+                        </label>
+
+                    </div>
+
+                    <h2 style="margin-top:18px">&#128666; Collection</h2>
+                    <p class="hint">Pickup at the counter is free. Delivery
+                        inside the city is {{ inr(40) }}, free above {{ inr(999) }}.</p>
+
+                    <div class="ph-pay-options">
+
+                        <label class="ph-pay-option">
+                            <input type="radio" name="delivery_type" value="PICKUP" checked>
+                            <div class="ph-pay-card">
+                                <strong>&#127970; Pick up at the counter</strong>
+                                <span>Show your order number at the Sanjeevani
+                                    pharmacy desk.</span>
+                            </div>
+                        </label>
+
+                        <label class="ph-pay-option">
+                            <input type="radio" name="delivery_type" value="DELIVERY">
+                            <div class="ph-pay-card">
+                                <strong>&#128757; Home delivery</strong>
+                                <span>Address and phone below become mandatory.</span>
+                            </div>
+                        </label>
+
+                    </div>
+
+                    <div class="ph-form-grid" style="margin-top:14px">
+
+                        <div class="ph-field" style="grid-column:1/-1">
+                            <label for="ph-address">Delivery address (only for delivery)</label>
+                            <textarea class="ph-textarea" id="ph-address" name="address"
+                                      rows="2" placeholder="House / flat, street, area, pincode"></textarea>
+                        </div>
+
+                        <div class="ph-field">
+                            <label for="ph-phone">Contact number</label>
+                            <input class="ph-input" id="ph-phone" name="phone"
+                                   value="{{ user.phone or '' }}" placeholder="98765 43210">
+                        </div>
+
+                        <div class="ph-field">
+                            <label for="ph-notes">Note for the pharmacist</label>
+                            <input class="ph-input" id="ph-notes" name="notes"
+                                   placeholder="e.g. substitute allowed, generic is fine">
+                        </div>
+
+                    </div>
+
+                    <label class="ph-check" style="margin-top:12px">
+                        <input type="checkbox" name="emergency" value="on">
+                        &#128652; This is urgent / emergency - flag it for the counter
+                    </label>
+
+                    <p class="ph-small ph-muted" style="margin-top:12px">
+                        By placing the order you confirm the medicines are for
+                        you (or the patient named in the prescription) and that
+                        prescription-only items were advised by a doctor.
+                    </p>
+
+                </section>
+
+                <div class="ph-panel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+
+                    <div style="flex:1;min-width:190px">
+                        <strong style="font-size:20px;color:#0f766e">
+                            {{ inr(total) }}
+                        </strong>
+                        <div class="ph-small ph-muted">
+                            {{ inr(subtotal) }} medicines
+                            {% if delivery_fee %} + {{ inr(delivery_fee) }} delivery{% endif %}
+                        </div>
+                    </div>
+
+                    <button class="ph-btn" type="submit" data-ph="checkout"
+                            {{ 'disabled' if not cart.ready }}>
+                        Place order &amp; pay
+                    </button>
+
+                </div>
+
+            </form>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ============================= RIGHT: summary ============================= -->
+
+        <aside>
+
+            <div class="ph-summary">
+
+                <h2 style="font-size:17px;margin-bottom:8px">Bill</h2>
+
+                <div class="ph-summary-row">
+                    <span>Items</span>
+                    <strong>{{ cart.count }}</strong>
+                </div>
+
+                <div class="ph-summary-row">
+                    <span>Medicine total</span>
+                    <strong>{{ inr(cart.subtotal) }}</strong>
+                </div>
+
+                <div class="ph-summary-row">
+                    <span>Delivery</span>
+                    <strong>
+                        {% if cart.subtotal >= 999 %}
+                            Free
+                        {% else %}
+                            {{ inr(40) }}
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="ph-summary-row total">
+                    <span>Payable</span>
+                    <strong>{{ inr(cart.subtotal + (0 if cart.subtotal >= 999 else 40)) }}</strong>
+                </div>
+
+                <p class="ph-small ph-muted" style="margin-top:10px">
+                    Delivery fee is added on the checkout form when you choose
+                    home delivery. Counter pickup is always free.
+                </p>
+
+                <a class="ph-btn ghost block" style="margin-top:12px"
+                   href="/pharmacy/prescriptions">
+                    Buy a doctor&#39;s prescription
+                </a>
+
+                <a class="ph-btn ghost block" style="margin-top:8px"
+                   href="/pharmacy/orders">
+                    My previous orders
+                </a>
+
+            </div>
+
+            <div class="ph-panel ph-emg">
+
+                <h2 style="font-size:16px">&#128652; Need it right now?</h2>
+
+                <p class="hint" style="margin-bottom:10px">
+                    If our shelf is empty, the emergency search shows partner
+                    chemists near the clinic that have the strip in stock
+                    (from our own database), plus Google Maps results when an
+                    API key is configured.
+                </p>
+
+                <a class="ph-btn danger block"
+                   href="/pharmacy/nearby{{ ('?medicine_id=' ~ cart.lines[0].medicine_id) if cart.lines else '' }}">
+                    Find it nearby
+                </a>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+</main>
+
+</body>
+</html>

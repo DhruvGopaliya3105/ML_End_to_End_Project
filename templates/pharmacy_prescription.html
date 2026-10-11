@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Doctor prescribed - Sanjeevani Pharmacy" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    <div class="ph-section-title">
+
+        <h2>&#129658; Tablets your doctor prescribed</h2>
+
+        <a class="ph-btn ghost small" href="/pharmacy">Browse the shelf</a>
+
+    </div>
+
+    <div class="ph-panel">
+
+        <p class="hint" style="margin-bottom:0">
+            Every prescription written in this system appears here with our
+            price against each line. Add the ones you want to the cart (or
+            &quot;add all&quot;), pay by cash or online, and the order shows
+            <strong>Confirmed</strong> right after. Lines we do not stock are
+            marked clearly and pushed to the nearby-shop search instead of
+            being sold as something else.
+        </p>
+
+    </div>
+
+    {% if not prescriptions %}
+
+        <div class="ph-panel ph-empty">
+            <strong>No prescription medicines yet</strong>
+            Once a doctor saves a prescription for you after a consultation,
+            the tablets appear here automatically with prices and a buy button.
+            You can still order anything from the
+            <a href="/pharmacy">pharmacy shelf</a>.
+        </div>
+
+    {% else %}
+
+        {% for group in prescriptions %}
+
+            <section class="ph-panel">
+
+                <div class="ph-row" style="justify-content:space-between;align-items:flex-start">
+
+                    <div>
+
+                        <h2>
+                            {{ group.doctor_name or 'Clinic doctor' }}
+                        </h2>
+
+                        <p class="hint" style="margin:2px 0 0">
+                            {% if group.created_at %}
+                                Prescribed on
+                                {{ group.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                                &middot;
+                            {% endif %}
+                            Rx #{{ group.prescription_id }}
+                            {% if group.diagnosis %}
+                                &middot; {{ group.diagnosis }}
+                            {% endif %}
+                        </p>
+
+                    </div>
+
+                    <button class="ph-btn small"
+                            data-ph="addrxall"
+                            data-id="{{ group.prescription_id }}">
+                        Add all available
+                    </button>
+
+                </div>
+
+                <div class="ph-table-wrap" style="margin-top:14px">
+
+                    <table class="ph-table">
+
+                        <thead>
+                            <tr>
+                                <th>Medicine</th>
+                                <th>Dose / how to take</th>
+                                <th>Here in stock</th>
+                                <th style="text-align:right">Price</th>
+                                <th>Buy</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for line in group['items'] %}
+
+                                <tr>
+
+                                    <td>
+                                        <div class="ph-row" style="gap:10px;flex-wrap:nowrap">
+                                            <img class="mini-img" src="{{ line.image }}"
+                                                 alt="{{ line.medicine_name }}"
+                                                 onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';">
+                                            <div>
+                                                <strong>{{ line.medicine_name }}</strong>
+                                                {% if line.matched_name and line.matched_name != line.medicine_name %}
+                                                    <div class="ph-small ph-muted">
+                                                        stocked as {{ line.matched_name }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ line.dosage or '-' }}
+                                        {% if line.frequency %}
+                                            <br>{{ line.frequency }}
+                                        {% endif %}
+                                        {% if line.duration %}
+                                            <br>{{ line.duration }}
+                                        {% endif %}
+                                        {% if line.instructions %}
+                                            <br><span class="ph-muted">{{ line.instructions }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if line.available %}
+                                            <span class="ph-badge success">{{ line.stock }} pack(s)</span>
+                                        {% elif line.matched_id %}
+                                            <span class="ph-badge danger">Out of stock</span>
+                                        {% else %}
+                                            <span class="ph-badge muted">Not stocked here</span>
+                                        {% endif %}
+
+                                        {% if line.in_cart %}
+                                            <span class="ph-badge warn">In cart</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="num">
+                                        {% if line.price is not none %}
+                                            <strong>{{ inr(line.price) }}</strong>
+                                        {% else %}
+                                            <span class="ph-muted">-</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if line.available %}
+                                            <div class="ph-row" style="gap:6px">
+                                                <button class="ph-btn small"
+                                                        data-ph="addrx"
+                                                        data-id="{{ line.id }}">
+                                                    Add
+                                                </button>
+                                                <a class="ph-btn ghost small"
+                                                   href="/pharmacy/cart">
+                                                    Cart
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <a class="ph-btn danger small"
+                                               href="/pharmacy/nearby?medicine_id={{ line.matched_id or '' }}&name={{ line.medicine_name | urlencode }}">
+                                                &#128652; Find nearby
+                                            </a>
+                                        {% endif %}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+        {% endfor %}
+
+        <div class="ph-panel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+
+            <div style="flex:1;min-width:200px">
+                <strong style="color:#0f766e;font-size:19px">{{ inr(cart_subtotal) }}</strong>
+                <div class="ph-small ph-muted">
+                    cart total right now ({{ cart_count }} pack(s)) &middot;
+                    payment options are on the cart page
+                </div>
+            </div>
+
+            <a class="ph-btn" href="/pharmacy/cart">Go to cart &amp; pay</a>
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

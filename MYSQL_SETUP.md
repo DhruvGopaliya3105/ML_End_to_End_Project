@@ -166,6 +166,7 @@ Here's what each reason means and how to fix it:
 | *"Nothing is listening on that MySQL host/port"* | MySQL service not started, or wrong `DB_PORT` | Start MySQL; on Windows: `net start MySQL80` |
 | *"The database 'x' is missing, or user 'y' has no privileges on it"* | Database not created, or user lacks a GRANT | Re-run your setup script, or `GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'user'@'localhost';` |
 | *"This MySQL user authenticates via the operating-system socket (auth_socket)"* | `auth_socket` plugin | Create a password user — see §1 |
+| *"Host '127.0.0.1' is not allowed to connect to this MySQL server"* (ERROR 1130) | the account exists only for another host — e.g. the setup script made `'sanjeevani_app'@'localhost'` but the app connects over TCP to `127.0.0.1`, or the server runs with `skip-name-resolve` | either set `DB_HOST=localhost` in `.env`, or run: `CREATE USER IF NOT EXISTS 'sanjeevani_app'@'%' IDENTIFIED BY 'Sanjeevani@12345'; GRANT ALL PRIVILEGES ON sanjeevani_clinic.* TO 'sanjeevani_app'@'%'; FLUSH PRIVILEGES;` |
 
 ### Quick manual connection test
 

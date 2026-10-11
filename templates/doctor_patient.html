@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = (patient.name ~ " - patient file - Sanjeevani") %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body class="dd-body">
+
+{% include "partials/doctor_nav.html" %}
+
+<main class="ph-wrap dd-wrap">
+
+    <!-- =========================================================
+         Patient header: identity + everything at a glance
+    ========================================================== -->
+    <section class="dd-file-head">
+
+        <div class="dd-file-id">
+            <span class="dd-avatar big">{{ patient.initials }}</span>
+            <div>
+                <p class="dd-kicker">
+                    {{ patient.patient_no }} &middot; enrolled {{ patient.enrolled }}
+                    {% if stats.is_new %}
+                        &middot; <span class="dd-tag new">first visit</span>
+                    {% endif %}
+                </p>
+                <h1>{{ patient.name }}</h1>
+                <p class="dd-hero-sub">
+                    {{ patient.age or '?' }} years {{ patient.gender or '' }}
+                    &middot; {{ patient.email }}
+                    {% if patient.phone %} &middot; {{ patient.phone }}{% endif %}
+                    {% if not patient.is_active %}
+                        &middot; <span class="dd-tag danger">login disabled</span>
+                    {% endif %}
+                </p>
+                <div class="dd-tags">
+                    {% for label, tone, hint in stats.tags %}
+                        <span class="dd-tag {{ tone }}" title="{{ hint }}">{{ label }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="dd-file-side">
+            <a class="ph-btn ghost small" href="/doctor-desk">&larr; All patients</a>
+            {% if show_billing %}
+                <a class="ph-btn small" href="/doctor-desk/patient/{{ patient.id }}/statement">
+                    Print statement
+                </a>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <section class="dd-tiles compact">
+
+        <div class="dd-tile">
+            <strong>{{ stats.visits }}</strong>
+            <span>Visits (booked)</span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>
+                {% if stats.first_visit %}{{ stats.first_visit.strftime('%d %b %y') }}{% else %}-{% endif %}
+            </strong>
+            <span>First visit</span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>
+                {% if stats.last_visit %}{{ stats.last_visit.strftime('%d %b %y') }}{% else %}-{% endif %}
+            </strong>
+            <span>Last visit
+                {% if stats.days_since_visit is not none %}
+                    ({{ stats.days_since_visit }}d ago)
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>{{ stats.prescriptions }}</strong>
+            <span>Prescriptions &middot; {{ stats.rx_lines }} lines</span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>{{ stats.followups_pending }}</strong>
+            <span>Follow-ups pending</span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>{{ stats.records }}</strong>
+            <span>Consultation notes</span>
+        </div>
+
+        <div class="dd-tile">
+            <strong>{{ stats.orders }}</strong>
+            <span>Medicine orders</span>
+        </div>
+
+        {% if show_billing %}
+            <div class="dd-tile {{ 'danger' if stats.due }}">
+                <strong>&#8377;{{ '%.0f' | format(stats.due) }}</strong>
+                <span>Due (billed &#8377;{{ '%.0f' | format(stats.billed) }})</span>
+            </div>
+        {% endif %}
+
+        <div class="dd-tile">
+            <strong>
+                {% if stats.avg_rating %}{{ stats.avg_rating }}&#9733;{% else %}&ndash;{% endif %}
+            </strong>
+            <span>{{ stats.reviews }} review(s)</span>
+        </div>
+
+    </section>
+
+    {% if flash %}
+        <div class="dd-note ok">{{ flash }}</div>
+    {% endif %}
+
+    <nav class="ph-tabs dd-tabs">
+        {% for item in tabs %}
+            <a class="ph-tab {{ 'active' if tab == item.key }}"
+               href="?tab={{ item.key }}">
+                {{ item.label }}
+                {% if item.key == 'notes' and stats.notes %}<span class="dd-pill">{{ stats.notes }}</span>{% endif %}
+                {% if item.key == 'billing' and stats.due %}<span class="dd-pill danger">{{ '%.0f' | format(stats.due) }}</span>{% endif %}
+            </a>
+        {% endfor %}
+    </nav>
+
+    <!-- =========================================================
+         TAB: OVERVIEW
+    ========================================================== -->
+    {% if tab == 'overview' %}
+
+        <div class="dd-grid">
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">What to know before you see them</h2>
+
+                <dl class="dd-dl">
+                    <dt>Coming for</dt>
+                    <dd>
+                        {% set upcoming = visits | rejectattr('is_past') | list %}
+                        {% if upcoming %}
+                            {{ upcoming[0].date }} at {{ upcoming[0].time }}
+                            &middot; {{ upcoming[0].visit_type or 'consultation' }}
+                            &middot; {{ upcoming[0].status }}
+                            {% if upcoming[0].reason %}<br><em>{{ upcoming[0].reason }}</em>{% endif %}
+                        {% else %}
+                            <span class="ph-muted">Nothing booked yet</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Next follow-up</dt>
+                    <dd>
+                        {% if stats.next_followup %}
+                            {{ stats.next_followup.strftime('%d %b %Y') }}
+                            {% if stats.followup_overdue %}
+                                <span class="dd-tag danger">overdue</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="ph-muted">None pending</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Ongoing treatment</dt>
+                    <dd>
+                        {% set active = [] %}
+                        {% for row in treatments if row.status and row.status.upper() == 'ACTIVE' %}
+                            {% if active.append(row) %}{% endif %}
+                        {% endfor %}
+                        {% if active %}
+                            {% for row in active %}
+                                {{ row.name }}
+                                <small class="ph-muted">since {{ row.start }}
+                                    {% if row.running_days is not none %}({{ row.running_days }} days){% endif %}
+                                </small><br>
+                            {% endfor %}
+                        {% else %}
+                            <span class="ph-muted">No active treatment row</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Money</dt>
+                    <dd>
+                        {% if show_billing %}
+                            billed &#8377;{{ '%.2f' | format(stats.billed) }}
+                            &middot; paid &#8377;{{ '%.2f' | format(stats.paid) }}
+                            {% if stats.due %}
+                                &middot; <strong class="dd-danger">due &#8377;{{ '%.2f' | format(stats.due) }}</strong>
+                            {% endif %}
+                            {% if stats.refunded %}
+                                &middot; refunded &#8377;{{ '%.2f' | format(stats.refunded) }}
+                            {% endif %}
+                            <br>
+                            <small class="ph-muted">
+                                {{ stats.unpaid_orders }} medicine order(s) still not paid
+                                {% if not stats.unpaid_orders %}every order is settled{% endif %}
+                            </small>
+                        {% else %}
+                            <span class="ph-muted">Billing is hidden for your role</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Allergies / red flags</dt>
+                    <dd>
+                        {% set flags = [] %}
+                        {% for note in notes %}
+                            {% if note.type in ('ALLERGY', 'RED_FLAG') or note.is_urgent %}
+                                {% if flags.append(note) %}{% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if flags %}
+                            {% for note in flags %}
+                                <span class="dd-tag {{ 'danger' if note.is_urgent else 'warn' }}">
+                                    {{ note.type_label }}
+                                </span>
+                                {{ note.title }}
+                                {% if note.body %}<br><small class="ph-muted">{{ note.body[:180] }}</small>{% endif %}
+                                <br>
+                            {% endfor %}
+                        {% else %}
+                            <span class="ph-muted">
+                                Nothing marked yet
+                                {% if can_write %}- add an allergy note below so it stays on top{% endif %}
+                            </span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </section>
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">Latest activity</h2>
+
+                <ol class="dd-timeline">
+                    {% for event in timeline[:10] %}
+                        <li class="dd-event {{ event.tone }}">
+                            <span class="dd-dot" data-kind="{{ event.kind }}"></span>
+                            <div>
+                                <strong>{{ event.title }}</strong>
+                                <small>{{ event.when_text }}</small>
+                                {% if event.money %}
+                                    <small class="dd-money">&#8377;{{ '%.2f' | format(event.money) }}</small>
+                                {% endif %}
+                                {% if event.sub %}<p>{{ event.sub }}</p>{% endif %}
+                                {% if event.link %}
+                                    <a class="dd-mini-link" href="{{ event.link }}">open</a>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% else %}
+                        <li class="ph-muted">Nothing recorded for this patient yet.</li>
+                    {% endfor %}
+                </ol>
+            </section>
+
+        </div>
+
+        {% if can_write %}
+            <section class="ph-panel dd-form-panel">
+                <h2 class="ph-panel-title">Add a note to this file</h2>
+                <form method="post" action="/doctor-desk/patient/{{ patient.id }}/notes" class="dd-form">
+                    <div class="dd-form-row">
+                        <input name="title" required maxlength="160"
+                               placeholder="One line - e.g. Allergic to penicillin"
+                               style="flex:2 1 260px">
+                        <select name="note_type" style="flex:1 1 140px">
+                            {% for item in note_types %}
+                                <option value="{{ item.key }}">{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="visibility" style="flex:1 1 150px"
+                                title="Patient visible notes appear on their own history page">
+                            <option value="DOCTOR_ONLY">Only doctors see this</option>
+                            <option value="PATIENT_VISIBLE">Patient can read it</option>
+                        </select>
+                        <input type="date" name="follow_up_date" style="flex:1 1 150px"
+                               title="Optional - link a come-back date to this note">
+                    </div>
+                    <textarea name="body" rows="3" maxlength="4000"
+                              placeholder="Details - advice, diet, family history, what to check next visit..."></textarea>
+                    <div class="dd-form-row">
+                        <label class="dd-check">
+                            <input type="checkbox" name="pinned" value="1"> Pin on top
+                        </label>
+                        <label class="dd-check">
+                            <input type="checkbox" name="urgent" value="1"> Urgent
+                        </label>
+                        <button class="ph-btn" type="submit">Save note</button>
+                    </div>
+                </form>
+            </section>
+        {% endif %}
+
+    <!-- =========================================================
+         TAB: VISITS & PAYMENTS
+    ========================================================== -->
+    {% elif tab == 'visits' %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                Every visit
+                <span class="ph-muted">&middot; {{ visits | length }} row(s)</span>
+            </h2>
+
+            {% if not visits %}
+                <p class="ph-muted">This patient has no appointment row. They may still have
+                    consultation notes below if you wrote them here.</p>
+            {% else %}
+                <div class="dd-table-wrap">
+                    <table class="dd-table">
+                        <thead>
+                            <tr>
+                                <th>Date &amp; time</th>
+                                <th>Doctor</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Reason</th>
+                                <th>Fee</th>
+                                {% if can_bill %}<th>Record payment</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for visit in visits %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ visit.date }}</strong>
+                                        <small>{{ visit.time }}{% if visit.end %} - {{ visit.end }}{% endif %}
+                                            {% if visit.duration %} ({{ visit.duration }} min){% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {{ visit.doctor }}
+                                        {% if visit.specialization %}
+                                            <br><small class="ph-muted">{{ visit.specialization }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ visit.visit_type or '-' }}</td>
+                                    <td>
+                                        <span class="dd-tag {{ 'ok' if visit.status in ('COMPLETED', 'CONFIRMED') else ('danger' if visit.status == 'CANCELLED' else 'warn') }}">
+                                            {{ visit.status }}
+                                        </span>
+                                        {% if visit.cancelled_by %}
+                                            <br><small class="ph-muted">by {{ visit.cancelled_by }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ visit.reason or '-' }}
+                                        {% if visit.doctor_cancel_reason %}
+                                            <br><small class="ph-muted">{{ visit.doctor_cancel_reason }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="dd-num">
+                                        &#8377;{{ '%.2f' | format(visit.amount) }}
+                                        <br>
+                                        <small>
+                                            {{ visit.method or '-' }} &middot;
+                                            <span class="{{ 'dd-ok' if visit.payment_status == 'PAID' else 'dd-danger' }}">
+                                                {{ visit.payment_status or 'PENDING' }}
+                                            </span>
+                                        </small>
+                                        {% if visit.refund_amount %}
+                                            <br><small class="ph-muted">
+                                                refund {{ visit.refund_status }}
+                                                &#8377;{{ '%.2f' | format(visit.refund_amount) }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    {% if can_bill %}
+                                        <td>
+                                            <form method="post"
+                                                  action="/doctor-desk/appointment/{{ visit.id }}/payment"
+                                                  class="dd-inline-form">
+                                                <input type="number" step="0.01" min="0" name="amount"
+                                                       value="{{ '%.2f' | format(visit.amount) }}"
+                                                       style="width:92px">
+                                                <select name="payment_method" style="width:92px">
+                                                    {% for method in ['CASH', 'UPI', 'CARD', 'INSURANCE'] %}
+                                                        <option value="{{ method }}"
+                                                                {% if (visit.method or 'CASH') == method %}selected{% endif %}>
+                                                            {{ method | title }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <select name="payment_status" style="width:110px">
+                                                    {% for state in ['PAID', 'PENDING', 'REFUNDED', 'FAILED', 'NOT_REQUIRED'] %}
+                                                        <option value="{{ state }}"
+                                                                {% if visit.payment_status == state %}selected{% endif %}>
+                                                            {{ state | title }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button class="ph-btn small" type="submit">Save</button>
+                                            </form>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            <p class="ph-small ph-muted">
+                The fee shown for a visit is what the booking stored
+                (<code>appointments.payment_amount</code>); when you save a payment here the
+                appointment row is updated, so the receipt on the patient's side stays correct.
+            </p>
+        </section>
+
+    <!-- =========================================================
+         TAB: CONSULTATION NOTES (medical records)
+    ========================================================== -->
+    {% elif tab == 'records' %}
+
+        {% if can_record %}
+            <section class="ph-panel dd-form-panel">
+                <h2 class="ph-panel-title">Write today's consultation</h2>
+                <form method="post" action="/doctor-desk/patient/{{ patient.id }}/record"
+                      class="dd-form">
+                    <div class="dd-form-row">
+                        <label>Visit date
+                            <input type="date" name="visit_date" value="{{ today_iso }}">
+                        </label>
+                        <input name="chief_complaint" maxlength="300"
+                               placeholder="Chief complaint - one line" style="flex:2 1 240px">
+                    </div>
+                    <div class="dd-form-row">
+                        <textarea name="symptoms" rows="3" maxlength="4000"
+                                  placeholder="Symptoms reported"></textarea>
+                        <textarea name="clinical_notes" rows="3" maxlength="4000"
+                                  placeholder="Examination / clinical notes"></textarea>
+                    </div>
+                    <div class="dd-form-row">
+                        <textarea name="diagnosis" rows="2" maxlength="2000"
+                                  placeholder="Diagnosis"></textarea>
+                        <textarea name="treatment_summary" rows="2" maxlength="2000"
+                                  placeholder="Treatment plan / summary"></textarea>
+                    </div>
+                    <div class="dd-form-row">
+                        <textarea name="medicines" rows="2" maxlength="2000"
+                                  placeholder="Medicines given (plain text; use the Prescriptions tab for a real Rx)"></textarea>
+                        <textarea name="instructions" rows="2" maxlength="2000"
+                                  placeholder="Advice for the patient"></textarea>
+                    </div>
+                    <div class="dd-form-row">
+                        <select name="status" style="flex:0 0 160px">
+                            <option value="ACTIVE">Active / under review</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="FOLLOWUP_REQUIRED">Follow-up required</option>
+                        </select>
+                        <button class="ph-btn" type="submit">Save record</button>
+                        <a class="ph-btn ghost"
+                           href="?tab=prescriptions">Write a prescription instead</a>
+                    </div>
+                </form>
+            </section>
+        {% endif %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                Consultation history
+                <span class="ph-muted">&middot; {{ records | length }} note(s)</span>
+            </h2>
+
+            {% if not records %}
+                <p class="ph-muted">No medical record row for this patient yet.</p>
+            {% else %}
+                <div class="dd-records">
+                    {% for record in records %}
+                        <article class="dd-record">
+                            <header>
+                                <h3>{{ record.visit_date }}</h3>
+                                <span class="dd-tag {{ 'ok' if record.status == 'COMPLETED' else 'warn' }}">
+                                    {{ record.status }}
+                                </span>
+                                <small class="ph-muted">
+                                    {{ record.doctor }}
+                                    {% if record.appointment_id %}
+                                        &middot; appointment #{{ record.appointment_id }}
+                                    {% endif %}
+                                    &middot; written {{ record.created }}
+                                </small>
+                                {% if can_record %}
+                                    <button class="ph-btn ghost tiny" type="button"
+                                            onclick="ddRecordStatus({{ record.id }}, 'COMPLETED')">
+                                        Mark completed
+                                    </button>
+                                {% endif %}
+                            </header>
+                            {% if record.chief_complaint %}
+                                <p><strong>Complaint:</strong> {{ record.chief_complaint }}</p>
+                            {% endif %}
+                            {% if record.symptoms %}
+                                <p><strong>Symptoms:</strong> {{ record.symptoms }}</p>
+                            {% endif %}
+                            {% if record.clinical_notes %}
+                                <p><strong>Notes:</strong> {{ record.clinical_notes }}</p>
+                            {% endif %}
+                            {% if record.diagnosis %}
+                                <p><strong>Diagnosis:</strong> {{ record.diagnosis }}</p>
+                            {% endif %}
+                            {% if record.treatment %}
+                                <p><strong>Treatment:</strong> {{ record.treatment }}</p>
+                            {% endif %}
+                            {% if record.medicines %}
+                                <p><strong>Medicines:</strong> {{ record.medicines }}</p>
+                            {% endif %}
+                            {% if record.instructions %}
+                                <p class="dd-advice"><strong>Advice:</strong> {{ record.instructions }}</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+        <div class="dd-grid">
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">Treatments</h2>
+                {% if not treatments %}
+                    <p class="ph-muted">No treatment row.</p>
+                {% else %}
+                    <table class="dd-table simple">
+                        <tbody>
+                            {% for row in treatments %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ row.name }}</strong>
+                                        <br><small class="ph-muted">{{ row.doctor }}</small>
+                                    </td>
+                                    <td>
+                                        {{ row.start }} &rarr; {{ row.end }}
+                                        {% if row.running_days is not none %}
+                                            <br><small class="ph-muted">{{ row.running_days }} day(s) running</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="dd-tag {{ 'ok' if row.status and row.status.upper() == 'ACTIVE' else 'muted' }}">
+                                            {{ row.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </section>
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">
+                    Follow-ups
+                    {% if can_record %}
+                        <span class="ph-muted">&middot; schedule one</span>
+                    {% endif %}
+                </h2>
+
+                {% if can_record %}
+                    <form method="post" action="/doctor-desk/patient/{{ patient.id }}/follow-up"
+                          class="dd-form compact">
+                        <div class="dd-form-row">
+                            <input type="date" name="follow_up_date" required>
+                            <input name="reason" maxlength="300" placeholder="Why - e.g. BP recheck">
+                        </div>
+                        <div class="dd-form-row">
+                            <input name="instructions" maxlength="2000"
+                                   placeholder="Instructions for the patient" style="flex:1">
+                            <button class="ph-btn small" type="submit">Book follow-up</button>
+                        </div>
+                    </form>
+                {% endif %}
+
+                {% if not follow_ups %}
+                    <p class="ph-muted">No follow-up pending or done.</p>
+                {% else %}
+                    <ul class="dd-list">
+                        {% for row in follow_ups %}
+                            <li class="{{ 'overdue' if row.overdue }}">
+                                <strong>{{ row.date }}</strong>
+                                {% if row.overdue %}
+                                    <span class="dd-tag danger">overdue</span>
+                                {% elif row.days_left is not none and row.status != 'COMPLETED' %}
+                                    <span class="dd-tag warn">in {{ row.days_left }} day(s)</span>
+                                {% endif %}
+                                <span class="dd-tag {{ 'muted' if row.status == 'COMPLETED' else 'primary' }}">
+                                    {{ row.status }}
+                                </span>
+                                <p>{{ row.reason or '-' }}</p>
+                                {% if row.instructions %}
+                                    <small class="ph-muted">{{ row.instructions }}</small>
+                                {% endif %}
+                                <br>
+                                <small class="ph-muted">
+                                    {{ row.doctor }}
+                                    {% if row.completed %} &middot; closed {{ row.completed }}{% endif %}
+                                </small>
+                                {% if can_record and row.status != 'COMPLETED' %}
+                                    <button class="ph-btn ghost tiny" type="button"
+                                            onclick="ddFollowUpDone({{ row.id }})">
+                                        Mark done
+                                    </button>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+
+        </div>
+
+    <!-- =========================================================
+         TAB: PRESCRIPTIONS
+    ========================================================== -->
+    {% elif tab == 'prescriptions' %}
+
+        {% if can_prescribe %}
+            <section class="ph-panel dd-form-panel">
+                <h2 class="ph-panel-title">Write a prescription</h2>
+                <p class="ph-small ph-muted">
+                    One medicine per line, columns separated by <code>|</code> - leave a column
+                    empty if it does not apply:
+                    <br><code>Dolo 650 | 650 mg | twice a day | 5 days | after food</code>
+                </p>
+                <form method="post" action="/doctor-desk/patient/{{ patient.id }}/prescription"
+                      class="dd-form">
+                    <textarea name="lines" rows="6" required
+                              placeholder="Dolo 650 | 650 mg | twice a day | 5 days | after food&#10;Cetirizine | 10 mg | at night | 7 days | can cause drowsiness"></textarea>
+                    <div class="dd-form-row">
+                        <input name="diagnosis" maxlength="500" placeholder="Diagnosis / indication"
+                               style="flex:1 1 220px">
+                        <input name="instructions" maxlength="1000"
+                               placeholder="General advice for the patient" style="flex:1 1 220px">
+                    </div>
+                    <button class="ph-btn" type="submit">Save &amp; send to patient</button>
+                </form>
+                <p class="ph-small ph-muted">
+                    It lands in <code>prescriptions</code> + <code>prescription_medicines</code>, so
+                    the patient sees it on <em>Pharmacy &rarr; Doctor's Rx</em> and can buy exactly
+                    those strips. Use <em>Send to cart</em> on any Rx below to fill their cart for them.
+                </p>
+            </section>
+        {% endif %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                All prescriptions
+                <span class="ph-muted">&middot; {{ prescriptions | length }}</span>
+            </h2>
+
+            {% if not prescriptions %}
+                <p class="ph-muted">Nothing prescribed for this patient yet.</p>
+            {% else %}
+                <div class="dd-rx-list">
+                    {% for rx in prescriptions %}
+                        <article class="dd-rx">
+                            <header>
+                                <h3>Rx #{{ rx.id }} &middot; {{ rx.date }}</h3>
+                                <small class="ph-muted">{{ rx.doctor }}</small>
+                                {% if can_prescribe %}
+                                    <form method="post"
+                                          action="/doctor-desk/prescription/{{ rx.id }}/send-to-cart"
+                                          class="dd-inline-form">
+                                        <button class="ph-btn ghost small" type="submit">
+                                            Send to patient's cart
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </header>
+                            {% if rx.diagnosis %}
+                                <p><strong>Diagnosis:</strong> {{ rx.diagnosis }}</p>
+                            {% endif %}
+                            <table class="dd-table simple">
+                                <thead>
+                                    <tr>
+                                        <th>Medicine</th>
+                                        <th>Dose</th>
+                                        <th>Frequency</th>
+                                        <th>Duration</th>
+                                        <th>Advice</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for line in rx.lines %}
+                                        <tr>
+                                            <td><strong>{{ line.name }}</strong></td>
+                                            <td>{{ line.dose or '-' }}</td>
+                                            <td>{{ line.frequency or '-' }}</td>
+                                            <td>
+                                                {{ line.duration or '-' }}
+                                                {% if line.days %}
+                                                    <br><small class="ph-muted">{{ line.days }} day(s)</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ line.advice or '-' }}</td>
+                                        </tr>
+                                    {% else %}
+                                        <tr><td colspan="5" class="ph-muted">No medicine lines.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if rx.instructions %}
+                                <p class="dd-advice"><strong>Advice:</strong> {{ rx.instructions }}</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+    <!-- =========================================================
+         TAB: MEDICINES TAKEN
+    ========================================================== -->
+    {% elif tab == 'medicines' %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">Medicine journey</h2>
+            <p class="ph-small ph-muted">
+                Merged from what was <em>prescribed</em> and what was actually <em>bought at the
+                counter</em>: how many courses, how many days in total, how many packs, from where
+                and whether it was paid for.
+            </p>
+
+            {% if not medicines %}
+                <p class="ph-muted">No medicine has been written or bought for this patient.</p>
+            {% else %}
+                <div class="dd-table-wrap">
+                    <table class="dd-table">
+                        <thead>
+                            <tr>
+                                <th>Medicine</th>
+                                <th>Prescribed</th>
+                                <th>Total days</th>
+                                <th>Courses</th>
+                                <th>Bought</th>
+                                <th>Spent</th>
+                                <th>From where</th>
+                                <th>Payment</th>
+                                <th>Last</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in medicines %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ row.medicine }}</strong>
+                                        {% if row.doctors %}
+                                            <br><small class="ph-muted">by {{ row.doctors | join(', ') }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ row.prescribed_times }} time(s)
+                                    </td>
+                                    <td class="dd-num">
+                                        {% if row.total_days %}
+                                            <strong>{{ row.total_days }}</strong> day(s)
+                                        {% else %}
+                                            <span class="ph-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <details class="dd-details">
+                                            <summary>{{ row.courses | length }} course(s)</summary>
+                                            <ul>
+                                                {% for course in row.courses %}
+                                                    <li>
+                                                        {{ course.date }} &middot; {{ course.dose or '-' }}
+                                                        &middot; {{ course.frequency or '-' }}
+                                                        &middot; {{ course.duration or '-' }}
+                                                        {% if course.days %}({{ course.days }}d){% endif %}
+                                                        {% if course.advice %}
+                                                            <br><small class="ph-muted">{{ course.advice }}</small>
+                                                        {% endif %}
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </details>
+                                    </td>
+                                    <td>
+                                        {% if row.packs %}
+                                            {{ row.packs }} pack(s)
+                                        {% else %}
+                                            <span class="ph-muted">not bought here</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="dd-num">
+                                        {% if row.spent %}
+                                            &#8377;{{ '%.2f' | format(row.spent) }}
+                                            {% if row.last_price %}
+                                                <br><small class="ph-muted">@ &#8377;{{ '%.2f' | format(row.last_price) }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if row.sources %}
+                                            {{ row.sources | join(' / ') }}
+                                        {% else %}
+                                            <span class="ph-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="dd-tag {{ 'ok' if row.payment == 'paid' else 'muted' }}">
+                                            {{ row.payment }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{ row.last }}
+                                        {% if row.days_since_last is not none %}
+                                            <br><small class="ph-muted">{{ row.days_since_last }}d ago</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </section>
+
+    <!-- =========================================================
+         TAB: FULL INVOICE
+    ========================================================== -->
+    {% elif tab == 'billing' %}
+
+        {% if not show_billing %}
+            <div class="dd-note warn">
+                Your role can open the file but not the money. Ask an admin for
+                <code>doctor.billing.read</code>.
+            </div>
+        {% else %}
+
+            <section class="dd-tiles compact">
+                <div class="dd-tile">
+                    <strong>&#8377;{{ '%.2f' | format(ledger.totals.billed) }}</strong>
+                    <span>Total billed</span>
+                </div>
+                <div class="dd-tile">
+                    <strong>&#8377;{{ '%.2f' | format(ledger.totals.paid) }}</strong>
+                    <span>Paid</span>
+                </div>
+                <div class="dd-tile {{ 'danger' if ledger.totals.due }}">
+                    <strong>&#8377;{{ '%.2f' | format(ledger.totals.due) }}</strong>
+                    <span>Due</span>
+                </div>
+                <div class="dd-tile">
+                    <strong>&#8377;{{ '%.2f' | format(ledger.totals.refunded) }}</strong>
+                    <span>Refunded</span>
+                </div>
+                <div class="dd-tile">
+                    <strong>{{ ledger.totals.count }}</strong>
+                    <span>Billable rows</span>
+                </div>
+                <div class="dd-tile">
+                    <strong>{{ ledger.totals.unpaid_count }}</strong>
+                    <span>Still unpaid</span>
+                </div>
+            </section>
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">
+                    Everything billed to this patient
+                    <a class="ph-btn ghost small"
+                       href="/doctor-desk/patient/{{ patient.id }}/statement">Print / PDF</a>
+                </h2>
+
+                <div class="dd-table-wrap">
+                    <table class="dd-table">
+                        <thead>
+                            <tr>
+                                <th>When</th>
+                                <th>What</th>
+                                <th>Where</th>
+                                <th>Status</th>
+                                <th>Method / reference</th>
+                                <th>Billed</th>
+                                <th>Paid</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in ledger.lines %}
+                                <tr>
+                                    <td>
+                                        {{ line.date }}
+                                        {% if line.time %}<br><small class="ph-muted">{{ line.time }}</small>{% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ line.title }}</strong>
+                                        <br>
+                                        <small class="ph-muted">
+                                            {{ 'Appointment fee' if line.kind == 'APPOINTMENT' else 'Medicine order' }}
+                                            {% if line.item_count %} &middot; {{ line.item_count }} item(s){% endif %}
+                                            {% if line.emergency %} &middot; emergency order{% endif %}
+                                        </small>
+                                        {% if line.note %}
+                                            <br><small>{{ line.note }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ line.where }}</td>
+                                    <td>
+                                        <span class="dd-tag {{ 'ok' if line.status == 'PAID' else ('muted' if line.status in ('NOT_REQUIRED', 'REFUNDED') else 'warn') }}">
+                                            {{ line.status or 'PENDING' }}
+                                        </span>
+                                        {% if line.order_status %}
+                                            <br><small class="ph-muted">{{ line.order_status }}</small>
+                                        {% endif %}
+                                        {% if line.refund %}
+                                            <br><small class="dd-danger">refunded &#8377;{{ '%.2f' | format(line.refund) }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ line.method or '-' }}
+                                        {% if line.reference %}
+                                            <br><small class="ph-muted">{{ line.reference }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="dd-num">&#8377;{{ '%.2f' | format(line.billed) }}</td>
+                                    <td class="dd-num">
+                                        <span class="{{ 'dd-ok' if line.paid else 'dd-danger' }}">
+                                            &#8377;{{ '%.2f' | format(line.paid) }}
+                                        </span>
+                                    </td>
+                                    <td class="dd-actions">
+                                        {% if line.kind == 'PHARMACY' %}
+                                            <a class="dd-mini-link"
+                                               href="/doctor-desk/patient/{{ patient.id }}/invoice/{{ line.order_no }}">
+                                                Invoice
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="ph-muted">
+                                        Nothing billed yet - no appointment fee and no medicine order.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="ph-panel">
+                <h2 class="ph-panel-title">Medicine orders, item by item</h2>
+
+                {% if not orders %}
+                    <p class="ph-muted">No pharmacy order from this patient.</p>
+                {% else %}
+                    <div class="dd-orders">
+                        {% for order in orders %}
+                            <article class="dd-order">
+                                <header>
+                                    <h3>{{ order.order_no }}</h3>
+                                    <small class="ph-muted">{{ order.date }}</small>
+                                    <span class="dd-tag {{ 'ok' if order.status == 'DELIVERED' else ('danger' if order.status == 'CANCELLED' else 'warn') }}">
+                                        {{ order.status }}
+                                    </span>
+                                    <span class="dd-tag {{ 'ok' if order.payment_status == 'PAID' else 'muted' }}">
+                                        {{ order.payment_status }}
+                                    </span>
+                                    <a class="dd-mini-link" href="{{ order.link }}">open at counter</a>
+                                </header>
+                                <table class="dd-table simple">
+                                    <thead>
+                                        <tr>
+                                            <th>Medicine</th>
+                                            <th>Form / strength</th>
+                                            <th>Pack</th>
+                                            <th>Qty</th>
+                                            <th>Dose &amp; days</th>
+                                            <th>Rate</th>
+                                            <th>Line total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in order['items'] %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ item.name }}</strong>
+                                                    {% if item.generic %}
+                                                        <br><small class="ph-muted">{{ item.generic }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ item.form or '-' }} {{ item.strength or '' }}</td>
+                                                <td>{{ item.pack or '-' }}</td>
+                                                <td class="dd-num">{{ item.qty }}</td>
+                                                <td>
+                                                    {{ item.dose or '-' }} {{ item.frequency or '' }}
+                                                    {% if item.duration %}
+                                                        <br><small class="ph-muted">{{ item.duration }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="dd-num">&#8377;{{ '%.2f' | format(item.price) }}</td>
+                                                <td class="dd-num">
+                                                    &#8377;{{ '%.2f' | format(item.total) }}
+                                                    <br>
+                                                    <small class="ph-muted">{{ item.source }}</small>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="5"><strong>Order total</strong></td>
+                                            <td class="dd-num">
+                                                subtotal &#8377;{{ '%.2f' | format(order.subtotal) }}
+                                                {% if order.delivery_fee %}
+                                                    + delivery &#8377;{{ '%.2f' | format(order.delivery_fee) }}
+                                                {% endif %}
+                                            </td>
+                                            <td class="dd-num"><strong>&#8377;{{ '%.2f' | format(order.total) }}</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                                {% if order.address %}
+                                    <p class="ph-small ph-muted">
+                                        Delivery: {{ order.address }}
+                                    </p>
+                                {% endif %}
+                                {% if order.notes %}
+                                    <p class="ph-small ph-muted">Note: {{ order.notes }}</p>
+                                {% endif %}
+                                {% if order.handed_over %}
+                                    <p class="ph-small ph-muted">Handed over: {{ order.handed_over }}</p>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+
+        {% endif %}
+
+    <!-- =========================================================
+         TAB: DOCTOR NOTES
+    ========================================================== -->
+    {% elif tab == 'notes' %}
+
+        {% if can_write %}
+            <section class="ph-panel dd-form-panel">
+                <h2 class="ph-panel-title">New note on this file</h2>
+                <form method="post" action="/doctor-desk/patient/{{ patient.id }}/notes"
+                      class="dd-form">
+                    <div class="dd-form-row">
+                        <input name="title" required maxlength="160"
+                               placeholder="Title (one line)" style="flex:2 1 260px">
+                        <select name="note_type" style="flex:1 1 150px">
+                            {% for item in note_types %}
+                                <option value="{{ item.key }}">{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="visibility" style="flex:1 1 150px">
+                            <option value="DOCTOR_ONLY">Only doctors see this</option>
+                            <option value="PATIENT_VISIBLE">Patient can read it</option>
+                        </select>
+                        <input type="date" name="follow_up_date" style="flex:1 1 150px">
+                    </div>
+                    <textarea name="body" rows="4" maxlength="4000"
+                              placeholder="Anything worth remembering next visit"></textarea>
+                    <div class="dd-form-row">
+                        <label class="dd-check"><input type="checkbox" name="pinned" value="1"> Pin</label>
+                        <label class="dd-check"><input type="checkbox" name="urgent" value="1"> Urgent</label>
+                        <button class="ph-btn" type="submit">Save</button>
+                    </div>
+                </form>
+            </section>
+        {% endif %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                Notes
+                <span class="ph-muted">&middot; {{ notes | length }}</span>
+            </h2>
+
+            {% if not notes %}
+                <p class="ph-muted">
+                    No note yet. Notes are the quickest way to keep something on a file that is not
+                    a formal record - an allergy, a diet instruction, "needs a reminder to come".
+                </p>
+            {% else %}
+                <div class="dd-notes">
+                    {% for note in notes %}
+                        <article class="dd-note-card {{ 'pinned' if note.is_pinned }}{{ 'urgent' if note.is_urgent }}">
+                            <header>
+                                <h3>{{ note.title }}</h3>
+                                <span class="dd-tag {{ 'danger' if note.type in ('RED_FLAG','ALLERGY') else 'primary' }}">
+                                    {{ note.type_label }}
+                                </span>
+                                {% if note.is_pinned %}<span class="dd-tag warn">pinned</span>{% endif %}
+                                {% if note.is_urgent %}<span class="dd-tag danger">urgent</span>{% endif %}
+                                {% if note.visibility == 'PATIENT_VISIBLE' %}
+                                    <span class="dd-tag ok">patient can read</span>
+                                {% else %}
+                                    <span class="dd-tag muted">internal</span>
+                                {% endif %}
+                            </header>
+                            {% if note.body %}
+                                <p>{{ note.body }}</p>
+                            {% endif %}
+                            <footer>
+                                <small class="ph-muted">
+                                    {{ note.author }}
+                                    {% if note.author_specialization %}
+                                        &middot; {{ note.author_specialization }}
+                                    {% endif %}
+                                    &middot; {{ note.created }}
+                                    {% if note.ago is not none %}({{ note.ago }}d ago){% endif %}
+                                    {% if note.follow_up_date %}
+                                        &middot; come back {{ note.follow_up_date }}
+                                    {% endif %}
+                                </small>
+                                {% if can_write %}
+                                    <span class="dd-note-actions">
+                                        <form method="post" action="/doctor-desk/notes/{{ note.id }}/flag">
+                                            <input type="hidden" name="field" value="pinned">
+                                            <button class="ph-btn ghost tiny" type="submit">
+                                                {{ 'Unpin' if note.is_pinned else 'Pin' }}
+                                            </button>
+                                        </form>
+                                        <form method="post" action="/doctor-desk/notes/{{ note.id }}/flag">
+                                            <input type="hidden" name="field" value="urgent">
+                                            <button class="ph-btn ghost tiny" type="submit">
+                                                {{ 'Not urgent' if note.is_urgent else 'Mark urgent' }}
+                                            </button>
+                                        </form>
+                                        <form method="post" action="/doctor-desk/notes/{{ note.id }}/flag">
+                                            <input type="hidden" name="field" value="archive">
+                                            <button class="ph-btn ghost tiny danger" type="submit">
+                                                Archive
+                                            </button>
+                                        </form>
+                                    </span>
+                                {% endif %}
+                            </footer>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+    <!-- =========================================================
+         TAB: REVIEWS
+    ========================================================== -->
+    {% elif tab == 'reviews' %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                What this patient said
+                <span class="ph-muted">&middot; {{ reviews | length }} review(s)</span>
+            </h2>
+
+            {% if not reviews %}
+                <p class="ph-muted">
+                    They have not left a review. After a visit is marked completed the patient gets
+                    a "share your outcome" card on their dashboard.
+                </p>
+            {% else %}
+                <div class="dd-reviews">
+                    {% for row in reviews %}
+                        <article class="dd-review">
+                            <header>
+                                <strong>{{ row.date }}</strong>
+                                <span class="dd-stars" aria-label="{{ row.rating }} out of 5">
+                                    {% for i in range(5) %}
+                                        <span class="{{ 'on' if row.rating and i < row.rating }}">&#9733;</span>
+                                    {% endfor %}
+                                </span>
+                                <small class="ph-muted">{{ row.doctor }}</small>
+                            </header>
+                            {% if row.comment %}<p>&ldquo;{{ row.comment }}&rdquo;</p>{% endif %}
+                            <dl class="dd-dl tight">
+                                {% if row.outcome %}<dt>Outcome</dt><dd>{{ row.outcome }}</dd>{% endif %}
+                                {% if row.condition %}<dt>Now</dt><dd>{{ row.condition }}</dd>{% endif %}
+                                {% if row.experience %}<dt>Experience</dt><dd>{{ row.experience }}</dd>{% endif %}
+                                {% if row.follow_up_preference %}
+                                    <dt>Wants follow-up</dt><dd>{{ row.follow_up_preference }}</dd>
+                                {% endif %}
+                                {% if row.reason_for_change %}
+                                    <dt>Why it changed</dt><dd>{{ row.reason_for_change }}</dd>
+                                {% endif %}
+                                {% if row.treatment %}<dt>Treatment</dt><dd>{{ row.treatment }}</dd>{% endif %}
+                            </dl>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+    <!-- =========================================================
+         TAB: REPORTS
+    ========================================================== -->
+    {% elif tab == 'documents' %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                Uploaded reports
+                <span class="ph-muted">&middot; {{ reports | length }}</span>
+            </h2>
+
+            {% if not reports %}
+                <p class="ph-muted">No document uploaded by this patient.</p>
+            {% else %}
+                <div class="dd-table-wrap">
+                    <table class="dd-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Uploaded</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in reports %}
+                                <tr>
+                                    <td><strong>{{ row.name }}</strong></td>
+                                    <td>{{ row.type or '-' }}</td>
+                                    <td class="dd-num">{{ row.size_kb }} KB</td>
+                                    <td>{{ row.uploaded }}</td>
+                                    <td>
+                                        <span class="dd-tag {{ 'ok' if row.status == 'APPROVED' else 'muted' }}">
+                                            {{ row.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            {% if screenings %}
+                <h2 class="ph-panel-title">AI screening history</h2>
+                <ul class="dd-list">
+                    {% for row in screenings %}
+                        <li>
+                            <strong>{{ row.date }}</strong>
+                            <span class="dd-tag {{ 'danger' if row.severity and row.severity|lower == 'high' else 'warn' }}">
+                                {{ row.severity or 'triage' }}
+                            </span>
+                            <p>{{ row.symptoms }}</p>
+                            <small class="ph-muted">
+                                {{ row.category or '' }}
+                                {% if row.specialist %} &middot; suggested: {{ row.specialist }}{% endif %}
+                            </small>
+                            {% if row.advice %}<p class="dd-advice">{{ row.advice[:400] }}</p>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+
+    <!-- =========================================================
+         TAB: TIMELINE
+    ========================================================== -->
+    {% else %}
+
+        <section class="ph-panel">
+            <h2 class="ph-panel-title">
+                Whole file in one line
+                <span class="ph-muted">&middot; newest first</span>
+            </h2>
+            <ol class="dd-timeline full">
+                {% for event in timeline %}
+                    <li class="dd-event {{ event.tone }}">
+                        <span class="dd-dot" data-kind="{{ event.kind }}"></span>
+                        <div>
+                            <strong>{{ event.title }}</strong>
+                            <small>{{ event.when_text }} &middot; {{ event.kind }}</small>
+                            {% if event.money %}
+                                <small class="dd-money">&#8377;{{ '%.2f' | format(event.money) }}</small>
+                            {% endif %}
+                            {% if event.sub %}<p>{{ event.sub }}</p>{% endif %}
+                            {% if event.link %}
+                                <a class="dd-mini-link" href="{{ event.link }}">open</a>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% else %}
+                    <li class="ph-muted">Nothing recorded yet.</li>
+                {% endfor %}
+            </ol>
+        </section>
+
+    {% endif %}
+
+</main>
+
+<script>
+    function ddRecordStatus(id, status) {
+        var body = new URLSearchParams();
+        body.set('status', status);
+
+        fetch('/doctor-desk/record/' + id + '/status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: body.toString()
+        }).then(function (response) {
+            return response.json();
+        }).then(function (data) {
+            if (data && data.success) {
+                window.location.reload();
+            } else {
+                window.alert((data && data.message) || 'Could not update that record.');
+            }
+        }).catch(function () {
+            window.alert('Request failed.');
+        });
+    }
+
+    function ddFollowUpDone(id) {
+        fetch('/doctor-desk/follow-up/' + id + '/complete', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' }
+        }).then(function (response) {
+            return response.json().catch(function () { return {}; });
+        }).then(function (data) {
+            if (data && data.success === false) {
+                window.alert(data.message || 'Could not close that follow-up.');
+                return;
+            }
+            window.location.reload();
+        }).catch(function () {
+            window.alert('Request failed.');
+        });
+    }
+</script>
+
+</body>
+
+</html>

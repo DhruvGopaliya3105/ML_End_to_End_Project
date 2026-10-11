@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Order " ~ (order.order_no if order else '') %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    {% if missing %}
+
+        <div class="ph-panel ph-empty">
+            <strong>Order not found</strong>
+            That order number is not in this pharmacy&#39;s records.
+            <div style="margin-top:14px">
+                <a class="ph-btn" href="/pharmacy/orders">My orders</a>
+            </div>
+        </div>
+
+    {% else %}
+
+    <div class="ph-row" style="justify-content:space-between;align-items:flex-start">
+
+        <div>
+
+            <div class="ph-row" style="gap:10px">
+                <h1 style="font-size:25px">Order {{ order.order_no }}</h1>
+                <span class="ph-badge {{ badge.tone }}">{{ badge.label }}</span>
+                {% if order.is_emergency %}
+                    <span class="ph-badge danger">&#128652; Urgent</span>
+                {% endif %}
+            </div>
+
+            <p class="ph-small ph-muted" style="margin-top:4px">
+                Placed {{ order.created_at_display }}
+                &middot;
+                {{ 'home delivery' if order.delivery_type == 'DELIVERY' else 'counter pickup' }}
+                &middot;
+                {{ order.payment_method }} / {{ order.payment_status }}
+                {% if order.transaction_id %}
+                    &middot; ref {{ order.transaction_id }}
+                {% endif %}
+            </p>
+
+        </div>
+
+        <div class="ph-row">
+            <a class="ph-btn ghost small" href="/pharmacy/orders">All my orders</a>
+            <a class="ph-btn ghost small" href="/pharmacy/order/{{ order.order_no }}/receipt"
+               target="_blank">Receipt</a>
+        </div>
+
+    </div>
+
+
+    <!-- ============================= CONFIRMED BANNER ============================= -->
+
+    {% if placed and order.status == 'CONFIRMED' %}
+
+        <div class="ph-alert success" style="margin-top:16px">
+            <strong>&#9989; Confirmed.</strong>
+            The pharmacy has your order and the stock is held for you.
+            {% if order.payment_method == 'CASH' %}
+                Pay {{ inr(order.total) }} in cash at the counter when you collect.
+            {% elif order.payment_status == 'PAID' %}
+                Payment received - nothing else to do.
+            {% else %}
+                Finish the payment below to keep the order confirmed.
+            {% endif %}
+        </div>
+
+    {% elif order.status == 'PENDING_PAYMENT' %}
+
+        <div class="ph-alert warn" style="margin-top:16px">
+            <strong>Payment pending.</strong> Your medicines are reserved for a
+            short while. Complete the payment to confirm the order, or cancel
+            it to release them back to the shelf.
+        </div>
+
+    {% elif order.status == 'CANCELLED' %}
+
+        <div class="ph-alert danger" style="margin-top:16px">
+            <strong>Cancelled.</strong>
+            {{ order.cancel_reason or 'This order was cancelled.' }}
+            Stock was returned to the pharmacy.
+        </div>
+
+    {% elif order.status == 'REFUNDED' %}
+
+        <div class="ph-alert danger" style="margin-top:16px">
+            <strong>Refunded.</strong>
+            {{ order.cancel_reason or 'Refund processed by the counter.' }}
+        </div>
+
+    {% endif %}
+
+
+    <div class="ph-split" style="margin-top:16px">
+
+        <div>
+
+            <!-- ============================= TIMELINE ============================= -->
+
+            <section class="ph-panel">
+
+                <h2 style="font-size:17px">Progress</h2>
+
+                <div class="ph-timeline">
+
+                    <div class="ph-step done">
+                        &#10102; Order placed<br>
+                        <span class="ph-small ph-muted">{{ order.created_at_display }}</span>
+                    </div>
+
+                    <div class="ph-step {{ 'done' if order.payment_status == 'PAID' or order.payment_method == 'CASH' }}">
+                        &#10103; Payment<br>
+                        <span class="ph-small ph-muted">
+                            {{ 'paid via ' ~ provider_label if order.payment_status == 'PAID' else (order.payment_status | title) }}
+                        </span>
+                    </div>
+
+                    <div class="ph-step {{ 'done' if order.status == 'CONFIRMED' }}">
+                        &#10104; Pharmacy confirmed<br>
+                        <span class="ph-small ph-muted">
+                            {% if order.confirmed_at %}
+                                {{ order.confirmed_at[:16].replace('T', ' ') }} UTC
+                            {% else %}
+                                waiting
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="ph-step {{ 'done' if order.status in ('CANCELLED', 'REFUNDED') }}">
+                        &#10105; Closed<br>
+                        <span class="ph-small ph-muted">
+                            {{ 'handed over / collected' if order.status == 'CONFIRMED' else order.status | title }}
+                        </span>
+                    </div>
+
+                </div>
+
+                {% if order.notes %}
+                    <p class="ph-small ph-muted" style="margin:0">
+                        Note: {{ order.notes }}
+                    </p>
+                {% endif %}
+
+            </section>
+
+
+            <!-- ============================= ITEMS ============================= -->
+
+            <section class="ph-panel">
+
+                <h2 style="font-size:17px">
+                    Medicines ({{ order['items'] | length }} line{{ 's' if order['items'] | length != 1 }})
+                </h2>
+
+                {% if order.order_type == 'PRESCRIPTION' %}
+                    <p class="hint">
+                        &#129658; Bought against a doctor&#39;s prescription
+                        {% if order.prescription_id %}(Rx #{{ order.prescription_id }}){% endif %}.
+                    </p>
+                {% endif %}
+
+                <div class="ph-table-wrap" style="border:none">
+
+                    <table class="ph-table">
+
+                        <thead>
+                            <tr>
+                                <th>Medicine</th>
+                                <th>Directions</th>
+                                <th style="text-align:center">Qty</th>
+                                <th style="text-align:right">Price</th>
+                                <th style="text-align:right">Total</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for item in order['items'] %}
+
+                                <tr>
+
+                                    <td>
+                                        <div class="ph-row" style="gap:10px;flex-wrap:nowrap">
+                                            <img class="mini-img" src="{{ item.image }}"
+                                                 alt="{{ item.name }}"
+                                                 onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';">
+                                            <div>
+                                                <strong>{{ item.name }}</strong>
+                                                <div class="ph-small ph-muted">
+                                                    {{ item.generic_name or '' }}
+                                                    {% if item.pack_size %} &middot; {{ item.pack_size }}{% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {% if item.dosage or item.frequency or item.duration %}
+                                            {{ item.dosage or '' }}
+                                            {{ item.frequency or '' }}
+                                            {{ item.duration or '' }}
+                                        {% else %}
+                                            <span class="ph-muted">as per label</span>
+                                        {% endif %}
+                                        {% if item.source == 'PRESCRIPTION' %}
+                                            <br><span class="ph-tag rx">&#129658; Rx</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td style="text-align:center">{{ item.quantity }}</td>
+
+                                    <td class="num">{{ inr(item.unit_price) }}</td>
+
+                                    <td class="num"><strong>{{ inr(item.line_total) }}</strong></td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
+            {% if staff and order.patient %}
+
+                <section class="ph-panel">
+
+                    <h2 style="font-size:17px">Patient (staff view)</h2>
+
+                    <p class="hint" style="margin:0">
+                        {{ order.patient.name }}
+                        &middot; {{ order.patient.email }}
+                        {% if order.patient.phone %} &middot; {{ order.patient.phone }}{% endif %}
+                        {% if order.address %}
+                            <br>Deliver to: {{ order.address }}
+                        {% endif %}
+                    </p>
+
+                </section>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ============================= RIGHT COLUMN ============================= -->
+
+        <aside>
+
+            <div class="ph-summary">
+
+                <h2 style="font-size:17px;margin-bottom:8px">Bill</h2>
+
+                <div class="ph-summary-row">
+                    <span>Medicines</span>
+                    <strong>{{ inr(order.subtotal) }}</strong>
+                </div>
+
+                <div class="ph-summary-row">
+                    <span>Delivery</span>
+                    <strong>
+                        {{ 'Free' if not order.delivery_fee else inr(order.delivery_fee) }}
+                    </strong>
+                </div>
+
+                <div class="ph-summary-row total">
+                    <span>{{ 'Paid' if order.payment_status == 'PAID' else 'Payable' }}</span>
+                    <strong>{{ inr(order.total) }}</strong>
+                </div>
+
+                {% if order.payment_status == 'PAID' and order.payment_method == 'ONLINE' %}
+                    <p class="ph-small ph-muted" style="margin:10px 0 0">
+                        Verified by {{ provider_label }}.
+                        {% if order.transaction_id %}
+                            Reference
+                            <span class="ph-mono" style="display:inline">{{ order.transaction_id }}</span>
+                        {% endif %}
+                    </p>
+                {% endif %}
+
+            </div>
+
+
+            <!-- ============================= PAY NOW ============================= -->
+
+            {% if can_pay and order.payment_status != 'PAID' %}
+
+                <section class="ph-panel" id="ph-pay">
+
+                    <h2 style="font-size:17px">&#128179; Pay {{ inr(order.total) }}</h2>
+
+                    <p class="hint" style="margin-bottom:10px">
+                        {{ payment_note }}
+                    </p>
+
+                    {% if gateway.provider == 'razorpay' %}
+
+                        <button class="ph-btn block" id="ph-razorpay-btn"
+                                data-order-id="{{ order.id }}"
+                                data-amount="{{ (order.total * 100) | int }}"
+                                data-name="{{ order.order_no }}">
+                            Pay {{ inr(order.total) }} with Razorpay
+                        </button>
+
+                        <p class="ph-small ph-muted" style="margin:8px 0 0">
+                            Signature is verified on the server
+                            (<code>POST /pharmacy/api/order/{{ order.id }}/pay</code>)
+                            before the order is confirmed.
+                        </p>
+
+                    {% else %}
+
+                        <div class="ph-qr-box">
+
+                            <img src="{{ gateway.qr_image }}" alt="UPI QR code">
+
+                            <div style="margin-top:10px">
+                                <strong>{{ inr(order.total) }}</strong>
+                                <div class="ph-small ph-muted">
+                                    to {{ gateway.upi_id }}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <button class="ph-btn block" style="margin-top:12px"
+                                data-ph="pay" data-id="{{ order.id }}">
+                            I have paid - confirm my order
+                        </button>
+
+                        <p class="ph-small ph-muted" style="margin:8px 0 0">
+                            Demo mode: no gateway keys in <code>.env</code>, so
+                            the app marks the payment as received and logs it.
+                            Add <code>RAZORPAY_KEY_ID</code> +
+                            <code>RAZORPAY_KEY_SECRET</code> to switch this
+                            button to a real checkout.
+                        </p>
+
+                    {% endif %}
+
+                </section>
+
+            {% endif %}
+
+
+            <!-- ============================= ACTIONS ============================= -->
+
+            <section class="ph-panel">
+
+                <h2 style="font-size:17px;margin-bottom:10px">Actions</h2>
+
+                <div class="ph-row" style="flex-direction:column;align-items:stretch">
+
+                    {% if can_cancel %}
+                        <button class="ph-btn ghost block" data-ph="cancel"
+                                data-id="{{ order.id }}">
+                            Cancel this order
+                        </button>
+                    {% endif %}
+
+                    {% if can_mark_cash and order.payment_status != 'PAID' %}
+                        <button class="ph-btn ghost block" data-ph="admin-fulfil"
+                                data-id="{{ order.id }}" data-action="mark_paid">
+                            Staff: cash received
+                        </button>
+                    {% endif %}
+
+                    {% if can_hand_over %}
+                        <button class="ph-btn block" data-ph="admin-fulfil"
+                                data-id="{{ order.id }}" data-action="handed_over">
+                            Staff: medicines handed over
+                        </button>
+                    {% endif %}
+
+                    {% if can_refund and order.status == 'CONFIRMED' %}
+                        <button class="ph-btn warn block" data-ph="admin-fulfil"
+                                data-id="{{ order.id }}" data-action="refund"
+                                data-reason="Refunded from the order page">
+                            Staff: refund this order
+                        </button>
+                    {% endif %}
+
+                    <a class="ph-btn ghost block"
+                       href="/pharmacy/order/{{ order.order_no }}/receipt"
+                       target="_blank">
+                        Print / save receipt
+                    </a>
+
+                </div>
+
+                {% if not own %}
+                    <p class="ph-small ph-muted" style="margin:10px 0 0">
+                        You are viewing this order as {{ role_label }}
+                        (pharmacy staff access).
+                    </p>
+                {% endif %}
+
+            </section>
+
+        </aside>
+
+    </div>
+
+    <script>
+      /* Razorpay is only used when RAZORPAY_KEY_ID is in .env. Everything else
+         keeps the offline simulated UPI flow above, so the page still works
+         with no network. */
+      {% if gateway.provider == 'razorpay' %}
+      (function () {
+        var button = document.getElementById("ph-razorpay-btn");
+        if (!button) return;
+
+        var script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = function () {
+          button.addEventListener("click", function () {
+            var rzp = new Razorpay({
+              key: "{{ gateway.key_id }}",
+              amount: button.dataset.amount,
+              currency: "INR",
+              name: "{{ gateway.counter_name }}",
+              description: "Order " + button.dataset.name,
+              handler: function (response) {
+                fetch("/pharmacy/api/order/" + button.dataset.orderId + "/pay", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                  body: new URLSearchParams({
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_signature: response.razorpay_signature,
+                  }),
+                  credentials: "same-origin"
+                })
+                  .then(function (r) { return r.json(); })
+                  .then(function (data) {
+                    if (data.success) { location.href = data.redirect; }
+                    else { alert(data.message || "Payment not verified"); }
+                  });
+              },
+            });
+            rzp.open();
+          });
+        };
+        document.head.appendChild(script);
+      })();
+      {% endif %}
+    </script>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

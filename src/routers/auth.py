@@ -216,9 +216,17 @@ def login(
     # ========================================================
     # REDIRECT
     # ========================================================
+    # Same login form for everyone; the role decides where you land.
+    # A doctor goes straight to their patient desk (/doctor-desk), and the
+    # dashboard is still one link away in that page's navbar.
+
+    landing = "/dashboard"
+
+    if (getattr(user, "role", "") or "").upper() == "DOCTOR":
+        landing = "/doctor-desk"
 
     return RedirectResponse(
-        url="/dashboard",
+        url=landing,
         status_code=303
     )
 

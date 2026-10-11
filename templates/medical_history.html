@@ -476,6 +476,67 @@
 </div>
 
 
+
+    {% if doctor_notes %}
+
+        <div style="
+            margin:26px 0 0;
+            border:1px solid #cfe3de;
+            border-left:4px solid #0f766e;
+            border-radius:12px;
+            padding:16px 18px;
+            background:#f5fbfa">
+
+            <h2 style="margin:0 0 2px;font-size:16px;color:#0f172a">
+                Notes your doctor shared with you
+            </h2>
+
+            <p style="margin:0;font-size:12.5px;color:#64748b">
+                Written on your patient file. The rest of the file stays with
+                the clinic.
+            </p>
+
+            {% for note in doctor_notes %}
+
+                <div style="margin-top:14px">
+
+                    <strong style="font-size:13.5px">{{ note.title }}</strong>
+
+                    <span style="
+                        display:inline-block;
+                        margin-left:6px;
+                        padding:1px 8px;
+                        border-radius:999px;
+                        background:#ccfbf1;
+                        color:#115e59;
+                        font-size:10.5px">
+                        {{ note.type_label }} &middot; {{ note.created }}
+                    </span>
+
+                    {% if note.body %}
+                        <p style="margin:6px 0 0;font-size:13px;color:#1f2937">
+                            {{ note.body }}
+                        </p>
+                    {% endif %}
+
+                    {% if note.follow_up_date %}
+                        <p style="margin:6px 0 0;font-size:12.5px;color:#b45309">
+                            Come back on: {{ note.follow_up_date }}
+                        </p>
+                    {% endif %}
+
+                    <p style="margin:6px 0 0;font-size:11.5px;color:#64748b">
+                        &mdash; {{ note.author }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
 </body>
 
 </html>

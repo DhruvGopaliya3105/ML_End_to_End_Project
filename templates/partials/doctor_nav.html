@@ -1,0 +1,55 @@
+{# Navbar for the doctor desk pages.
+
+   Links are shown from the same permissions the routes check, so a role that
+   lost doctor.desk.read does not even see "Pharmacy shop" here. #}
+
+<nav class="ph-navbar dd-navbar">
+
+    <a class="ph-logo" href="/doctor-desk">
+        &#129658; Sanjeevani
+        <span class="sub">Doctor Desk</span>
+    </a>
+
+    <div class="ph-nav">
+
+        <a href="/doctor-desk"
+           class="{{ 'active' if request.url.path in ('/doctor-desk', '/doctor-desk/') else '' }}">
+            Patients
+        </a>
+
+        <a href="/doctor-desk?scope=followup"
+           class="{{ 'active' if 'scope=followup' in (request.url.query or '') else '' }}">
+            Follow-ups
+            {% if tiles and tiles.followup_overdue %}
+                <span class="ph-badge-count">{{ tiles.followup_overdue }}</span>
+            {% endif %}
+        </a>
+
+        <a href="/doctor-desk?scope=unpaid">
+            Dues
+            {% if tiles and tiles.due_total %}
+                <span class="ph-badge-count">&#8377;{{ '%.0f' | format(tiles.due_total) }}</span>
+            {% endif %}
+        </a>
+
+        {% if can('pharmacy.view') %}
+            <a href="/pharmacy">Pharmacy shop</a>
+        {% endif %}
+
+        {% if can('pharmacy.order.read.all') or can('pharmacy.catalog.write') %}
+            <a href="/pharmacy/admin">Pharmacy admin</a>
+        {% endif %}
+
+        <a href="/dashboard">My account</a>
+
+        {% if user.user_name == 'Guest' %}
+            <a href="/login" class="danger">Login</a>
+        {% else %}
+            <a href="/logout" class="danger">Logout ({{ role_label }})</a>
+        {% endif %}
+
+    </div>
+
+</nav>
+
+<div id="ph-toast"></div>

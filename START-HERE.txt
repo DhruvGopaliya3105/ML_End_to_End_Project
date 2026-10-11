@@ -1,0 +1,235 @@
+==============================================================================
+ SANJEEVANI CLINIC  +  PHARMACY MODULE          (complete project zip)
+==============================================================================
+
+Everything below is ONE FastAPI project. The clinic already worked; the
+pharmacy (/pharmacy, /pharmacy/admin) is added on top of it - same database,
+same login, same templates.
+
+------------------------------------------------------------------------------
+ RUN IT (5 commands)
+------------------------------------------------------------------------------
+ 1.  unzip this file to a NEW folder (not over your existing project - see
+     "IF YOU ALREADY RUN THIS PROJECT" below), then open a terminal IN the
+     folder that contains main.py
+
+ 2.  python -m venv .venv
+        Windows:          .venv\Scripts\activate
+        macOS / Linux:    source .venv/bin/activate
+
+ 3.  pip install -r requirements.txt
+
+ 4.  python test_pharmacy.py
+        -> should finish with:  173 checks passed, 0 failed
+     (that test uses its own throwaway SQLite file, so it never touches MySQL)
+
+ 4c. python check_all_features.py
+        -> should finish with:  319 checks passed, 0 failed
+     OR run everything at once (original clinic + new features + MySQL):
+        python verify_all.py                 one command, prints a summary table
+        python verify_all.py --quick         skip the MySQL step
+     THIS is the "is every feature really connected" check: every page for
+     every role (patient / doctor / pharmacist / admin / super user), the desk's
+     10 tabs, the links between clinic <-> pharmacy <-> doctor desk, one orphan
+     query per foreign key, 2 full end-to-end walks (buy a strip; doctor -> Rx
+     -> patient's cart) and a role-matrix revoke + reset. It builds its own
+     throwaway database (check_all_features.db) and deletes it again, so your
+     data is never touched. Extras:
+        python check_all_features.py --html check_report.html   printable report
+        python check_all_features.py --live        read-only on YOUR database (no URL
+                                              needed, no writes, no server required)
+
+ 4b. if you ARE on MySQL, also run  python test_pharmacy_mysql.py
+        -> 52 checks against your real database: tables, catalog, a purchase,
+           stock move, cancel, admin tabs, audit rows, snapshot + rollback.
+           It prints SKIP and exits happily when MySQL is not reachable.
+
+ 5.  python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+     open  http://127.0.0.1:8000            (clinic)
+           http://127.0.0.1:8000/pharmacy   (medicine shop)
+           http://127.0.0.1:8000/pharmacy/admin   (super user console)
+           http://127.0.0.1:8000/health     (which database is active)
+
+ That is enough for a demo: the app uses the bundled SQLite file
+ sanjeevani_clinic.db, which already contains the demo data (20 doctors,
+ 32 diseases, 111 medicines, partner chemists, prescriptions).
+
+------------------------------------------------------------------------------
+ USE YOUR OWN MYSQL INSTEAD  (recommended file: database_setup_with_pharmacy.sql)
+------------------------------------------------------------------------------
+ 1.  MySQL Workbench -> File -> Open SQL Script ->  database_setup_with_pharmacy.sql
+     -> lightning bolt (Ctrl+Shift+Enter) -> "Execute all statements"
+
+     That one file = your 15 clinic tables + the 12 pharmacy tables + all demo
+     data. It has NO "DROP DATABASE", uses CREATE ... IF NOT EXISTS and
+     INSERT IGNORE everywhere, so it can be run on a database that already has
+     your appointments and records - it only adds what is missing. Run it twice
+     and the second run changes nothing.
+     (database_setup.sql is the old file and DOES drop the database. Only use
+      it when you really want an empty reset.)
+
+ 1b. If you only want to add the pharmacy to the database you already have
+     (the usual case), paste this smaller file instead - 357 lines, no clinic
+     part, and it refuses to touch anything that exists:
+        workbench_pharmacy.sql    12 CREATE TABLEs + all catalog data + 5 logins
+     Data afterwards:  python seed_pharmacy.py
+     Other pieces, all regenerable with  python build_workbench_sql.py :
+        pharmacy_setup.sql   just the 12 CREATE TABLEs
+        pharmacy_seed.sql    just the pharmacy INSERTs (~100 KB of catalogue)
+
+------------------------------------------------------------------------------
+ WHICH SQL DO I PASTE?  (all four are safe: IF NOT EXISTS + INSERT IGNORE,
+ no DROP DATABASE anywhere, so your appointments / records / follow-ups stay)
+------------------------------------------------------------------------------
+  A) ONE file with EVERYTHING (existing clinic + all new features, 27 tables)
+        workbench_all_features.sql          (855 lines: 15 clinic + 12 module
+        tables + 20 doctors/140 schedules/5 visit types + 5 logins + verify grid.
+        No DROP, paste twice = "0 rows affected". Then run
+        `python seed_pharmacy.py` once for the 111-medicine catalogue.
+        Verified: fresh database -> 27 tables, then seed -> test_pharmacy_mysql.py
+        = 52/52.)
+
+  A) brand new or empty database
+        database_setup_with_pharmacy.sql     (1317 lines: 15 clinic + 12
+        pharmacy tables + ALL demo data + a verification grid at the end,
+        plus the two MySQL accounts at the very bottom - see the note below)
+
+  A+2) you ALREADY pasted an earlier file and want the newest features only
+        mysql_upgrade_existing_db.sql        (161 lines; IGNORE this one if you
+        ran A above - it is already covered)
+        -> adds doctor_patient_notes + role_permissions, adds the
+           treatment_reviews.updated_at column the OLD database_setup.sql was
+           missing (guarded ALTER - MySQL has no ADD COLUMN IF NOT EXISTS), and
+           INSERT IGNOREs the SUPERUSER login. Verified: 0 errors when run twice,
+           on an up-to-date database AND on a database where the two tables and
+           the column were missing. Ends with a table saying "present" for each.
+        -> it deletes nothing: your medical_records / follow_ups stay untouched
+           (tested: a hand-made record + follow-up survived a re-run)
+
+  B) you already pasted the pharmacy file in an earlier round and only the
+     DOCTOR DESK is new  ->  easiest: paste mysql_upgrade_existing_db.sql
+     (case A+2 above). If you would rather paste by hand, this block is the
+     12th table, copied verbatim from workbench_pharmacy.sql:
+
+        CREATE TABLE IF NOT EXISTS `doctor_patient_notes` (
+          id INTEGER NOT NULL AUTO_INCREMENT,
+          doctor_id INTEGER,
+          doctor_name VARCHAR(120),
+          doctor_specialization VARCHAR(100),
+          patient_id INTEGER NOT NULL,
+          note_type VARCHAR(20) NOT NULL,
+          title VARCHAR(160) NOT NULL,
+          body TEXT,
+          visibility VARCHAR(20) NOT NULL,
+          is_pinned BOOL NOT NULL,
+          is_urgent BOOL NOT NULL,
+          follow_up_date DATE,
+          status VARCHAR(20) NOT NULL,
+          created_at DATETIME NOT NULL,
+          updated_at DATETIME NOT NULL,
+          PRIMARY KEY (id),
+          FOREIGN KEY(doctor_id) REFERENCES users (id) ON DELETE SET NULL,
+          FOREIGN KEY(patient_id) REFERENCES users (id) ON DELETE CASCADE,
+          INDEX `ix_doctor_patient_notes_doctor_id` (`doctor_id`),
+          INDEX `ix_doctor_patient_notes_note_type` (`note_type`),
+          INDEX `ix_doctor_patient_notes_patient_id` (`patient_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+     then prove it landed:
+        SELECT COUNT(*) AS desk_notes FROM sanjeevani_clinic.doctor_patient_notes;
+        SELECT TABLE_NAME FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA='sanjeevani_clinic'
+           AND TABLE_NAME IN ('diseases','medicines','medicine_diseases',
+             'pharmacy_cart_items','nearby_pharmacies','nearby_pharmacy_stocks',
+             'pharmacy_snapshots','pharmacy_orders','pharmacy_order_items',
+             'pharmacy_audit_logs','role_permissions','doctor_patient_notes');
+        -> must list 12 rows
+
+     NOTE: you do NOT have to run any SQL for a new table ever again - main.py
+     calls Base.metadata.create_all() on every start, so a missing table is
+     created by itself. The SQL files are for people who want to review or
+     pre-create the schema (or who run a MySQL user without DDL rights).
+
+  C) your database is a mess and you want a guaranteed-complete copy of it
+     (SQLite only, no MySQL needed):  delete sanjeevani_clinic.db, run
+        python seed_pharmacy.py
+     it rebuilds the file from scratch with all 27 tables + demo data.
+
+ 2.  copy .env.example to .env  and set:
+         DB_USER=root
+         DB_PASSWORD=your_password
+         DB_NAME=sanjeevani_clinic
+         USE_SQLITE=false
+ 3.  start the app. The 12 pharmacy tables are created automatically.
+     (Want to read / run the SQL by hand?  pharmacy_setup.sql)
+ 4.  python seed_pharmacy.py        # fills the pharmacy catalog + logins
+ 5.  restart the app.
+
+ If MySQL is not reachable the app prints a LOUD warning and keeps working on
+ SQLite, so you can never be stuck.
+
+------------------------------------------------------------------------------
+ IF YOU ALREADY RUN THIS PROJECT (your own MySQL + your own data)
+------------------------------------------------------------------------------
+ Do NOT unzip over your working folder - your uncommitted changes would be
+ overwritten and your .env is not inside this zip (it is git-ignored).
+ Instead do ONE of these:
+
+   a) Extract this zip somewhere new and copy your .env into it:
+          copy  C:\path\to\your\project\.env   ->   <extracted>\.env
+      then start the app: the 12 pharmacy tables appear in your existing
+      sanjeevani_clinic database automatically (same MySQL, same data).
+
+   b) Or keep your current folder and copy only these from the zip:
+          PHARMACY.md  DOCTOR_DESK.md  START-HERE.txt  README.md
+          seed_pharmacy.py  test_pharmacy.py  test_pharmacy_mysql.py
+          check_all_features.py
+          pharmacy_setup.sql  pharmacy_seed.sql  workbench_pharmacy.sql
+  mysql_upgrade_existing_db.sql
+  workbench_all_features.sql
+          database_setup_with_pharmacy.sql
+          pharmacy_schema_export.py  build_workbench_sql.py
+          src\models\ (10 new files, incl. doctor_patient_note.py)
+          src\security\rbac.py
+          src\services\pharmacy_*.py (7) + doctor_desk_service.py
+          src\routers\pharmacy.py  src\routers\pharmacy_admin.py
+          src\routers\doctor_desk.py
+          templates\pharmacy*.html (8)  templates\doctor_*.html (3)
+          templates\partials\pharmacy_*.html (2)  templates\partials\doctor_nav.html
+          static\pharmacy.css  static\pharmacy.js  static\images\pharmacy\
+     10 existing files are edited by the module (main.py, src\config.py,
+     src\models\__init__.py, src\routers\auth.py, src\routers\medical_history.py,
+     templates\dashboard.html, templates\medical_history.html, .env.example,
+     README.md, RUN.md).  Do not hand-copy those - the patch does it in one go:
+        git apply --binary pharmacy-feature.patch
+        (no git? copy the files anyway - they are all in the full zip)
+
+ Either way:  python seed_pharmacy.py   once, then restart. Your appointments,
+ doctors, records and prescriptions are untouched - the pharmacy only adds
+ tables and two links on the dashboard.
+
+------------------------------------------------------------------------------
+ DEMO LOGINS
+------------------------------------------------------------------------------
+   patient@demo.com          Demo@1234        shop, cart, own orders
+   doctor@demo.com           Doctor@1234      DOCTOR DESK: every enrolled
+                                          patient's full file (visits,
+                                          records, Rx, medicines, invoices,
+                                          reviews) + write notes/records/Rx
+                                          /follow-ups/payments; pharmacy too
+   pharmacist@demo.com       Pharma@1234      orders, stock, nearby shops
+   admin@demo.com            Admin@1234       everything except role editing
+   superuser@sanjeevani.com  Super@1234       everything + roles + rollback
+
+------------------------------------------------------------------------------
+ READ NEXT
+------------------------------------------------------------------------------
+   DOCTOR_DESK.md the doctor's patient desk: every feature, the tabs, the
+                  whole workflow (login -> roster -> file -> write back) and
+                  which 7 permissions it uses
+   PHARMACY.md    what was added (file by file), every route, the rules the
+                  code enforces, audit log + rollback how-to, how to go live
+   RUN.md         setup, SQLite vs MySQL, troubleshooting
+   MYSQL_SETUP.md MySQL-specific problems
+==============================================================================

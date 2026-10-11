@@ -60,11 +60,18 @@ def booking_page(
 
     doctor_id: int,
 
-    appointment_date: date,
+    appointment_date: date | None = None,
 
     db: Session = Depends(get_db)
 
 ):
+
+    # The injury-analysis page links here with only ?doctor_id=...
+    # A missing date defaults to today so the page always opens.
+
+    if appointment_date is None:
+
+        appointment_date = date.today()
 
     user_id = request.session.get("user_id")
 
@@ -302,9 +309,7 @@ def book_appointment(
     if error:
 
         return RedirectResponse(
-
             url="/doctors",
-
             status_code=303
         )
 
@@ -330,9 +335,7 @@ def book_appointment(
     if confirm_error and confirmed_appointment is None:
 
         return RedirectResponse(
-
             url="/appointments?error=confirmation_failed",
-
             status_code=303
         )
 
@@ -342,13 +345,10 @@ def book_appointment(
     # ========================================================
 
     doctor = (
-
         db.query(Doctor)
-
         .filter(
             Doctor.id == doctor_id
         )
-
         .first()
     )
 
@@ -392,16 +392,12 @@ def my_appointments(
     if user_id is None:
 
         return RedirectResponse(
-
             url="/login",
-
             status_code=303
         )
 
     appointments = get_patient_appointments(
-
         db=db,
-
         patient_id=user_id
     )
 
@@ -442,9 +438,7 @@ def cancel_appointment(
     if user_id is None:
 
         return RedirectResponse(
-
             url="/login",
-
             status_code=303
         )
 
@@ -466,9 +460,7 @@ def cancel_appointment(
     if error:
 
         return RedirectResponse(
-
             url="/appointments?error=cancel_failed",
-
             status_code=303
         )
 
@@ -478,9 +470,7 @@ def cancel_appointment(
     # ========================================================
 
     return RedirectResponse(
-
         url="/appointments?cancelled=success",
-
         status_code=303
     )
 
@@ -507,18 +497,13 @@ def reschedule_page(
     if user_id is None:
 
         return RedirectResponse(
-
             url="/login",
-
             status_code=303
         )
 
     appointment = get_patient_appointment(
-
         db=db,
-
         appointment_id=appointment_id,
-
         patient_id=user_id
     )
 
@@ -526,16 +511,11 @@ def reschedule_page(
     if appointment is None:
 
         return templates.TemplateResponse(
-
             request,
-
             "reschedule_appointment.html",
-
             {
                 "user": request.session,
-
                 "appointment": None,
-
                 "error":
                     "Appointment not found."
             }
@@ -543,17 +523,12 @@ def reschedule_page(
 
 
     return templates.TemplateResponse(
-
         request,
-
         "reschedule_appointment.html",
-
         {
             "user": request.session,
-
             "appointment":
                 appointment,
-
             "error": None
         }
     )
@@ -587,9 +562,7 @@ def reschedule_appointment(
     if user_id is None:
 
         return RedirectResponse(
-
             url="/login",
-
             status_code=303
         )
 
@@ -601,26 +574,18 @@ def reschedule_appointment(
     if end_time <= start_time:
 
         appointment = get_patient_appointment(
-
             db=db,
-
             appointment_id=appointment_id,
-
             patient_id=user_id
         )
 
         return templates.TemplateResponse(
-
             request,
-
             "reschedule_appointment.html",
-
             {
                 "user": request.session,
-
                 "appointment":
                     appointment,
-
                 "error":
                     "End time must be after start time."
             }
@@ -654,26 +619,18 @@ def reschedule_appointment(
     if error:
 
         current_appointment = get_patient_appointment(
-
             db=db,
-
             appointment_id=appointment_id,
-
             patient_id=user_id
         )
 
         return templates.TemplateResponse(
-
             request,
-
             "reschedule_appointment.html",
-
             {
                 "user": request.session,
-
                 "appointment":
                     current_appointment,
-
                 "error":
                     error
             }
@@ -685,8 +642,6 @@ def reschedule_appointment(
     # ========================================================
 
     return RedirectResponse(
-
         url="/appointments?rescheduled=success",
-
         status_code=303
     )

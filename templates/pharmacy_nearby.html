@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Find medicine nearby - emergency" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    <section class="ph-panel ph-emg">
+
+        <h1 style="font-size:23px">&#128652; Emergency: who has it near you</h1>
+
+        <p class="hint" style="margin:6px 0 0">
+            Our shelf is allowed to be empty - your treatment cannot. This page
+            reads partner chemist stock <strong>straight from the clinic
+            database</strong> (works offline, no key needed) and adds live
+            Google Maps results when
+            <code>GOOGLE_MAPS_API_KEY</code> is set in <code>.env</code>.
+            Call first, then go - the route button opens Google Maps.
+        </p>
+
+        <form method="get" action="/pharmacy/nearby" class="ph-search" style="margin-top:14px">
+
+            {% if medicine_id %}
+                <input type="hidden" name="medicine_id" value="{{ medicine_id }}">
+            {% endif %}
+
+            <input class="ph-input" type="search" name="name"
+                   value="{{ name or (medicine.name if medicine else '') }}"
+                   placeholder="Medicine or salt name (e.g. Azithromycin 500)"
+                   style="flex:1;min-width:240px">
+
+            <button class="ph-btn danger" type="submit">Search nearby shops</button>
+
+            {% if medicine %}
+                <a class="ph-btn ghost" href="/pharmacy/cart">
+                    Back to my cart
+                </a>
+            {% endif %}
+
+        </form>
+
+        {% if google_key_hint %}
+            <div class="ph-alert info" style="margin:14px 0 0">
+                {{ google_key_hint }}
+            </div>
+        {% endif %}
+
+    </section>
+
+
+    <!-- ============================= WHAT WE COULD NOT SELL ============================= -->
+
+    {% if medicine %}
+
+        <section class="ph-panel">
+
+            <div class="ph-row" style="justify-content:space-between;align-items:flex-start">
+
+                <div class="ph-row" style="gap:14px;flex-wrap:nowrap">
+
+                    <img src="{{ medicine.display_image }}" alt="{{ medicine.name }}"
+                         style="width:96px;height:74px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0"
+                         onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';">
+
+                    <div>
+                        <h2 style="font-size:19px">{{ medicine.name }}</h2>
+                        <p class="hint" style="margin:2px 0 0">
+                            {{ medicine.generic_name or '' }}
+                            {% if medicine.pack_size %} &middot; {{ medicine.pack_size }}{% endif %}
+                        </p>
+                        <p class="ph-small" style="margin:6px 0 0">
+                            {% if medicine.stock > 0 %}
+                                <span class="ph-badge success">
+                                    We have {{ medicine.stock }} pack(s) at {{ inr(medicine.price) }}
+                                </span>
+                                <a class="ph-btn small" style="margin-left:8px"
+                                   href="/pharmacy/cart">Buy here instead</a>
+                            {% else %}
+                                <span class="ph-badge danger">
+                                    Out of stock in our pharmacy
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ============================= RESULTS ============================= -->
+
+    <div class="ph-section-title">
+
+        <h2>
+            {{ nearby.results | length }} shop(s) checked for
+            &quot;{{ nearby.medicine_name }}&quot;
+        </h2>
+
+        <span class="ph-small ph-muted">
+            {{ nearby.partner_count }} from our SQL partner list &middot;
+            {{ nearby.google_count }} from Google Maps &middot;
+            radius {{ (nearby.radius_m / 1000) | round(1) }} km &middot;
+            google: {{ nearby.google_status }}
+        </span>
+
+    </div>
+
+    {% if nearby.note %}
+        <div class="ph-alert info">{{ nearby.note }}</div>
+    {% endif %}
+
+    {% if not nearby.results %}
+
+        <div class="ph-panel ph-empty">
+            <strong>No partner shop has it in the database yet</strong>
+            <p class="ph-small ph-muted" style="max-width:560px;margin:0 auto">
+                The super user can add chemists (and their stock) under
+                <a href="/pharmacy/admin?tab=nearby">Pharmacy admin &rarr; Nearby shops</a>,
+                and importing from Google Maps fills this list automatically.
+                For a genuine emergency, call the clinic counter - they keep a
+                manual stock register.
+            </p>
+        </div>
+
+    {% else %}
+
+        {% for shop in nearby.results %}
+
+            <article class="ph-shop {{ 'open24' if shop.open_24x7 }}">
+
+                <div>
+
+                    <h3>
+                        {{ shop.name }}
+                        {% if shop.is_partner %}
+                            <span class="ph-tag ok">tie-up shop</span>
+                        {% else %}
+                            <span class="ph-tag">listed</span>
+                        {% endif %}
+                        {% if shop.open_24x7 %}
+                            <span class="ph-tag rx">24x7</span>
+                        {% endif %}
+                    </h3>
+
+                    <div class="meta">
+                        {{ shop.address or 'Address not recorded' }}
+                        {% if shop.area %} &middot; {{ shop.area }}{% endif %}
+                        {% if shop.distance_km %}
+                            <br>&#128205; about {{ shop.distance_km }} km from the clinic
+                        {% endif %}
+                        {% if shop.opening_hours %}
+                            &middot; &#128337; {{ shop.opening_hours }}
+                        {% endif %}
+                        {% if shop.rating %}
+                            &middot; &#11088; {{ shop.rating }}
+                        {% endif %}
+                    </div>
+
+                    <div class="ph-row" style="margin-top:8px;gap:6px">
+
+                        {% if shop.stock is not none %}
+                            <span class="ph-badge {{ 'success' if shop.available else 'muted' }}">
+                                {{ shop.stock }} pack(s) in their system
+                            </span>
+                        {% else %}
+                            <span class="ph-badge muted">Stock not recorded - call to confirm</span>
+                        {% endif %}
+
+                        {% if shop.price %}
+                            <span class="ph-tag">{{ inr(shop.price) }}</span>
+                        {% endif %}
+
+                        {% if shop.trust == 'VERIFIED' %}
+                            <span class="ph-small ph-muted">reported by the shop</span>
+                        {% endif %}
+
+                        {% if shop.updated_at %}
+                            <span class="ph-small ph-muted">&middot; updated {{ shop.updated_at }}</span>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                <div class="actions">
+
+                    {% if shop.tel_link %}
+                        <a class="ph-btn" href="{{ shop.tel_link }}">
+                            &#128222; Call shop
+                        </a>
+                    {% else %}
+                        <span class="ph-btn ghost" title="No number recorded">
+                            No phone recorded
+                        </span>
+                    {% endif %}
+
+                    <a class="ph-btn ghost" href="{{ shop.maps_link }}" target="_blank"
+                       rel="noopener">
+                        &#128663; Route
+                    </a>
+
+                    {% if not shop.available and shop.stock is not none %}
+                        <a class="ph-btn ghost small" href="/pharmacy/nearby?name={{ (nearby.medicine_name | urlencode) }}">
+                            Ask for a substitute
+                        </a>
+                    {% endif %}
+
+                </div>
+
+            </article>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    <!-- ============================= HOW THIS WORKS ============================= -->
+
+    <section class="ph-panel">
+
+        <h2 style="font-size:16px">Why this list can be trusted</h2>
+
+        <p class="hint" style="margin-bottom:0">
+            Rows marked <span class="ph-tag ok">tie-up shop</span> come from the
+            <code>nearby_pharmacies</code> + <code>nearby_pharmacy_stocks</code>
+            tables, which the pharmacy counter updates - so the number of packs
+            you see is a stock figure, not a guess. Rows from Google are live
+            chemist listings: they prove a shop is open nearby, but the stock has
+            to be confirmed on the phone. Both kinds are cached in SQL, so the
+            same search is instant - and still works - the next time.
+        </p>
+
+    </section>
+
+</main>
+
+</body>
+</html>

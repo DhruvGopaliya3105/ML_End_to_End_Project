@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Receipt " ~ order.order_no %}
+    {% include "partials/pharmacy_head.html" %}
+    <style>
+        body {
+            background: #fff;
+        }
+
+        .ph-invoice {
+            max-width: 760px;
+            margin: 24px auto 60px;
+            padding: 26px 30px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+        }
+
+        .ph-invoice header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 3px solid #0f766e;
+            padding-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .ph-invoice h1 {
+            font-size: 22px;
+            color: #0f766e;
+        }
+
+        .ph-invoice table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
+        .ph-invoice th,
+        .ph-invoice td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 9px 8px;
+            text-align: left;
+        }
+
+        .ph-invoice td.right,
+        .ph-invoice th.right {
+            text-align: right;
+        }
+
+        .ph-invoice .totals {
+            margin-top: 14px;
+            margin-left: auto;
+            width: 260px;
+        }
+
+        .ph-invoice footer {
+            margin-top: 26px;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 12px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+
+<main class="ph-invoice">
+
+    <header>
+
+        <div>
+            <h1>&#128138; Sanjeevani Clinic Pharmacy</h1>
+            <div class="ph-small ph-muted">
+                Medicines dispensed &middot; Counter copy
+            </div>
+        </div>
+
+        <div style="text-align:right">
+            <strong>{{ order.order_no }}</strong>
+            <div class="ph-small ph-muted">{{ printed_on }}</div>
+            <div class="ph-small">
+                <span class="ph-badge {{ badge.tone }}">{{ badge.label }}</span>
+            </div>
+        </div>
+
+    </header>
+
+    <div class="ph-row" style="margin-top:14px;font-size:13px;gap:26px;flex-wrap:wrap">
+
+        <div>
+            <strong>Billed to</strong><br>
+            {{ (order.patient.name if order.patient else user.user_name) }}<br>
+            {% if order.patient and order.patient.email %}
+                {{ order.patient.email }}<br>
+            {% endif %}
+            {% if order.phone %}{{ order.phone }}{% endif %}
+        </div>
+
+        <div>
+            <strong>Collection</strong><br>
+            {{ 'Home delivery' if order.delivery_type == 'DELIVERY' else 'Pickup at counter' }}
+            {% if order.address %}
+                <br>{{ order.address }}
+            {% endif %}
+        </div>
+
+        <div>
+            <strong>Payment</strong><br>
+            {{ order.payment_method }} &middot; {{ order.payment_status }}
+            {% if order.transaction_id %}
+                <br>{{ order.transaction_id }}
+            {% endif %}
+        </div>
+
+    </div>
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Medicine</th>
+                <th>Directions</th>
+                <th class="right">Qty</th>
+                <th class="right">Rate</th>
+                <th class="right">Amount</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for item in order['items'] %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <strong>{{ item.name }}</strong>
+                        {% if item.generic_name %}
+                            <br><span class="ph-muted">{{ item.generic_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ item.dosage or '' }} {{ item.frequency or '' }} {{ item.duration or '' }}
+                        {% if item.source == 'PRESCRIPTION' %}
+                            <br><em>as prescribed</em>
+                        {% endif %}
+                    </td>
+                    <td class="right">{{ item.quantity }}</td>
+                    <td class="right">{{ inr(item.unit_price) }}</td>
+                    <td class="right">{{ inr(item.line_total) }}</td>
+                </tr>
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+    <table class="totals">
+        <tr>
+            <td>Medicines</td>
+            <td class="right">{{ inr(order.subtotal) }}</td>
+        </tr>
+        <tr>
+            <td>Delivery</td>
+            <td class="right">{{ inr(order.delivery_fee) }}</td>
+        </tr>
+        <tr>
+            <td><strong>Total</strong></td>
+            <td class="right"><strong>{{ inr(order.total) }}</strong></td>
+        </tr>
+        <tr>
+            <td>Balance at counter</td>
+            <td class="right">
+                {{ inr(order.total) if order.payment_status != 'PAID' else 'Nil - paid' }}
+            </td>
+        </tr>
+    </table>
+
+    <footer>
+        Medicines sold are not exchanged or refunded except as per pharmacy
+        rules. Rx items are dispensed only against a valid prescription. Store
+        below 25&deg;C, away from children. For any query quote
+        {{ order.order_no }} at the Sanjeevani clinic counter.
+        <br><br>
+        Computer generated receipt &middot; printed {{ printed_on }}
+    </footer>
+
+    <div class="ph-no-print" style="text-align:center;margin-top:14px">
+        <button class="ph-btn" onclick="window.print()">Print this receipt</button>
+        <a class="ph-btn ghost" href="/pharmacy/order/{{ order.order_no }}">Back to order</a>
+    </div>
+
+</main>
+
+</body>
+</html>

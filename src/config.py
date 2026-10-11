@@ -7,6 +7,7 @@ modules used relative paths such as "templates", "artifacts" and
 files when the server was started from anywhere other than the repo root.
 """
 
+import os
 from pathlib import Path
 
 # <repo root>/src/config.py  ->  <repo root>
@@ -23,7 +24,11 @@ ARTIFACTS_DIR = BASE_DIR / "artifacts"
 UPLOAD_DIR = BASE_DIR / "uploads" / "medical_reports"
 
 # Fallback SQLite database (only used when MySQL is unavailable / USE_SQLITE=true)
-SQLITE_DB_PATH = BASE_DIR / "sanjeevani_clinic.db"
+# SQLITE_DB_PATH can be pointed at another file - used by test_pharmacy.py to run
+# the pharmacy smoke test against a throwaway copy instead of your real data.
+SQLITE_DB_PATH = Path(
+    os.getenv("SQLITE_DB_PATH") or (BASE_DIR / "sanjeevani_clinic.db")
+)
 
 # Logs written by src/logger.py
 LOGS_DIR = BASE_DIR / "logs"

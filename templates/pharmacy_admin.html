@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Pharmacy admin - Sanjeevani" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body class="theme-body">
+
+<div class="th-shell">
+
+<aside class="th-sidebar">
+
+    <a class="th-logo" href="/pharmacy/admin">
+        <span class="th-logo-icon">&#9881;&#65039;</span>
+        Sanjeevani
+        <span class="th-logo-sub">Admin</span>
+    </a>
+
+    <nav class="th-nav">
+        <a href="/dashboard">&#9638; Dashboard</a>
+        <a href="/pharmacy">&#128138; Pharmacy shop</a>
+        <a href="/pharmacy/admin" class="active">&#128737;&#65039; Admin console</a>
+        <a href="/pharmacy/admin?tab=orders">&#128230; Orders</a>
+        <a href="/pharmacy/admin?tab=catalog">&#127991; Catalog</a>
+        <a href="/pharmacy/admin?tab=nearby">&#127978; Nearby shops</a>
+        <a href="/pharmacy/admin?tab=audit">&#128220; Audit log</a>
+        <a href="/pharmacy/admin?tab=access">&#128272; Access</a>
+        <a href="/pharmacy/admin?tab=snapshots">&#128198; Snapshots</a>
+    </nav>
+
+    <div class="th-side-foot">
+        <div class="th-avatar">{{ (user.user_name or "A")[0] | upper }}</div>
+        <div>
+            <div class="th-side-name">{{ user.user_name or "Admin" }}</div>
+            <div class="th-side-role">{{ role_label }}</div>
+        </div>
+    </div>
+
+    <a class="th-side-logout" href="/logout">&#9099; Logout</a>
+
+</aside>
+
+<div class="th-main">
+
+<header class="th-topbar">
+    <div class="th-search">&#128269; Search anything...</div>
+    <div class="th-top-actions">
+        <a class="th-icon-btn" href="/notifications" title="Notifications">&#128276;</a>
+    </div>
+</header>
+
+
+<div class="ph-wrap th-content">
+
+    <div class="ph-row" style="justify-content:space-between;align-items:flex-start">
+
+        <div>
+            <h1 style="font-size:24px">&#9881;&#65039; Pharmacy control</h1>
+            <p class="ph-small ph-muted" style="margin:4px 0 0">
+                Signed in as <strong>{{ user.user_name }}</strong>
+                ({{ role_label }}{% if is_superuser %} &middot; full permission{% endif %}).
+                Every write on this page lands in the audit log, and the
+                destructive ones take a snapshot first so they can be rolled back.
+            </p>
+        </div>
+
+        <a class="ph-btn ghost small" href="/pharmacy">Open the shop</a>
+
+    </div>
+
+    <!-- =========================================================
+         SYSTEM OVERVIEW (stat cards)
+    ========================================================== -->
+    <section class="glass" style="padding:20px 22px;margin:18px 0 4px">
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div>
+                <h2 style="margin:0 0 4px;font-size:20px">System Overview</h2>
+                <p class="ph-small ph-muted" style="margin:0">
+                    Manage and monitor the entire Sanjeevani Healthcare platform.
+                </p>
+            </div>
+            <span class="th-pill">Last 30 Days &#9662;</span>
+        </div>
+
+        <div class="th-stats">
+            <div class="th-stat">
+                <span class="th-stat-icon green">&#128101;</span>
+                <div><strong>{{ overview.patients }}</strong><span>Total Patients</span></div>
+            </div>
+            <div class="th-stat">
+                <span class="th-stat-icon blue">&#129658;</span>
+                <div><strong>{{ overview.doctors }}</strong><span>Active Doctors</span></div>
+            </div>
+            <div class="th-stat">
+                <span class="th-stat-icon purple">&#128197;</span>
+                <div><strong>{{ overview.appointments }}</strong><span>Appointments</span></div>
+            </div>
+            <div class="th-stat">
+                <span class="th-stat-icon amber">&#8377;</span>
+                <div>
+                    <strong>&#8377;{{ '%.0f' | format(overview.revenue) }}</strong>
+                    <span>Revenue (paid orders)</span>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <nav class="ph-tabs">
+        {% for row in tabs %}
+            <a class="ph-tab {{ 'active' if tab == row.slug }}{{ ' locked' if not row.allowed }}"
+               href="?tab={{ row.slug }}"
+               {% if not row.allowed %}title="Your role is missing the permission for this tab"{% endif %}>
+                {{ row.label }}{% if not row.allowed %} &#128274;{% endif %}
+            </a>
+        {% endfor %}
+    </nav>
+
+
+    <!-- ====================================================================
+         TAB: ORDERS
+    ===================================================================== -->
+
+    {% if tab == 'orders' %}
+
+        <div class="ph-stats">
+
+            <div class="ph-stat">
+                <strong>{{ order_stats.total_orders }}</strong>
+                <span>Orders</span>
+            </div>
+
+            <div class="ph-stat">
+                <strong>{{ order_stats.confirmed }}</strong>
+                <span>Confirmed</span>
+            </div>
+
+            <div class="ph-stat">
+                <strong>{{ order_stats.pending_payment }}</strong>
+                <span>Awaiting payment</span>
+            </div>
+
+            <div class="ph-stat">
+                <strong>{{ inr(order_stats.revenue) }}</strong>
+                <span>Collected</span>
+            </div>
+
+            <div class="ph-stat">
+                <strong>{{ inr(order_stats.cash_due) }}</strong>
+                <span>Cash due at counter</span>
+            </div>
+
+            <div class="ph-stat">
+                <strong>{{ order_stats.emergency }}</strong>
+                <span>Flagged urgent</span>
+            </div>
+
+        </div>
+
+        <section class="ph-panel">
+
+            <div class="ph-row" style="justify-content:space-between">
+                <h2>Counter queue</h2>
+                <a class="ph-btn ghost small" href="/pharmacy/admin/api/orders/export.csv">
+                    Export CSV
+                </a>
+            </div>
+
+            <p class="hint">
+                Newest first. &quot;Cash received&quot; and &quot;handed
+                over&quot; need <code>pharmacy.order.fulfil</code>; refund needs
+                <code>pharmacy.order.refund</code>.
+            </p>
+
+            {% if not order_rows %}
+
+                <div class="ph-empty">
+                    <strong>No orders yet</strong>
+                    Place one from <a href="/pharmacy">/pharmacy</a> and it
+                    appears here instantly.
+                </div>
+
+            {% else %}
+
+                <div class="ph-table-wrap">
+
+                    <table class="ph-table">
+
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Patient</th>
+                                <th>Items</th>
+                                <th>Payment</th>
+                                <th style="text-align:right">Total</th>
+                                <th>Status</th>
+                                <th>Counter actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for row in order_rows %}
+
+                                <tr>
+
+                                    <td>
+                                        <a href="/pharmacy/order/{{ row.order_no }}">
+                                            <strong>{{ row.order_no }}</strong>
+                                        </a>
+                                        <div class="ph-small ph-muted">
+                                            {{ row.created_at_display }}
+                                            {% if row.is_emergency %}
+                                                <br><span class="ph-tag out">&#128652; urgent</span>
+                                            {% endif %}
+                                            {% if row.order_type == 'PRESCRIPTION' %}
+                                                <br><span class="ph-tag rx">&#129658; Rx order</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.patient.name if row.patient else '-' }}
+                                        {% if row.phone %}
+                                            <br><a href="tel:{{ row.phone }}">{{ row.phone }}</a>
+                                        {% endif %}
+                                        {% if row.address %}
+                                            <br><span class="ph-muted">deliver: {{ row.address[:48] }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.item_count }} pack(s)
+                                        <div class="ph-muted">
+                                            {% for item in row['items'][:2] %}
+                                                {{ item.name }}&nbsp;&times;{{ item.quantity }}<br>
+                                            {% endfor %}
+                                            {% if row['items'] | length > 2 %}
+                                                +{{ (row['items'] | length) - 2 }} more
+                                            {% endif %}
+                                        </div>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.payment_method }}
+                                        <br><span class="ph-muted">{{ row.payment_status }}</span>
+                                        {% if row.transaction_id %}
+                                            <br><span class="ph-mono" style="display:inline">{{ row.transaction_id[:18] }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="num"><strong>{{ inr(row.total) }}</strong></td>
+
+                                    <td data-badge>
+                                        <span class="ph-badge {{ row.badge.tone }}">{{ row.badge.label }}</span>
+                                    </td>
+
+                                    <td>
+                                        <div class="ph-row" style="gap:6px">
+
+                                            {% if row.payment_status != 'PAID' and can('pharmacy.order.fulfil') %}
+                                                <button class="ph-btn small" data-ph="admin-fulfil"
+                                                        data-id="{{ row.id }}" data-action="mark_paid">
+                                                    Cash received
+                                                </button>
+                                            {% endif %}
+
+                                            {% if row.status == 'CONFIRMED' and not row.confirmed_at == None and can('pharmacy.order.fulfil') %}
+                                                <button class="ph-btn ghost small" data-ph="admin-fulfil"
+                                                        data-id="{{ row.id }}" data-action="handed_over">
+                                                    Handed over
+                                                </button>
+                                            {% endif %}
+
+                                            {% if row.status in ('PENDING_PAYMENT', 'CONFIRMED') and can('pharmacy.order.refund') %}
+                                                <button class="ph-btn warn small" data-ph="admin-fulfil"
+                                                        data-id="{{ row.id }}" data-action="refund"
+                                                        data-reason="Refunded from the counter queue">
+                                                    Refund
+                                                </button>
+                                            {% endif %}
+
+                                            {% if row.status == 'PENDING_PAYMENT' and can('pharmacy.order.refund') %}
+                                                <button class="ph-btn danger small" data-ph="admin-fulfil"
+                                                        data-id="{{ row.id }}" data-action="cancel"
+                                                        data-reason="Cancelled at the counter">
+                                                    Cancel
+                                                </button>
+                                            {% endif %}
+
+                                        </div>
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ====================================================================
+         TAB: CATALOG
+    ===================================================================== -->
+
+    {% if tab == 'catalog' %}
+
+        <div class="ph-stats">
+
+            <div class="ph-stat"><strong>{{ stats.medicines }}</strong><span>On shelf</span></div>
+            <div class="ph-stat"><strong>{{ stats.diseases }}</strong><span>Diseases</span></div>
+            <div class="ph-stat"><strong>{{ stats.low_stock }}</strong><span>Low stock</span></div>
+            <div class="ph-stat"><strong>{{ stats.out_of_stock }}</strong><span>Out of stock</span></div>
+            <div class="ph-stat"><strong>{{ inr(stats.stock_value) }}</strong><span>Stock value</span></div>
+            <div class="ph-stat"><strong>{{ catalog_total }}</strong><span>Rows (incl. hidden)</span></div>
+
+        </div>
+
+        <!-- ---------------- add medicine ---------------- -->
+
+        <section class="ph-panel">
+
+            <h2>Add a medicine</h2>
+            <p class="hint">
+                Diseases are typed as comma separated names - a new one is
+                created on the fly and shows up as a filter chip on the shop
+                page. Leave SKU empty and one is generated.
+            </p>
+
+            <form id="ph-add-medicine" class="ph-form-grid" autocomplete="off">
+
+                <div class="ph-field" style="grid-column:span 2">
+                    <label>Product name *</label>
+                    <input class="ph-input" name="name" placeholder="Dolo 650 Tablet">
+                </div>
+
+                <div class="ph-field">
+                    <label>Salt / generic</label>
+                    <input class="ph-input" name="generic_name" placeholder="Paracetamol 650 mg">
+                </div>
+
+                <div class="ph-field">
+                    <label>Brand</label>
+                    <input class="ph-input" name="brand" placeholder="Micro Labs">
+                </div>
+
+                <div class="ph-field">
+                    <label>Form</label>
+                    <select class="ph-select" name="form">
+                        {% for row in ['TABLET','CAPSULE','SYRUP','SUSPENSION','DROPS','OINTMENT','CREAM','POWDER','INJECTION','SPRAY','DEVICE','LOZENGE','LIQUID','GEL','GUMMY'] %}
+                            <option value="{{ row }}">{{ row }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="ph-field">
+                    <label>Strength</label>
+                    <input class="ph-input" name="strength" placeholder="650 mg">
+                </div>
+
+                <div class="ph-field">
+                    <label>Pack</label>
+                    <input class="ph-input" name="pack_size" placeholder="Strip of 15 tablets">
+                </div>
+
+                <div class="ph-field">
+                    <label>Sale price (Rs) *</label>
+                    <input class="ph-input" name="price" type="number" step="0.01" min="0" placeholder="32.00">
+                </div>
+
+                <div class="ph-field">
+                    <label>MRP (Rs)</label>
+                    <input class="ph-input" name="mrp" type="number" step="0.01" min="0" placeholder="35.00">
+                </div>
+
+                <div class="ph-field">
+                    <label>Stock (packs)</label>
+                    <input class="ph-input" name="stock" type="number" min="0" value="20">
+                </div>
+
+                <div class="ph-field">
+                    <label>Low stock alert at</label>
+                    <input class="ph-input" name="low_stock_alert" type="number" min="0" value="10">
+                </div>
+
+                <div class="ph-field">
+                    <label>SKU (optional)</label>
+                    <input class="ph-input" name="sku" placeholder="auto">
+                </div>
+
+                <div class="ph-field" style="grid-column:span 2">
+                    <label>Diseases / uses (comma separated)</label>
+                    <input class="ph-input" name="diseases" placeholder="fever, headache">
+                </div>
+
+                <div class="ph-field">
+                    <label>Photo URL (optional)</label>
+                    <input class="ph-input" name="image_url" placeholder="https://... or leave empty">
+                </div>
+
+                <div class="ph-field" style="grid-column:span 2">
+                    <label>How to take</label>
+                    <input class="ph-input" name="dosage_info" placeholder="After food, twice a day">
+                </div>
+
+                <div class="ph-field" style="grid-column:span 2">
+                    <label>Warning</label>
+                    <input class="ph-input" name="warning" placeholder="Schedule H - prescription needed">
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <label class="ph-check">
+                        <input type="checkbox" name="requires_prescription" value="on">
+                        Prescription only
+                    </label>
+                </div>
+
+                <div class="ph-field" style="grid-column:1/-1">
+                    <button class="ph-btn" type="button" id="ph-save-medicine">Save medicine</button>
+                </div>
+
+            </form>
+
+        </section>
+
+        <script>
+          document.getElementById("ph-save-medicine").addEventListener("click", function () {
+            var form = document.getElementById("ph-add-medicine");
+            var data = {};
+            new FormData(form).forEach(function (value, key) { data[key] = value; });
+
+            if (!data.name || !data.price) {
+                pharmacy.toast("Name and price are required", "bad");
+                return;
+            }
+
+            pharmacy.post("/pharmacy/admin/api/medicines", data)
+              .then(function (result) {
+                pharmacy.toast(result.message, "good");
+                setTimeout(function () { location.reload(); }, 800);
+              })
+              .catch(function (error) { pharmacy.toast(error.message, "bad"); });
+          });
+        </script>
+
+        <!-- ---------------- stock photo + bulk tools ---------------- -->
+
+        <section class="ph-panel">
+
+            <h2>Photo, bulk price and stock count</h2>
+
+            <p class="hint">
+                Bulk actions write a pinned snapshot first, so a wrong paste or
+                a mistyped percentage is one click away from being undone.
+            </p>
+
+            <div class="ph-form-grid">
+
+                <div class="ph-field">
+                    <label>Medicine photo</label>
+                    <select class="ph-select" id="ph-image-medicine">
+                        {% for row in catalog_rows %}
+                            <option value="{{ row.id }}">{{ row.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="ph-field">
+                    <label>Image file (png/jpg/webp)</label>
+                    <input class="ph-input" type="file" id="ph-image-file" accept="image/*">
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <button class="ph-btn" type="button" data-ph="admin-image">
+                        Upload photo
+                    </button>
+                </div>
+
+            </div>
+
+            <form id="ph-bulk-price" class="ph-form-grid" style="margin-top:16px">
+
+                <div class="ph-field">
+                    <label>Bulk price change (%)</label>
+                    <input class="ph-input" name="percent" type="number" step="0.1" placeholder="e.g. -5 or 12">
+                </div>
+
+                <div class="ph-field">
+                    <label>...or flat (Rs)</label>
+                    <input class="ph-input" name="flat" type="number" step="0.01" placeholder="e.g. 5">
+                </div>
+
+                <div class="ph-field">
+                    <label>Only this disease</label>
+                    <select class="ph-select" name="disease">
+                        <option value="">Whole catalog</option>
+                        {% for row in diseases %}
+                            <option value="{{ row.slug }}">{{ row.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <button class="ph-btn warn" type="button" data-ph="admin-bulk-price">
+                        Apply (with undo point)
+                    </button>
+                </div>
+
+            </form>
+
+            <div style="margin-top:16px">
+
+                <label class="ph-field" style="display:block">
+                    <span style="display:block;font-size:12px;font-weight:700;color:#475569;
+                                   text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px">
+                        Stock count paste - one row per line: <code>sku,stock</code> or
+                        <code>sku,stock,price</code>
+                    </span>
+                    <textarea class="ph-textarea" id="ph-import-text"
+                              placeholder="MED-00001,240&#10;MED-00002,180,29.00"></textarea>
+                </label>
+
+                <div class="ph-row" style="margin-top:10px">
+                    <select class="ph-select" id="ph-import-mode">
+                        <option value="set">Set stock to these numbers</option>
+                        <option value="delta">Add these to current stock</option>
+                    </select>
+                    <button class="ph-btn" type="button" data-ph="admin-import">
+                        Import stock
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ---------------- catalog table ---------------- -->
+
+        <section class="ph-panel">
+
+            <div class="ph-row" style="justify-content:space-between">
+                <h2>Catalog ({{ catalog_total }})</h2>
+                <form method="get" action="/pharmacy/admin" class="ph-search">
+                    <input type="hidden" name="tab" value="catalog">
+                    <input class="ph-input" name="q" placeholder="Search to filter (reload)">
+                    <button class="ph-btn ghost small" type="submit">Filter</button>
+                </form>
+            </div>
+
+            <div class="ph-table-wrap">
+
+                <table class="ph-table">
+
+                    <thead>
+                        <tr>
+                            <th>Photo</th>
+                            <th>Medicine</th>
+                            <th>Diseases</th>
+                            <th style="text-align:right">Price / MRP</th>
+                            <th style="text-align:center">Stock</th>
+                            <th>Adjust stock</th>
+                            <th>Row actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for row in catalog_rows %}
+
+                            <tr data-med="{{ row.id }}" style="{{ 'opacity:.45' if not row.is_active }}">
+
+                                <td>
+                                    <img class="mini-img" src="{{ row.image }}"
+                                         alt="{{ row.name }}"
+                                         onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';">
+                                </td>
+
+                                <td>
+                                    <strong>{{ row.name }}</strong>
+                                    <div class="ph-small ph-muted">
+                                        {{ row.sku }} &middot; {{ row.generic_name or '-' }}
+                                        &middot; {{ row.form }} {{ row.strength or '' }}
+                                        {% if row.requires_prescription %}
+                                            <br><span class="ph-tag rx">&#129658; Rx only</span>
+                                        {% endif %}
+                                        {% if not row.is_active %}
+                                            <br><span class="ph-tag out">hidden from patients</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td class="ph-small">
+                                    {% for tag in row.disease_names %}
+                                        <span class="ph-tag">{{ tag }}</span>
+                                    {% endfor %}
+                                </td>
+
+                                <td class="num">
+                                    <strong>{{ inr(row.price) }}</strong>
+                                    <div class="ph-small ph-muted">
+                                        MRP {{ inr(row.mrp) if row.mrp else '-' }}
+                                    </div>
+                                </td>
+
+                                <td style="text-align:center">
+                                    <strong data-stock-now>{{ row.stock }}</strong>
+                                    <div class="ph-small">
+                                        {% if row.stock <= 0 %}
+                                            <span class="ph-tag out">out</span>
+                                        {% elif row.low_stock %}
+                                            <span class="ph-tag low">low</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="ph-row" style="gap:6px;flex-wrap:nowrap">
+                                        <input class="ph-input" data-stock-input type="number"
+                                               value="10" style="width:78px;min-width:78px;padding:7px">
+                                        <select class="ph-select" data-stock-mode
+                                                style="min-width:78px;padding:7px">
+                                            <option value="delta">+/-</option>
+                                            <option value="set">set to</option>
+                                        </select>
+                                        <button class="ph-btn ghost small" data-ph="admin-stock"
+                                                data-id="{{ row.id }}">Go</button>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="ph-row" style="gap:6px;flex-wrap:nowrap">
+                                        <button class="ph-btn ghost small" data-ph="admin-toggle"
+                                                data-id="{{ row.id }}">
+                                            {{ 'Hide' if row.is_active else 'Show' }}
+                                        </button>
+                                        {% if row.stock <= 0 %}
+                                            <a class="ph-btn danger small"
+                                               href="/pharmacy/nearby?medicine_id={{ row.id }}">
+                                                Nearby
+                                            </a>
+                                        {% endif %}
+                                        <button class="ph-btn danger small" data-ph="admin-delete"
+                                                data-id="{{ row.id }}"
+                                                title="Deletes, after a pinned snapshot (undo from Snapshots)">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ====================================================================
+         TAB: NEARBY
+    ===================================================================== -->
+
+    {% if tab == 'nearby' %}
+
+        <section class="ph-panel">
+
+            <h2>Partner chemists (the SQL side of the emergency search)</h2>
+
+            <p class="hint">
+                Rows here are what the patient sees when our shelf is empty -
+                no Google key required.
+                {% if not google_enabled %}
+                    <code>GOOGLE_MAPS_API_KEY</code> is not set, so the
+                    &quot;Import from Google&quot; button stays idle until you
+                    add it.
+                {% endif %}
+            </p>
+
+            <form id="ph-shop-form" class="ph-form-grid">
+
+                <div class="ph-field">
+                    <label>Shop name *</label>
+                    <input class="ph-input" name="name" placeholder="Apollo Pharmacy - C-Scheme">
+                </div>
+
+                <div class="ph-field">
+                    <label>Phone</label>
+                    <input class="ph-input" name="phone" placeholder="0141-5115115">
+                </div>
+
+                <div class="ph-field">
+                    <label>Area</label>
+                    <input class="ph-input" name="area" placeholder="C-Scheme">
+                </div>
+
+                <div class="ph-field" style="grid-column:span 2">
+                    <label>Address</label>
+                    <input class="ph-input" name="address" placeholder="Ashok Marg, Jaipur">
+                </div>
+
+                <div class="ph-field">
+                    <label>City</label>
+                    <input class="ph-input" name="city" value="Jaipur">
+                </div>
+
+                <div class="ph-field">
+                    <label>Latitude</label>
+                    <input class="ph-input" name="latitude" type="number" step="0.0001" placeholder="26.9101">
+                </div>
+
+                <div class="ph-field">
+                    <label>Longitude</label>
+                    <input class="ph-input" name="longitude" type="number" step="0.0001" placeholder="75.7901">
+                </div>
+
+                <div class="ph-field">
+                    <label>Hours text</label>
+                    <input class="ph-input" name="opening_hours" placeholder="09:00 - 22:30">
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <label class="ph-check"><input type="checkbox" name="open_24x7" value="on"> Open 24x7</label>
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <label class="ph-check">
+                        <input type="checkbox" name="is_partner" value="on" checked>
+                        Tie-up shop (stock maintained by us)
+                    </label>
+                </div>
+
+                <div class="ph-field">
+                    <label>&nbsp;</label>
+                    <button class="ph-btn" type="button" data-ph="admin-shop">Save shop</button>
+                </div>
+
+            </form>
+
+            <div class="ph-row" style="margin-top:12px">
+                <button class="ph-btn ghost" type="button" data-ph="admin-sync">
+                    &#128260; Import chemists from Google Maps into SQL
+                </button>
+            </div>
+
+        </section>
+
+        {% for shop in shops %}
+
+            <section class="ph-panel">
+
+                <div class="ph-row" style="justify-content:space-between;align-items:flex-start">
+
+                    <div>
+                        <h2 style="font-size:18px">
+                            {{ shop.name }}
+                            {% if shop.is_partner %}
+                                <span class="ph-tag ok">tie-up</span>
+                            {% endif %}
+                            {% if shop.open_24x7 %}
+                                <span class="ph-tag rx">24x7</span>
+                            {% endif %}
+                            {% if not shop.is_active %}
+                                <span class="ph-tag out">inactive</span>
+                            {% endif %}
+                        </h2>
+                        <p class="hint" style="margin:4px 0 0">
+                            {{ shop.address or 'no address' }} &middot;
+                            {{ shop.phone or 'no phone' }}
+                            {% if shop.latitude %} &middot; {{ shop.latitude }}, {{ shop.longitude }}{% endif %}
+                            {% if shop.distance_km %} &middot; {{ shop.distance_km }} km{% endif %}
+                        </p>
+                    </div>
+
+                    <div class="ph-row" style="gap:6px">
+                        <a class="ph-btn ghost small" href="?tab=nearby&shop={{ shop.id }}#stock-{{ shop.id }}">
+                            Manage stock
+                        </a>
+                        <a class="ph-btn ghost small" href="/pharmacy/nearby?name={{ shop.name | urlencode }}">
+                            Patient view
+                        </a>
+                    </div>
+
+                </div>
+
+                <div id="stock-{{ shop.id }}" class="ph-details">
+
+                    <strong class="ph-small">Stock this shop reports ({{ shop.stock | length }} row(s))</strong>
+
+                    {% for row in shop.stock %}
+                        <div class="ph-row" style="justify-content:space-between;margin-top:6px">
+                            <span class="ph-small">{{ row.label }}</span>
+                            <span class="ph-small">
+                                {{ row.stock }} pack(s)
+                                {% if row.price %} &middot; {{ inr(row.price) }}{% endif %}
+                                <span class="ph-tag">{{ row.trust }}</span>
+                            </span>
+                        </div>
+                    {% else %}
+                        <p class="ph-small ph-muted" style="margin:6px 0 0">
+                            Nothing recorded yet - use the form below.
+                        </p>
+                    {% endfor %}
+
+                    {% if can('pharmacy.nearby.write') %}
+                        <form class="ph-shop-stock" data-shop="{{ shop.id }}"
+                              style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+
+                            <select class="ph-select" name="medicine_id" style="flex:1;min-width:200px">
+                                {% for row in catalog_rows %}
+                                    <option value="{{ row.id }}">{{ row.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <input class="ph-input" name="stock" type="number" min="0" value="10"
+                                   style="width:100px;min-width:100px" placeholder="packs">
+
+                            <input class="ph-input" name="price" type="number" step="0.01"
+                                   style="width:120px;min-width:120px" placeholder="price">
+
+                            <button class="ph-btn small" type="submit">Save stock</button>
+
+                        </form>
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+        {% else %}
+
+            <div class="ph-panel ph-empty">
+                <strong>No chemists recorded</strong>
+                Add the shops around the clinic above - that is what makes the
+                emergency option work with no internet.
+            </div>
+
+        {% endfor %}
+
+        <script>
+          document.querySelectorAll(".ph-shop-stock").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+              event.preventDefault();
+              var data = {};
+              new FormData(form).forEach(function (value, key) { data[key] = value; });
+              data.shop_id = form.dataset.shop;
+
+              pharmacy.post("/pharmacy/admin/api/nearby/stock", data)
+                .then(function () {
+                  pharmacy.toast("Partner stock saved", "good");
+                  setTimeout(function () { location.reload(); }, 700);
+                })
+                .catch(function (error) { pharmacy.toast(error.message, "bad"); });
+            });
+          });
+        </script>
+
+    {% endif %}
+
+
+    <!-- ====================================================================
+         TAB: AUDIT
+    ===================================================================== -->
+
+    {% if tab == 'audit' %}
+
+        <section class="ph-panel">
+
+            <div class="ph-row" style="justify-content:space-between">
+                <h2>Audit log ({{ log_total }} events)</h2>
+                <a class="ph-btn ghost small" href="/pharmacy/admin/api/audit/export.csv">
+                    Download CSV
+                </a>
+            </div>
+
+            <p class="hint">
+                Append-only: nothing in the app edits or deletes these rows.
+                Expand an event to see the exact before / after JSON of the
+                change, and jump straight to the snapshot that can undo it.
+            </p>
+
+            {% if not logs %}
+
+                <div class="ph-empty">
+                    <strong>Nothing logged yet</strong>
+                    Buy something or edit the catalog and the trail starts here.
+                </div>
+
+            {% else %}
+
+                <div class="ph-table-wrap">
+
+                    <table class="ph-table">
+
+                        <thead>
+                            <tr>
+                                <th>When</th>
+                                <th>Who</th>
+                                <th>Action</th>
+                                <th>Object</th>
+                                <th>What happened</th>
+                                <th>Undo</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for row in logs %}
+
+                                <tr>
+
+                                    <td class="ph-small">
+                                        {{ row.created_at_display }}
+                                        <br><span class="ph-muted">{{ row.ip_address or '-' }}</span>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.actor_name }}
+                                        <br><span class="ph-muted">{{ row.actor_role }}</span>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        <span class="ph-badge {{
+                                            'danger' if row.severity == 'CRITICAL'
+                                            else ('warn' if row.severity == 'WARN' else 'muted') }}">
+                                            {{ row.action }}
+                                        </span>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.entity_type or '-' }}
+                                        {% if row.entity_id %}#{{ row.entity_id }}{% endif %}
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.description or '' }}
+                                        {% if row.before_json or row.after_json %}
+                                            <details>
+                                                <summary class="ph-muted" style="cursor:pointer">
+                                                    diff
+                                                </summary>
+                                                {% if row.before_json %}
+                                                    <pre class="ph-json">BEFORE
+{{ row.before_json }}</pre>
+                                                {% endif %}
+                                                {% if row.after_json %}
+                                                    <pre class="ph-json">AFTER
+{{ row.after_json }}</pre>
+                                                {% endif %}
+                                            </details>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {% if row.rollback_available and row.snapshot_id %}
+                                            <a href="?tab=snapshots#snapshot-{{ row.snapshot_id }}">
+                                                snapshot #{{ row.snapshot_id }}
+                                            </a>
+                                        {% elif row.rollback_available %}
+                                            restore point
+                                        {% else %}
+                                            <span class="ph-muted">-</span>
+                                        {% endif %}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ====================================================================
+         TAB: ACCESS CONTROL
+    ===================================================================== -->
+
+    {% if tab == 'access' %}
+
+        <section class="ph-panel">
+
+            <h2>Role &rarr; permission matrix</h2>
+
+            <p class="hint">
+                Defaults live in <code>src/security/rbac.py</code>; clicking a
+                switch writes an override row into <code>role_permissions</code>,
+                which is why no redeploy is needed. The Super User column is
+                locked on purpose: it always has everything, so the last
+                administrator can never be locked out by mistake.
+            </p>
+
+            <div class="ph-table-wrap">
+
+                <table class="ph-table ph-matrix">
+
+                    <thead>
+                        <tr>
+                            <th>Permission</th>
+                            {% for role in roles %}
+                                <th>{{ role.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for perm in permission_list %}
+
+                            <tr>
+                                <td style="text-align:left">
+                                    <code>{{ perm.key }}</code>
+                                    <div class="ph-small ph-muted">{{ perm.label }}</div>
+                                </td>
+                                {% for role in roles %}
+                                    <td>
+                                        {% if role.role == 'SUPERUSER' %}
+                                            <span class="ph-badge success" title="Cannot be removed">always</span>
+                                        {% else %}
+                                            <span class="ph-switch {{ '' if role.permissions[perm.key] else 'off' }}"
+                                                  data-ph="admin-permission"
+                                                  data-role="{{ role.role }}"
+                                                  data-perm="{{ perm.key }}"
+                                                  title="Click to toggle for {{ role.role }}">
+                                                <i></i>
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="ph-row" style="margin-top:12px">
+                <button class="ph-btn ghost" type="button"
+                        onclick="if(confirm('Delete every override row and go back to the code defaults?')){pharmacy.post('/pharmacy/admin/api/roles/reset',{}).then(function(){location.reload()})}">
+                    Reset to code defaults
+                </button>
+                {% if not is_superuser_actor %}
+                    <span class="ph-badge warn">
+                        Changing roles and permissions needs SUPERUSER
+                    </span>
+                {% endif %}
+            </div>
+
+        </section>
+
+        <section class="ph-panel">
+
+            <h2>Users</h2>
+
+            <p class="hint">
+                A user's role decides what the pharmacy lets them do. Only a
+                Super User may create or remove another Super User, and nobody
+                can drop their own role while using it.
+            </p>
+
+            <div class="ph-table-wrap">
+
+                <table class="ph-table">
+
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Account</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for row in users %}
+
+                            <tr data-user="{{ row.id }}">
+
+                                <td class="ph-small">{{ row.id }}</td>
+                                <td><strong>{{ row.name }}</strong></td>
+                                <td class="ph-small">{{ row.email }}</td>
+
+                                <td>
+                                    <select class="ph-select" data-role-select>
+                                        {% for role in roles %}
+                                            <option value="{{ role.role }}"
+                                                    {{ 'selected' if role.role == row.role }}>
+                                                {{ role.label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <select class="ph-select" data-active-select>
+                                        <option value="active" {{ 'selected' if row.is_active }}>active</option>
+                                        <option value="inactive" {{ 'selected' if not row.is_active }}>disabled</option>
+                                    </select>
+                                </td>
+
+                                <td>
+                                    {% if is_superuser_actor %}
+                                        <button class="ph-btn small" data-ph="admin-role"
+                                                data-id="{{ row.id }}">Save</button>
+                                    {% else %}
+                                        <span class="ph-muted ph-small">read only</span>
+                                    {% endif %}
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ====================================================================
+         TAB: SNAPSHOTS / ROLLBACK
+    ===================================================================== -->
+
+    {% if tab == 'snapshots' %}
+
+        <section class="ph-panel">
+
+            <h2>Rollback and restore</h2>
+
+            <p class="hint">
+                A snapshot is a JSON copy of the pharmacy tables. Restore is two
+                steps on purpose: <em>preview</em> shows exactly which rows would
+                change, then the confirm button sends the snapshot checksum back
+                so a stale page cannot write the wrong state. Before restoring,
+                the current state is captured as a
+                <code>PRE_RESTORE</code> snapshot - so a wrong rollback is itself
+                undoable.
+            </p>
+
+            <div class="ph-row">
+
+                <input class="ph-input" id="ph-snapshot-label"
+                       placeholder="Label (e.g. before Diwali price revision)">
+
+                <select class="ph-select" id="ph-snapshot-scope">
+                    {% for row in scopes %}
+                        <option value="{{ row }}">{{ row }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="ph-btn" type="button" data-ph="admin-snapshot"
+                        data-label-from="#ph-snapshot-label"
+                        data-scope-from="#ph-snapshot-scope">
+                    Take snapshot now
+                </button>
+
+                <button class="ph-btn ghost" type="button"
+                        onclick="if(confirm('Delete unpinned snapshots older than 7 days, keeping the newest 20?')){pharmacy.post('/pharmacy/admin/api/snapshots/prune',{keep:20}).then(function(d){pharmacy.toast('Removed '+d.removed);setTimeout(function(){location.reload()},600)})}">
+                    Prune old
+                </button>
+
+            </div>
+
+            <div id="ph-preview-box" class="ph-details" style="display:none"></div>
+
+        </section>
+
+        <section class="ph-panel">
+
+            <h2>Snapshots ({{ snapshots | length }} newest)</h2>
+
+            {% if not snapshots %}
+
+                <div class="ph-empty"><strong>No snapshots yet</strong></div>
+
+            {% else %}
+
+                <div class="ph-table-wrap">
+
+                    <table class="ph-table">
+
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Label</th>
+                                <th>Scope</th>
+                                <th>Trigger</th>
+                                <th style="text-align:right">Rows</th>
+                                <th style="text-align:right">Size</th>
+                                <th>Created by</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for row in snapshots %}
+
+                                <tr id="snapshot-{{ row.id }}">
+
+                                    <td><strong>#{{ row.id }}</strong></td>
+
+                                    <td>
+                                        {{ row.label }}
+                                        <div class="ph-small ph-muted">
+                                            {{ row.created_at_display }}
+                                            {% if row.description %}
+                                                <br>{{ row.description }}
+                                            {% endif %}
+                                            {% if row.restore_count %}
+                                                <br>restored {{ row.restore_count }}x
+                                                {% if row.last_restored_by %} by {{ row.last_restored_by }}{% endif %}
+                                            {% endif %}
+                                        </div>
+                                        {% if row.is_pinned %}
+                                            <span class="ph-tag ok">pinned</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="ph-small">
+                                        {{ row.scope }}
+                                        <div class="ph-muted">
+                                            {% for table, count in row.row_counts.items() %}
+                                                {{ table }}:{{ count }}{{ ' ' }}
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+
+                                    <td class="ph-small">
+                                        <span class="ph-tag {{ 'rx' if row.trigger == 'PRE_RESTORE' else '' }}">
+                                            {{ row.trigger }}
+                                        </span>
+                                    </td>
+
+                                    <td class="num">{{ row.row_count }}</td>
+                                    <td class="num">{{ (row.size_bytes / 1024) | round(1) }} KB</td>
+
+                                    <td class="ph-small">
+                                        {{ row.created_by_name }}
+                                        <br><span class="ph-muted">{{ row.created_by_role }}</span>
+                                    </td>
+
+                                    <td>
+                                        <div class="ph-row" style="gap:6px;flex-wrap:nowrap">
+
+                                            {% if can('pharmacy.snapshot.restore') %}
+                                                <button class="ph-btn ghost small" data-ph="admin-preview"
+                                                        data-id="{{ row.id }}">
+                                                    Preview restore
+                                                </button>
+                                            {% endif %}
+
+                                            <a class="ph-btn ghost small"
+                                               href="/pharmacy/admin/api/snapshots/{{ row.id }}/export.json">
+                                                JSON
+                                            </a>
+
+                                            <button class="ph-btn ghost small" data-ph="admin-pin"
+                                                    data-id="{{ row.id }}">
+                                                {{ 'Unpin' if row.is_pinned else 'Pin' }}
+                                            </button>
+
+                                            {% if can('pharmacy.snapshot.restore') %}
+                                                <button class="ph-btn danger small"
+                                                        onclick="if(confirm('Delete snapshot #{{ row.id }}? This cannot be undone.')){pharmacy.del('/pharmacy/admin/api/snapshots/{{ row.id }}',{}).then(function(){location.reload()}).catch(function(e){pharmacy.toast(e.message,'bad')})}">
+                                                    Delete
+                                                </button>
+                                            {% endif %}
+
+                                        </div>
+
+                                        <div class="ph-small ph-muted" style="margin-top:4px">
+                                            checksum {{ row.checksum[:12] }}&hellip;
+                                        </div>
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+    {% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>

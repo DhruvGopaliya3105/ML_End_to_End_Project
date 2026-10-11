@@ -42,11 +42,27 @@ def medical_history_page(
         patient_id=user_id
     )
 
+    # A doctor can mark a note "patient can read it" from the doctor desk;
+    # those share onto this page. Everything marked internal stays hidden -
+    # the desk stores both kinds in doctor_patient_notes (visibility column).
+    doctor_notes = []
+
+    try:
+        from src.services import doctor_desk_service as doctor_desk
+
+        doctor_notes = [
+            note for note in doctor_desk.notes_for(db, user_id)
+            if (note.get("visibility") or "") == "PATIENT_VISIBLE"
+        ]
+    except Exception:  # noqa: BLE001 - a missing desk table must not hide history
+        doctor_notes = []
+
     return templates.TemplateResponse(
         request,
         "medical_history.html",
         {
             "user": request.session,
-            "history": history
+            "history": history,
+            "doctor_notes": doctor_notes
         }
     )

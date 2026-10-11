@@ -1,10 +1,14 @@
-
 from datetime import datetime, date, time, timedelta
 
 from sqlalchemy.orm import Session
 
 from src.models.doctor_schedule import DoctorSchedule
-from src.models.appointment import Appointment
+
+# NOTE: Appointment is imported lazily inside get_available_times(). A
+# module-level "from src.models.appointment import Appointment" here formed a
+# circular import with older copies of src/models/appointment.py that imported
+# this service at module level - and a circular import at import time stops
+# the whole app from starting.
 
 
 # ============================================================
@@ -79,6 +83,10 @@ def get_available_times(
     # ========================================================
     # EXISTING APPOINTMENTS
     # ========================================================
+
+    # imported here (not at module level) so this service can never take part
+    # in a circular import, no matter which module is imported first
+    from src.models.appointment import Appointment
 
     existing_appointments = (
         db.query(Appointment)
@@ -227,4 +235,3 @@ def get_available_times(
 
 
     return available_times
-

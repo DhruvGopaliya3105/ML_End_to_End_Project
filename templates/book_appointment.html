@@ -431,7 +431,7 @@
         <div class="doctor">
 
             <h2>
-                Dr. {{ doctor.name }}
+                {{ doctor.name if doctor.name.lower().startswith('dr.') else 'Dr. ' ~ doctor.name }}
             </h2>
 
             <p>
@@ -487,6 +487,7 @@
                     id="appointmentDate"
                     name="appointment_date"
                     min="{{ today }}"
+                    value="{{ appointment_date }}"
                     required
                 >
 

@@ -31,6 +31,10 @@ from src.config import (
 
 from src.database.base import Base
 
+# Registers every table (including the pharmacy ones) on Base.metadata before
+# create_all() runs in lifespan.
+import src.models  # noqa: F401,E402
+
 from src.database.connection import (
     DATABASE_BACKEND,
     DATABASE_LABEL,
@@ -258,6 +262,26 @@ from src.routers.treatment_review import (
 )
 
 # ============================================================
+# PHARMACY ROUTERS
+# ============================================================
+# Patient side: catalog, cart, checkout, prescription buying, nearby search.
+# Admin side: catalog + stock, order queue, audit log, role matrix, snapshots.
+# Imported before include_router below; their SQLAlchemy models are imported
+# too, so Base.metadata.create_all() in lifespan creates the pharmacy tables.
+
+from src.routers.pharmacy import (
+    router as pharmacy_router
+)
+
+from src.routers.pharmacy_admin import (
+    router as pharmacy_admin_router
+)
+
+from src.routers.doctor_desk import (
+    router as doctor_desk_router
+)
+
+# ============================================================
 # FOLLOW-UP ROUTER
 # ============================================================
 
@@ -316,6 +340,29 @@ app.include_router(
 
 app.include_router(
     treatment_review_router
+)
+
+# ============================================================
+# PHARMACY ROUTERS REGISTER
+# ============================================================
+
+app.include_router(
+    pharmacy_router
+)
+
+app.include_router(
+    pharmacy_admin_router
+)
+
+# ============================================================
+# DOCTOR DESK REGISTER
+# ============================================================
+# A doctor's own patient register: every enrolled patient, their whole
+# file (visits, records, prescriptions, medicines, invoices, reviews) and
+# the tools to write notes / records / prescriptions back into it.
+
+app.include_router(
+    doctor_desk_router
 )
 
 # ============================================================

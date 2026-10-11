@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Doctor Desk - Sanjeevani" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body class="dd-body">
+
+{% include "partials/doctor_nav.html" %}
+
+<main class="ph-wrap dd-wrap">
+
+    <!-- =========================================================
+         Header: who is signed in, which list they are looking at
+    ========================================================== -->
+    <div class="dd-hero">
+
+        <div>
+            <p class="dd-kicker">Doctor Desk &middot; {{ today }}</p>
+            <h1>{{ tiles.doctor.name if tiles.doctor else me.user_name }}</h1>
+            <p class="dd-hero-sub">
+                {% if tiles.doctor and tiles.doctor.specialization %}
+                    {{ tiles.doctor.specialization }}
+                    &middot; consultation fee &#8377;{{ '%.0f' | format(tiles.doctor.consultation_fee) }}
+                {% else %}
+                    Clinic patient register
+                {% endif %}
+                &middot;
+                {% if sees_all %}
+                    you can open <strong>every enrolled patient</strong>
+                {% else %}
+                    you can open <strong>only your own patients</strong>
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="dd-hero-actions">
+            <a class="ph-btn ghost small" href="/dashboard">My account</a>
+            {% if can('pharmacy.view') %}
+                <a class="ph-btn ghost small" href="/pharmacy">Pharmacy</a>
+            {% endif %}
+            <button class="ph-btn small" type="button" onclick="window.print()">
+                Print this list
+            </button>
+        </div>
+
+    </div>
+
+    {% if not tiles.doctor %}
+        <div class="dd-note warn">
+            Your login <strong>{{ me.user_email }}</strong> is not matched to a row in the
+            <code>doctors</code> table yet (matched by email, then by name). You can still open
+            patient files; to see <em>your</em> appointments, follow-ups and fees here, either set
+            that doctor's email to your login email, or name the login exactly like the doctor.
+        </div>
+    {% endif %}
+
+    {% if flash %}
+        <div class="dd-note ok">{{ flash }}</div>
+    {% endif %}
+
+    <!-- =========================================================
+         Tiles - every number is a fresh query, nothing is stored
+    ========================================================== -->
+    <section class="dd-tiles">
+
+        <a class="dd-tile" href="/doctor-desk?scope=all">
+            <strong>{{ tiles.patients }}</strong>
+            <span>Enrolled patients</span>
+        </a>
+
+        <a class="dd-tile new" href="/doctor-desk?scope=new">
+            <strong>{{ tiles.new_30d }}</strong>
+            <span>New this month</span>
+        </a>
+
+        <a class="dd-tile" href="/doctor-desk">
+            <strong>{{ tiles.today_visits }}</strong>
+            <span>Visits booked today</span>
+        </a>
+
+        <a class="dd-tile warn" href="/doctor-desk?scope=followup">
+            <strong>{{ tiles.followup_overdue }}</strong>
+            <span>Follow-ups overdue</span>
+        </a>
+
+        <a class="dd-tile danger" href="/doctor-desk?scope=unpaid">
+            <strong>&#8377;{{ '%.0f' | format(tiles.due_total) }}</strong>
+            <span>Total dues on files</span>
+        </a>
+
+        <a class="dd-tile danger" href="/doctor-desk?scope=urgent">
+            <strong>{{ tiles.urgent_notes }}</strong>
+            <span>Urgent notes</span>
+        </a>
+
+    </section>
+
+    <!-- =========================================================
+         Search + chips + sort
+    ========================================================== -->
+    <form class="dd-tools" method="get" action="/doctor-desk" id="dd-tools">
+
+        <div class="dd-search">
+            <input type="search" name="q" id="dd-q" value="{{ q }}"
+                   placeholder="Search name, email, phone or #id - e.g. Rahul"
+                   autocomplete="off">
+            <input type="hidden" name="scope" value="{{ scope }}">
+            <input type="hidden" name="sort" value="{{ sort }}" id="dd-sort">
+            <input type="hidden" name="direction" value="{{ direction }}">
+            <button class="ph-btn small" type="submit">Search</button>
+        </div>
+
+        <div class="dd-chips">
+            {% for chip in meta.scopes %}
+                <a class="dd-chip {{ 'active' if scope == chip.key }}"
+                   href="?q={{ q | urlencode }}&scope={{ chip.key }}&sort={{ sort }}&direction={{ direction }}">
+                    {{ chip.label }}
+                    <span>{{ chip.count }}</span>
+                </a>
+            {% endfor %}
+        </div>
+
+        <div class="dd-sort">
+            <label for="dd-sort-select">Sort by</label>
+            <select id="dd-sort-select" onchange="ddPickSort(this.value)">
+                {% for key, label in [('last_visit', 'Last visit'), ('new', 'First visit'),
+                                      ('visits', 'Number of visits'), ('due', 'Amount due'),
+                                      ('name', 'Name A-Z'), ('rating', 'Their rating')] %}
+                    <option value="{{ key }}" {% if key == sort %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+            <a class="ph-btn ghost small"
+               href="?q={{ q | urlencode }}&scope={{ scope }}&sort={{ sort }}&direction={{ 'asc' if direction == 'desc' else 'desc' }}">
+                {{ 'Newest first' if direction == 'desc' else 'Oldest first' }}
+            </a>
+        </div>
+
+    </form>
+
+    <!-- =========================================================
+         The roster
+    ========================================================== -->
+    <section class="ph-panel dd-panel">
+
+        <div class="dd-panel-head">
+            <h2>
+                Patient register
+                <span class="ph-muted">&middot; {{ meta.total }} match{{ 'es' if meta.total != 1 else '' }}</span>
+            </h2>
+            <p class="ph-small ph-muted">
+                First visit, last visit, how many times they came, what is pending and what is
+                unpaid &mdash; all computed now, from your database.
+            </p>
+        </div>
+
+        {% if not rows %}
+            <div class="dd-empty">
+                <p><strong>No patient matches this filter.</strong></p>
+                <p class="ph-small ph-muted">
+                    Clear the search, or pick another chip above. A brand new registration shows
+                    up here as soon as the person signs up, even before their first visit.
+                </p>
+                <a class="ph-btn ghost small" href="/doctor-desk">Show everyone</a>
+            </div>
+        {% else %}
+
+            <div class="dd-table-wrap">
+                <table class="dd-table" id="dd-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>File status</th>
+                            <th>First visit</th>
+                            <th>Last visit</th>
+                            <th>Came</th>
+                            <th>Notes</th>
+                            <th>Money</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            {% set st = row.stats %}
+                            <tr data-search="{{ row.name }} {{ row.email }} {{ row.phone }} {{ row.patient_no }}">
+                                <td>
+                                    <div class="dd-person">
+                                        <span class="dd-avatar">{{ row.initials }}</span>
+                                        <span>
+                                            <a class="dd-name" href="/doctor-desk/patient/{{ row.id }}">
+                                                {{ row.name }}
+                                            </a>
+                                            <small>
+                                                {{ row.patient_no }} &middot;
+                                                {{ row.age or '?' }}y {{ row.gender or '' }}<br>
+                                                {{ row.email }}
+                                            </small>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="dd-tags">
+                                        {% if not st.mine %}
+                                            <span class="dd-tag muted">Not your patient</span>
+                                        {% endif %}
+                                        {% for label, tone, hint in row.tags %}
+                                            <span class="dd-tag {{ tone }}" title="{{ hint }}">{{ label }}</span>
+                                        {% endfor %}
+                                        {% if st.upcoming %}
+                                            <span class="dd-tag primary">
+                                                {{ st.upcoming }} upcoming
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if st.first_visit %}
+                                        {{ st.first_visit.strftime('%d %b %Y') }}
+                                        <small class="ph-muted">enrolled {{ row.enrolled }}</small>
+                                    {% else %}
+                                        <span class="ph-muted">never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if st.last_visit %}
+                                        {{ st.last_visit.strftime('%d %b %Y') }}
+                                        <small class="ph-muted">
+                                            {{ st.days_since_visit }} day(s) ago
+                                        </small>
+                                    {% else %}
+                                        <span class="ph-muted">-</span>
+                                    {% endif %}
+                                    {% if st.next_followup %}
+                                        <br><small class="dd-next">
+                                            follow-up {{ st.next_followup.strftime('%d %b %Y') }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td class="dd-num">
+                                    <strong>{{ st.visits }}</strong> visit{{ 's' if st.visits != 1 else '' }}
+                                    <small class="ph-muted">
+                                        {{ st.records }} note(s) &middot;
+                                        {{ st.prescriptions }} Rx &middot;
+                                        {{ st.rx_lines }} med line(s)
+                                        {% if st.treatments %} &middot; {{ st.treatments }} treat.{% endif %}
+                                    </small>
+                                </td>
+                                <td class="dd-num">
+                                    {% if st.notes %}
+                                        <a href="/doctor-desk/patient/{{ row.id }}?tab=notes">
+                                            {{ st.notes }} note{{ 's' if st.notes != 1 else '' }}
+                                        </a>
+                                        {% if st.urgent_notes %}
+                                            <br><small class="dd-danger">{{ st.urgent_notes }} urgent</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="ph-muted">-</span>
+                                    {% endif %}
+                                    {% if st.documents %}
+                                        <br><small class="ph-muted">{{ st.documents }} report(s)</small>
+                                    {% endif %}
+                                </td>
+                                <td class="dd-num">
+                                    <small>
+                                        billed &#8377;{{ '%.0f' | format(st.billed) }}
+                                        &middot; paid &#8377;{{ '%.0f' | format(st.paid) }}
+                                    </small>
+                                    <br>
+                                    {% if st.due %}
+                                        <strong class="dd-danger">
+                                            due &#8377;{{ '%.0f' | format(st.due) }}
+                                        </strong>
+                                    {% else %}
+                                        <small class="dd-ok">settled</small>
+                                    {% endif %}
+                                    {% if st.orders %}
+                                        <br><small class="ph-muted">{{ st.orders }} medicine order(s)</small>
+                                    {% endif %}
+                                </td>
+                                <td class="dd-actions">
+                                    <a class="ph-btn small" href="/doctor-desk/patient/{{ row.id }}">
+                                        Open file
+                                    </a>
+                                    <a class="ph-btn ghost small"
+                                       href="/doctor-desk/patient/{{ row.id }}?tab=notes">
+                                        Note
+                                    </a>
+                                    <a class="ph-btn ghost small"
+                                       href="/doctor-desk/patient/{{ row.id }}/statement">
+                                        Statement
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if meta.pages > 1 %}
+                <div class="dd-pager">
+                    {% for number in range(1, meta.pages + 1) %}
+                        <a class="dd-page {{ 'active' if number == meta.page }}"
+                           href="?q={{ q | urlencode }}&scope={{ scope }}&sort={{ sort }}&direction={{ direction }}&page={{ number }}">
+                            {{ number }}
+                        </a>
+                    {% endfor %}
+                    <span class="ph-small ph-muted">
+                        showing page {{ meta.page }} of {{ meta.pages }}
+                        ({{ meta.per_page }} per page)
+                    </span>
+                </div>
+            {% endif %}
+
+        {% endif %}
+
+    </section>
+
+    <p class="ph-small ph-muted dd-foot">
+        Nothing here is hard-coded: the chips, the numbers and the tags are counted from
+        <code>appointments</code>, <code>medical_records</code>, <code>prescriptions</code>,
+        <code>follow_ups</code>, <code>treatment_reviews</code>, <code>doctor_patient_notes</code>
+        and the pharmacy order tables on every load.
+    </p>
+
+</main>
+
+<script>
+    // Instant filtering of the rows already on the page (the server-side
+    // search above still handles the full register).
+    (function () {
+        var box = document.getElementById('dd-q');
+        var table = document.getElementById('dd-table');
+        if (!box || !table) return;
+
+        box.addEventListener('input', function () {
+            var term = box.value.trim().toLowerCase();
+            var shown = 0;
+
+            table.querySelectorAll('tbody tr').forEach(function (tr) {
+                var hit = !term || (tr.getAttribute('data-search') || '').toLowerCase().indexOf(term) > -1;
+                tr.style.display = hit ? '' : 'none';
+                if (hit) shown++;
+            });
+
+            var note = document.getElementById('dd-live-count');
+
+            if (!note) {
+                note = document.createElement('p');
+                note.id = 'dd-live-count';
+                note.className = 'ph-small ph-muted';
+                table.parentNode.appendChild(note);
+            }
+
+            note.textContent = term
+                ? shown + ' of the rows on this page match "' + box.value.trim() + '"'
+                : '';
+        });
+
+        var select = document.getElementById('dd-sort-select');
+        var hidden = document.getElementById('dd-sort');
+
+        window.ddPickSort = function (value) {
+            if (hidden) hidden.value = value;
+            document.getElementById('dd-tools').submit();
+        };
+    })();
+</script>
+
+</body>
+
+</html>

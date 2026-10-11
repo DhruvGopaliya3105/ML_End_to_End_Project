@@ -1,0 +1,63 @@
+{# Shared navbar for the pharmacy pages.
+
+   Which links appear is decided by the same permissions the API checks
+   (src/security/rbac.py), so a role that was switched off in the Access tab
+   does not even see the button. #}
+
+<nav class="ph-navbar">
+
+    <a class="ph-logo" href="/pharmacy">
+        &#128138; Sanjeevani
+        <span class="sub">Pharmacy</span>
+    </a>
+
+    <div class="ph-nav">
+
+        <a href="/pharmacy"
+           class="{{ 'active' if request.url.path in ('/pharmacy', '/pharmacy/') else '' }}">
+            Shop
+        </a>
+
+        <a href="/pharmacy/prescriptions"
+           class="{{ 'active' if '/pharmacy/prescriptions' in request.url.path else '' }}">
+            Doctor&#39;s Rx
+        </a>
+
+        <a href="/pharmacy/cart"
+           class="{{ 'active' if '/pharmacy/cart' in request.url.path else '' }}">
+            Cart
+            <span class="ph-badge-count"
+                  data-ph-badge
+                  style="{{ 'display:none' if not cart_count }}">{{ cart_count or 0 }}</span>
+        </a>
+
+        <a href="/pharmacy/orders"
+           class="{{ 'active' if '/pharmacy/orders' in request.url.path else '' }}">
+            My Orders
+        </a>
+
+        <a href="/pharmacy/nearby"
+           class="{{ 'active' if '/pharmacy/nearby' in request.url.path else '' }}">
+            &#128652; Nearby 24x7
+        </a>
+
+        {% if can('pharmacy.order.read.all') or can('pharmacy.catalog.write') %}
+            <a href="/pharmacy/admin"
+               class="{{ 'active' if '/pharmacy/admin' in request.url.path else '' }}">
+                Admin
+            </a>
+        {% endif %}
+
+        <a href="/dashboard">Dashboard</a>
+
+        {% if user.user_name == 'Guest' %}
+            <a href="/login" class="danger">Login</a>
+        {% else %}
+            <a href="/logout" class="danger">Logout ({{ role_label }})</a>
+        {% endif %}
+
+    </div>
+
+</nav>
+
+<div id="ph-toast"></div>

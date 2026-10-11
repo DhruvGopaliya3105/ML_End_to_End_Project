@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img" aria-label="Powder photo placeholder">
+<rect width="400" height="300" rx="18" fill="#f8fafc"/>
+<rect x="6" y="6" width="388" height="288" rx="14" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+<text x="24" y="46" font-family="Segoe UI,Arial,sans-serif" font-size="21" font-weight="700" fill="#a16207">Powder</text>
+<text x="24" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#64748b">Sanjeevani Pharmacy</text>
+<g><path d="M132 116 h136 v128 h-136 z" fill="#ffffff" stroke="#a16207" stroke-width="3"/><path d="M132 116 h136 M132 244 h136" stroke="#fde68a" stroke-width="6"/><path d="M150 200 q40 -34 100 0" stroke="#a16207" stroke-width="3" fill="none"/></g>
+</svg>

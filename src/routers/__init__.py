@@ -49,11 +49,19 @@ def booking_page(
 
     doctor_id: int,
 
-    appointment_date: date,
+    appointment_date: date | None = None,
 
     db: Session = Depends(get_db)
 
 ):
+
+
+    # The injury-analysis page links here with only ?doctor_id=...
+    # A missing date defaults to today so the page always opens.
+
+    if appointment_date is None:
+
+        appointment_date = date.today()
 
 
     user_id = request.session.get("user_id")
@@ -127,6 +135,9 @@ def booking_page(
 
             "appointment_date":
                 appointment_date,
+
+            "today":
+                date.today().isoformat(),
 
             "visit_types":
                 visit_types

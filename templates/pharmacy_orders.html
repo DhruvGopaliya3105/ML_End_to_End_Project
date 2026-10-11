@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "My pharmacy orders" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    <div class="ph-section-title">
+
+        <h2>&#128203; My pharmacy orders</h2>
+
+        <div class="ph-row">
+            <a class="ph-btn ghost small" href="/pharmacy">Order more</a>
+            <a class="ph-btn ghost small" href="/pharmacy/prescriptions">
+                Doctor&#39;s Rx
+            </a>
+        </div>
+
+    </div>
+
+    {% if not orders %}
+
+        <div class="ph-panel ph-empty">
+            <strong>No orders yet</strong>
+            Your confirmed purchases, receipts and payment status will be
+            listed here.
+            <div style="margin-top:14px">
+                <a class="ph-btn" href="/pharmacy">Open the pharmacy</a>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="ph-table-wrap">
+
+            <table class="ph-table">
+
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Placed</th>
+                        <th>Items</th>
+                        <th>Payment</th>
+                        <th style="text-align:right">Total</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in orders %}
+
+                        <tr>
+
+                            <td>
+                                <strong>{{ row.order_no }}</strong>
+                                {% if row.is_emergency %}
+                                    <span class="ph-tag out">&#128652; urgent</span>
+                                {% endif %}
+                                <div class="ph-small ph-muted">
+                                    {% if row.order_type == 'PRESCRIPTION' %}
+                                        from a doctor&#39;s prescription
+                                    {% else %}
+                                        self-selected
+                                    {% endif %}
+                                    &middot;
+                                    {{ 'delivery' if row.delivery_type == 'DELIVERY' else 'counter pickup' }}
+                                </div>
+                            </td>
+
+                            <td class="ph-small">{{ row.created_at_display }}</td>
+
+                            <td>
+                                {{ row.item_count }}
+                                <div class="ph-small ph-muted">
+                                    {{ row['items'][0].name if row['items'] }}
+                                    {% if row['items'] | length > 1 %}
+                                        +{{ (row['items'] | length) - 1 }} more
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td class="ph-small">
+                                {{ row.payment_method }}
+                                <br>
+                                <span class="ph-muted">{{ row.payment_status }}</span>
+                            </td>
+
+                            <td class="num"><strong>{{ inr(row.total) }}</strong></td>
+
+                            <td data-badge>
+                                <span class="ph-badge {{ row.badge.tone }}">
+                                    {{ row.badge.label }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <div class="ph-row" style="gap:6px">
+
+                                    <a class="ph-btn ghost small"
+                                       href="/pharmacy/order/{{ row.order_no }}">
+                                        Open
+                                    </a>
+
+                                    {% if row.status == 'PENDING_PAYMENT' %}
+                                        <button class="ph-btn small"
+                                                data-ph="pay"
+                                                data-id="{{ row.id }}">
+                                            Pay now
+                                        </button>
+                                    {% endif %}
+
+                                    {% if row.status in ('PENDING_PAYMENT', 'CONFIRMED') and row.payment_status != 'PAID' %}
+                                        <button class="ph-btn ghost small"
+                                                data-ph="cancel"
+                                                data-id="{{ row.id }}">
+                                            Cancel
+                                        </button>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="ph-panel">
+            <h2 style="font-size:16px">What the statuses mean</h2>
+            <p class="hint" style="margin:0">
+                <span class="ph-badge success">Confirmed</span> the pharmacy
+                has your order and the stock is reserved for you.
+                <span class="ph-badge warn">Payment pending</span> online
+                order waiting for the payment to land - pay it from the
+                &quot;Pay now&quot; button.
+                <span class="ph-badge muted">Cancelled</span> stock was given
+                back to the shelf, nothing is owed.
+                <span class="ph-badge danger">Refunded</span> money was sent
+                back by the counter and stock was returned.
+            </p>
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

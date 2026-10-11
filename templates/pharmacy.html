@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% set page_title = "Pharmacy - Sanjeevani Clinic" %}
+    {% include "partials/pharmacy_head.html" %}
+</head>
+
+<body>
+
+{% include "partials/pharmacy_nav.html" %}
+
+<main class="ph-wrap">
+
+    <!-- ============================= HERO ============================= -->
+
+    <section class="ph-hero">
+
+        <div>
+
+            <h1>&#128138; Sanjeevani Pharmacy</h1>
+
+            <p>
+                Every tablet, syrup and ointment the clinic stocks, with the
+                price on the shelf. Pick by disease, add to cart, pay by cash
+                or online. Out of stock? The red
+                <strong>Nearby 24x7</strong> link finds a chemist around you
+                that still has it.
+            </p>
+
+            <p style="margin-top:10px">
+                {% if user.user_name == 'Guest' %}
+                    <a href="/login" style="color:#fff;text-decoration:underline">
+                        Login
+                    </a>
+                    to buy, or keep browsing - prices are open to everyone.
+                {% else %}
+                    Signed in as <strong>{{ user.user_name }}</strong>
+                    ({{ role_label }})
+                {% endif %}
+            </p>
+
+        </div>
+
+        <div class="ph-hero-stats">
+
+            <div class="ph-hero-stat">
+                <strong>{{ stats.medicines }}</strong>
+                <span>Medicines</span>
+            </div>
+
+            <div class="ph-hero-stat">
+                <strong>{{ stats.diseases }}</strong>
+                <span>Diseases covered</span>
+            </div>
+
+            <div class="ph-hero-stat">
+                <strong>{{ stats.out_of_stock }}</strong>
+                <span>Out of stock</span>
+            </div>
+
+            <div class="ph-hero-stat">
+                <strong>{{ inr(stats.stock_value) }}</strong>
+                <span>Stock value</span>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ============================= FILTERS ============================= -->
+
+    <section class="ph-panel">
+
+        <form method="get" action="/pharmacy" class="ph-search">
+
+            <input
+                type="hidden"
+                name="disease"
+                value="{{ active_disease }}"
+            >
+
+            <input
+                class="ph-input"
+                type="search"
+                name="q"
+                value="{{ search }}"
+                placeholder="Search tablet, salt or brand (e.g. paracetamol)"
+                style="flex:1;min-width:230px"
+            >
+
+            <select class="ph-select" name="form">
+                <option value="">Any form</option>
+                {% for row in forms %}
+                    <option value="{{ row }}" {{ 'selected' if active_form == row }}>
+                        {{ row | capitalize }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select class="ph-select" name="sort">
+                {% for key, label in [
+                    ('popular', 'Sort: A-Z'),
+                    ('price_low', 'Price: low to high'),
+                    ('price_high', 'Price: high to low'),
+                    ('stock_low', 'Stock: least first'),
+                    ('newest', 'Newest added')
+                ] %}
+                    <option value="{{ key }}" {{ 'selected' if active_sort == key }}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select class="ph-select" name="rx">
+                <option value="">Rx + OTC</option>
+                <option value="yes" {{ 'selected' if rx_filter == 'yes' }}>
+                    Prescription only
+                </option>
+                <option value="no" {{ 'selected' if rx_filter == 'no' }}>
+                    Over the counter
+                </option>
+            </select>
+
+            <label class="ph-check">
+                <input type="checkbox" name="available" value="true"
+                       {{ 'checked' if only_available }}>
+                In stock only
+            </label>
+
+            <button class="ph-btn" type="submit">Apply</button>
+
+            {% if search or active_disease or active_form or only_available or rx_filter %}
+                <a class="ph-btn ghost" href="/pharmacy">Clear</a>
+            {% endif %}
+
+        </form>
+
+
+        <!-- disease chips: "jitni bhi disease hai uske hisab se tablets" -->
+
+        <div class="ph-chips">
+
+            <a class="ph-chip {{ 'active' if not active_disease }}"
+               href="{{ '/pharmacy?q=' ~ search if search else '/pharmacy' }}">
+                All diseases
+                <small>{{ total if not active_disease else '' }}</small>
+            </a>
+
+            {% for row in diseases %}
+                <a class="ph-chip {{ 'active' if active_disease == row.slug }}"
+                   href="/pharmacy?disease={{ row.slug }}{{ '&q=' ~ search if search else '' }}"
+                   title="{{ row.description or row.name }}">
+                    {{ row.icon or '&#129658;' }} {{ row.name }}
+                    <small>{{ row.count }}</small>
+                </a>
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+    <!-- ============================= RESULTS ============================= -->
+
+    <div class="ph-section-title">
+
+        <h2>
+            {% if active_disease %}
+                {{ total }} medicine(s) for that condition
+            {% else %}
+                {{ total }} medicine(s)
+            {% endif %}
+        </h2>
+
+        <span class="ph-small ph-muted">
+            Page {{ page }} of {{ pages }} &middot; prices include taxes
+        </span>
+
+    </div>
+
+    {% if not medicines %}
+
+        <div class="ph-panel ph-empty">
+            <strong>Nothing matched that search</strong>
+            Try a salt name like
+            <em>paracetamol</em>, <em>pantoprazole</em> or
+            <em>cetirizine</em>, or
+            <a href="/pharmacy">show the whole catalog</a>.
+        </div>
+
+    {% else %}
+
+        <div class="ph-grid">
+
+            {% for row in medicines %}
+
+                <article class="ph-card">
+
+                    <div class="ph-card-img">
+                        <img
+                            src="{{ row.image }}"
+                            alt="{{ row.name }}"
+                            loading="lazy"
+                            onerror="this.onerror=null;this.src='/static/images/pharmacy/not-found.svg';"
+                        >
+                    </div>
+
+                    <div class="ph-card-body">
+
+                        <h3>{{ row.name }}</h3>
+
+                        <div class="gen">
+                            {{ row.generic_name or 'General' }}
+                            {% if row.brand %} &middot; {{ row.brand }}{% endif %}
+                        </div>
+
+                        <div class="pack">
+                            {{ row.pack_size or '' }}
+                            {% if row.strength %} &middot; {{ row.strength }}{% endif %}
+                        </div>
+
+                        <div class="ph-tags">
+                            {% for tag in row.diseases[:3] %}
+                                <a class="ph-tag" href="/pharmacy?disease={{ tag.slug }}">
+                                    {{ tag.name }}
+                                </a>
+                            {% endfor %}
+                            {% if row.requires_prescription %}
+                                <span class="ph-tag rx" title="Doctor's prescription needed">&#128137; Rx</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="ph-price">
+                            <strong>{{ inr(row.price) }}</strong>
+                            {% if row.mrp %}
+                                <del>{{ inr(row.mrp) }}</del>
+                            {% endif %}
+                            {% if row.savings_pct %}
+                                <span class="off">{{ row.savings_pct }}% off</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="ph-tags">
+                            {% if row.stock > row.low_stock_alert %}
+                                <span class="ph-tag ok">In stock &middot; {{ row.stock }}</span>
+                            {% elif row.stock > 0 %}
+                                <span class="ph-tag low">Only {{ row.stock }} left</span>
+                            {% else %}
+                                <span class="ph-tag out">Out of stock</span>
+                            {% endif %}
+                        </div>
+
+                        {% if row.dosage_info %}
+                            <div class="ph-small ph-muted">{{ row.dosage_info }}</div>
+                        {% endif %}
+
+                        <div class="ph-card-actions">
+
+                            {% if row.available %}
+
+                                <input
+                                    class="ph-input"
+                                    type="number"
+                                    min="1"
+                                    max="{{ row.max_qty or 10 }}"
+                                    value="1"
+                                    data-qty-for="{{ row.id }}"
+                                    style="width:62px;min-width:62px;padding:8px;text-align:center"
+                                    aria-label="Quantity for {{ row.name }}"
+                                >
+
+                                <button class="ph-btn"
+                                        data-ph="add"
+                                        data-id="{{ row.id }}">
+                                    Add
+                                </button>
+
+                                <button class="ph-btn ghost"
+                                        data-ph="buynow"
+                                        data-id="{{ row.id }}"
+                                        data-qty="1"
+                                        title="Skip the cart and order this now">
+                                    Buy now
+                                </button>
+
+                            {% else %}
+
+                                <a class="ph-btn danger"
+                                   href="/pharmacy/nearby?medicine_id={{ row.id }}">
+                                    &#128652; Find nearby
+                                </a>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+        {% if pages > 1 %}
+
+            <div class="ph-row" style="justify-content:center;margin-top:22px">
+
+                {% set base = '/pharmacy?q=' ~ search ~ '&disease=' ~ active_disease ~ '&form=' ~ active_form ~ '&sort=' ~ active_sort %}
+
+                {% if page > 1 %}
+                    <a class="ph-btn ghost" href="{{ base }}&page={{ page - 1 }}">&larr; Previous</a>
+                {% endif %}
+
+                <span class="ph-badge muted">{{ page }} / {{ pages }}</span>
+
+                {% if page < pages %}
+                    <a class="ph-btn ghost" href="{{ base }}&page={{ page + 1 }}">Next &rarr;</a>
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

@@ -953,96 +953,63 @@
 
     </style>
 
+    <link rel="stylesheet" href="/static/theme.css">
+
 </head>
 
 
-<body>
+<body class="theme-body">
 
 
 <!-- ==================================================
      NAVBAR
 =================================================== -->
 
-<nav class="navbar">
+<div class="th-shell">
 
+<aside class="th-sidebar">
 
-    <div class="logo">
+    <a class="th-logo" href="/dashboard">
+        <span class="th-logo-icon">&#9829;</span>
+        Sanjeevani
+        <span class="th-logo-sub">Healthcare</span>
+    </a>
 
-        <div class="logo-icon">
-            ❤️
+    <nav class="th-nav">
+        <a href="/dashboard" class="active">&#9638; Dashboard</a>
+        <a href="/appointments">&#128197; My Appointments</a>
+        <a href="/doctors">&#129658; Find Doctors</a>
+        <a href="/chatbot">&#129302; AI Health Assistant</a>
+        <a href="/pharmacy">&#128138; Pharmacy</a>
+        <a href="/medical-history">&#128203; My Records</a>
+        <a href="/injury">&#129657; Injury Assistant</a>
+        <a href="/notifications">&#128276; Notifications</a>
+        <a href="/profile">&#128100; Profile</a>
+    </nav>
+
+    <div class="th-side-foot">
+        <div class="th-avatar">{{ (user.user_name or "U")[0] | upper }}</div>
+        <div>
+            <div class="th-side-name">{{ user.user_name or "User" }}</div>
+            <div class="th-side-role">{{ user.user_role or "PATIENT" }}</div>
         </div>
-
-        Sanjeevani AI
-
     </div>
 
+    <a class="th-side-logout" href="/logout">&#9099; Logout</a>
 
-    <div class="nav-right">
+</aside>
 
-        <a
-            href="/chatbot"
-            class="notification-btn"
-            title="Open clinic chatbot"
-            style="font-size: 18px; width: auto; padding: 0 14px; text-decoration: none; color: #0f766e; font-weight: 700;"
-        >
-            💬 Chat
-        </a>
+<div class="th-main">
 
-        <!-- Notifications -->
-
-        <a
-            href="/notifications"
-            class="notification-btn"
-            title="Notifications"
-        >
-            🔔
-        </a>
-
-
-        <!-- Profile -->
-
-        <a
-            href="{{ '/login' if user.user_name == 'Guest' else '/profile' }}"
-            class="profile-link"
-        >
-
-            <div class="avatar">
-
-                {% if user.user_name %}
-
-                    {{ user.user_name[0] | upper }}
-
-                {% else %}
-
-                    U
-
-                {% endif %}
-
-            </div>
-
-
-            <div>
-
-                <div class="profile-name">
-
-                    {{ user.user_name or "User" }}
-
-                </div>
-
-                <div class="profile-role">
-
-                    {{ user.user_role or "PATIENT" }}
-
-                </div>
-
-            </div>
-
-        </a>
-
-
+<header class="th-topbar">
+    <div class="th-search">&#128269; Search doctors, services, medicines...</div>
+    <div class="th-top-actions">
+        <a class="th-icon-btn" href="/chatbot" title="AI Health Assistant">&#128172;</a>
+        <a class="th-icon-btn" href="/notifications" title="Notifications">&#128276;</a>
     </div>
+</header>
 
-</nav>
+
 
 
 
@@ -1050,7 +1017,7 @@
      MAIN CONTAINER
 =================================================== -->
 
-<main class="container">
+<div class="container th-content">
 
 
     <!-- ==================================================
@@ -1226,6 +1193,83 @@
         </a>
 
 
+        <!-- Pharmacy -->
+
+        <a
+            href="/pharmacy"
+            class="quick-card"
+        >
+
+            <div class="quick-icon">
+                💊
+            </div>
+
+            <h3>
+                Pharmacy
+            </h3>
+
+            <p>
+                Buy medicines by disease with prices
+                on the shelf, pay cash or online, and
+                find a 24x7 shop near you in an
+                emergency.
+            </p>
+
+        </a>
+
+
+        {% if user.user_role in ('DOCTOR', 'ADMIN', 'SUPERUSER') %}
+            <!-- Doctor Desk -->
+
+            <a
+                href="/doctor-desk"
+                class="quick-card"
+            >
+
+                <div class="quick-icon">
+                    🩺📋
+                </div>
+
+                <h3>
+                    Doctor Desk
+                </h3>
+
+                <p>
+                    Open any enrolled patient's file -
+                    visits, consultation notes,
+                    prescriptions, medicines taken,
+                    invoices and reviews - and write
+                    notes, records and new prescriptions
+                    back into it.
+                </p>
+
+            </a>
+        {% endif %}
+
+
+        <!-- Pharmacy orders -->
+
+        <a
+            href="/pharmacy/orders"
+            class="quick-card"
+        >
+
+            <div class="quick-icon">
+                🧾
+            </div>
+
+            <h3>
+                My Medicine Orders
+            </h3>
+
+            <p>
+                Track confirmed orders, pay what is
+                pending and print a receipt.
+            </p>
+
+        </a>
+
+
     </section>
 
 
@@ -1285,7 +1329,6 @@
 
             </p>
 
-
             <a
                 href="/injury"
                 class="feature-btn"
@@ -1301,7 +1344,6 @@
         <!-- Medical Reports -->
 
         <div class="feature-card">
-
 
             <div class="feature-top">
 
@@ -1329,7 +1371,6 @@
 
             </p>
 
-
             <a
                 href="/medical-reports"
                 class="feature-btn"
@@ -1345,7 +1386,6 @@
         <!-- Medical History -->
 
         <div class="feature-card">
-
 
             <div class="feature-top">
 
@@ -1373,7 +1413,6 @@
 
             </p>
 
-
             <a
                 href="/medical-history"
                 class="feature-btn"
@@ -1389,7 +1428,6 @@
         <!-- Follow Up -->
 
         <div class="feature-card">
-
 
             <div class="feature-top">
 
@@ -1417,7 +1455,6 @@
 
             </p>
 
-
             <a
                 href="/medical-history"
                 class="feature-btn"
@@ -1433,7 +1470,6 @@
         <!-- Feedback -->
 
         <div class="feature-card">
-
 
             <div class="feature-top">
 
@@ -1457,7 +1493,6 @@
                 your consultation.
 
             </p>
-
 
     <a
     href="/treatment-review"
@@ -1591,18 +1626,15 @@
         </div>
 
 
-
         <!-- Profile -->
 
         <div class="panel">
-
 
             <div class="panel-header">
 
                 <div class="panel-title">
                     My Profile
                 </div>
-
 
                 <a
                     href="{{ '/login' if user.user_name == 'Guest' else '/profile' }}"
@@ -1665,7 +1697,6 @@
     </section>
 
 
-
     <!-- ==================================================
          FOOTER
     =================================================== -->
@@ -1682,7 +1713,11 @@
     </div>
 
 
-</main>
+</div>
+
+</div>
+
+</div>
 
 
 </body>
