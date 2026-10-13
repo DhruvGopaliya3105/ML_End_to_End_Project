@@ -17,3 +17,7 @@ artifacts/
 # Jupyter cache
 .ipynb_checkpoints/
 uploads/medical_reports/
+
+# Local databases and patient uploads
+*.db
+uploads/medical_reports/

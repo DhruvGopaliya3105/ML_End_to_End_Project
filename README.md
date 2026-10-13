@@ -14,6 +14,14 @@ prescribed, an emergency "which chemist near me has it" search (Google Maps +
 partner shops stored in SQL), and a super user console with role based access,
 an audit log and snapshot rollback. See **[PHARMACY.md](PHARMACY.md)**.
 
+There is also the **MCP Intelligence Platform** (`/mcp`): 10 independent
+FastMCP servers (5 user / 3 admin / 2 system) behind an authenticated FastAPI
+gateway, with strict RBAC, a deterministic evidence-validation layer for the
+chatbot (controlled refusals instead of hallucinations), 9 separate audit log
+streams, an AI safety benchmark suite, what-if simulation on synthetic data,
+clinical conflict review and idempotent workflow recovery. See
+**[MCP_PLATFORM.md](MCP_PLATFORM.md)**.
+
 ---
 
 ## ▶  Fastest way to run this project (extracted zip / fresh clone)
@@ -35,9 +43,9 @@ pip install -r requirements.txt
 #    (the bundled .db is already seeded, so this only refreshes it)
 python seed_pharmacy.py
 
-# 4. prove the pharmacy + doctor desk work: 173 checks, must end with "0 failed"
+# 4. prove the pharmacy + doctor desk work: 233 checks, must end with "0 failed"
 python test_pharmacy.py
-#    (on MySQL, also:  python test_pharmacy_mysql.py  -> 52 checks on the real DB)
+#    (on MySQL, also:  python test_pharmacy_mysql.py  -> 58 checks on the real DB)
 
 # 5. prove BOTH halves work: the original clinic features AND the new ones.
 #    One command, runs the project's own smoke scripts + the pharmacy suite +
@@ -109,16 +117,16 @@ Full list + workflow: **`DOCTOR_DESK.md`**
 | `src/routers/pharmacy*.py` | Pharmacy shop, cart, checkout, nearby search + admin console |
 | `src/security/rbac.py` | Roles and permissions (who may do what, everywhere) |
 | `seed_pharmacy.py` | One command that fills the pharmacy: 32 diseases, 111 medicines, photos, partner chemists, demo logins |
-| `test_pharmacy.py` | End-to-end smoke test for the pharmacy **and the doctor desk** (173 checks) |
+| `test_pharmacy.py` | End-to-end smoke test for the pharmacy **and the doctor desk** (233 checks) |
 | `check_all_features.py` | **Cross-check that every feature is connected** - 319 checks over pages, links, foreign keys, roles, schema-vs-code, the 2 new-feature flows and **43 end-to-end steps through the ORIGINAL clinic features** (`--html report.html`, `--live` = read-only run on the database in your `.env`) |
-| `verify_all.py` | **One command that runs every check** - the project's own smoke scripts + the pharmacy suite (173) + the integration suite (319) + the MySQL suite (52) when `.env` says MySQL; prints a summary table, exits 1 if anything failed |
+| `verify_all.py` | **One command that runs every check** - the project's own smoke scripts + the pharmacy suite (233) + the integration suite (319) + the MySQL suite (58) when `.env` says MySQL; prints a summary table, exits 1 if anything failed |
 | `workbench_all_features.sql` | **The complete file to paste in MySQL Workbench** - all **27 tables** (15 clinic + 12 new: pharmacy, cart, orders, audit/snapshots, role matrix, doctor-desk notes) + the 5 demo logins + the clinic seed data, no DROP, re-runnable. The 111-medicine catalogue is loaded by `python seed_pharmacy.py` |
 | `workbench_pharmacy.sql` | **The file to paste in MySQL Workbench** - 12 pharmacy tables + the 5 demo logins, no DROP, re-runnable |
 | `mysql_upgrade_existing_db.sql` | **Paste this if your database already has the older pharmacy tables** - adds `doctor_patient_notes` + `role_permissions`, adds the `treatment_reviews.updated_at` column the old `database_setup.sql` forgot (guarded `ALTER`), and `INSERT IGNORE`s the SUPERUSER login. Deletes nothing |
 | `database_setup_with_pharmacy.sql` | **One safe Workbench script** — 15 clinic + 12 pharmacy tables + demo data, no DROP, re-runnable |
 | `pharmacy_seed.sql` | Just the pharmacy INSERTs (diseases, 111 medicines, chemists, logins, demo Rx) |
 | `build_workbench_sql.py` | Regenerates both files above from the models + your seeded data |
-| `test_pharmacy_mysql.py` | Runs 52 checks against your real MySQL database (SKIPs if MySQL is unreachable) |
+| `test_pharmacy_mysql.py` | Runs 58 checks against your real MySQL database (SKIPs if MySQL is unreachable) |
 | `PHARMACY.md` | Everything about the pharmacy module |
 | `templates/`, `static/` | Frontend (Jinja2 + CSS) |
 
@@ -229,7 +237,7 @@ What it looks at, in order:
 |---|---|---|
 | 1. boot + static | 3 | the app imports with the real code, and `pharmacy.css` / `pharmacy.js` really get served (a 404 there = your templates load dead assets) |
 | 2. pages per role | 159 | 13 clinic pages + 7 pharmacy pages + all 6 admin tabs + **all 10 doctor-desk tabs**, walked as PATIENT / DOCTOR / PHARMACIST / ADMIN / SUPERUSER; that each login lands on the right page (doctor → `/doctor-desk`); and that a patient is bounced off `/pharmacy/admin` |
-| 2b. JSON APIs | 8 | the APIs the JS actually calls answer `success: true` (`/api/medicines?q=`, `/api/cart`, `/api/nearby`, admin `orders` / `audit` / `snapshots`, desk `api/patients` / `api/summary`) - the 173-check suite covers the other writes |
+| 2b. JSON APIs | 8 | the APIs the JS actually calls answer `success: true` (`/api/medicines?q=`, `/api/cart`, `/api/nearby`, admin `orders` / `audit` / `snapshots`, desk `api/patients` / `api/summary`) - the 233-check suite covers the other writes |
 | 3. link rules | 18 | greps the shipped templates/JS, so a dead button is caught even when the page renders: dashboard → `/pharmacy` **and** → `/doctor-desk`, nav Cart / Orders / Nearby, receipt → order, doctor file → invoice tab, `pharmacy.js` → `add-prescription`, … |
 | 6. Google wiring | 8 | `/pharmacy/api/nearby` answers with or without `GOOGLE_MAPS_API_KEY`, always carries `google_status`, and the admin sync endpoint is mounted (details below) |
 | 4. cross-table integrity | 40 | 13 LEFT JOIN orphan checks (order items ↔ orders ↔ medicines, cart ↔ users, Rx lines ↔ Rx ↔ medicines, desk notes ↔ patients, appointments ↔ doctors, records ↔ follow-ups…), 13 table-presence checks and the data every feature assumes (111 medicines, 32 diseases, the 5 demo logins, exactly one SUPERUSER, 0 rows in `role_permissions` on a clean install) |

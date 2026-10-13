@@ -708,7 +708,7 @@
 
                     <h3>
 
-                        Dr. {{ doctor.name }}
+                        {{ doctor.name if doctor.name.lower().startswith('dr.') else 'Dr. ' ~ doctor.name }}
 
                     </h3>
 

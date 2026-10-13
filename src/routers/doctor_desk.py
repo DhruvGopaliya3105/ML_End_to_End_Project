@@ -867,8 +867,8 @@ def statement_page(
 )
 def order_invoice(
     patient_id: int,
-    request: Request,
     order_no: str,
+    request: Request,
     db: Session = Depends(get_db)
 ):
 

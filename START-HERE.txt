@@ -20,7 +20,7 @@ same login, same templates.
  3.  pip install -r requirements.txt
 
  4.  python test_pharmacy.py
-        -> should finish with:  173 checks passed, 0 failed
+        -> should finish with:  214 checks passed, 0 failed
      (that test uses its own throwaway SQLite file, so it never touches MySQL)
 
  4c. python check_all_features.py

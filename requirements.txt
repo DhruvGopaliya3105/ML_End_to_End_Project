@@ -18,3 +18,4 @@ Pillow
 pypdf
 pwdlib[argon2]
 pytesseract
+fastmcp  # MCP servers (10 FastMCP services) + gateway client

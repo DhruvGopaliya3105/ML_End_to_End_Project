@@ -1,3 +1,5 @@
+import re
+
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -395,6 +397,16 @@ async def analyze_injury(
                 None
             )
             or "Doctor"
+        )
+
+        # names are stored WITH the "Dr." prefix - strip it so the page's
+        # own "Dr." label does not render as "Dr. Dr. ..."
+
+        doctor_name = re.sub(
+            r"^dr\.?\s+",
+            "",
+            doctor_name.strip(),
+            flags=re.IGNORECASE
         )
 
         doctor_specialization = (

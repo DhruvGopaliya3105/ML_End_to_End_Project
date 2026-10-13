@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Login | Sanjeevani Healthcare</title>
+
+    <link rel="stylesheet" href="/static/theme.css">
+
+    <style>
+        /* Demo accounts panel (login page only) */
+        .lg-demo {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .lg-demo-head {
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #8FA3BF;
+            margin-bottom: 8px;
+        }
+        .lg-demo-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 6px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: #E6EDF7;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .lg-demo-row:hover {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.55);
+        }
+        .lg-demo-row.lg-demo-flash {
+            background: rgba(16, 185, 129, 0.28);
+            border-color: #10B981;
+        }
+        .lg-demo-role {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .lg-demo-cred {
+            font-size: 11px;
+            color: #9FB4CE;
+            font-family: monospace;
+        }
+    </style>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2310B981'/><path d='M20 55h18l8-18 12 32 8-14h14' stroke='%2304110C' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+
+<body class="theme-body lg-body">
+
+<!-- ==================================================
+     TOP NAV
+=================================================== -->
+
+<header class="th-topnav">
+
+    <a class="th-logo" href="/">
+        <span class="th-logo-icon">
+            <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                <path d="M12 55h20l10-22 14 38 10-16h22" stroke="#04110C" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </span>
+        Sanjeevani
+        <span class="th-logo-sub">Healthcare</span>
+    </a>
+
+    <nav class="th-links">
+        <a href="/">Home</a>
+        <a href="#">About</a>
+        <a href="#">Services</a>
+        <a href="/doctors">Doctors</a>
+        <a href="/pharmacy">Pharmacy</a>
+        <a href="#">Contact</a>
+    </nav>
+
+    <a class="th-em-btn" href="#">
+        📞 Emergency Help
+    </a>
+
+</header>
+
+<!-- ==================================================
+     HERO + LOGIN CARD
+=================================================== -->
+
+<div class="lg-hero">
+
+    <!-- decorative hospital illustration -->
+    <svg class="lg-hospital" viewBox="0 0 520 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="40" y="120" width="300" height="180" rx="10" fill="#10B981" opacity="0.5"/>
+        <rect x="70" y="150" width="60" height="60" rx="6" fill="#0B1220"/>
+        <rect x="150" y="150" width="60" height="60" rx="6" fill="#0B1220"/>
+        <rect x="230" y="150" width="60" height="60" rx="6" fill="#0B1220"/>
+        <rect x="70" y="230" width="60" height="70" rx="6" fill="#0B1220"/>
+        <rect x="150" y="230" width="60" height="70" rx="6" fill="#0B1220"/>
+        <rect x="230" y="230" width="60" height="70" rx="6" fill="#0B1220"/>
+        <rect x="340" y="60" width="140" height="240" rx="10" fill="#10B981" opacity="0.35"/>
+        <rect x="385" y="30" width="50" height="50" rx="8" fill="#10B981"/>
+        <rect x="398" y="43" width="24" height="24" rx="4" fill="#0B1220"/>
+        <rect x="368" y="100" width="34" height="34" rx="5" fill="#0B1220"/>
+        <rect x="418" y="100" width="34" height="34" rx="5" fill="#0B1220"/>
+        <rect x="368" y="160" width="34" height="34" rx="5" fill="#0B1220"/>
+        <rect x="418" y="160" width="34" height="34" rx="5" fill="#0B1220"/>
+        <rect x="368" y="220" width="34" height="34" rx="5" fill="#0B1220"/>
+        <rect x="418" y="220" width="34" height="34" rx="5" fill="#0B1220"/>
+    </svg>
+
+    <!-- LEFT: hero -->
+    <div class="lg-left">
+
+        <h1 class="lg-headline">
+            Your Health<br>
+            <span>Our Commitment</span>
+        </h1>
+
+        <p class="lg-sub">
+            AI-powered healthcare platform for smarter consultations,
+            better treatments and a healthier tomorrow.
+        </p>
+
+        <ul class="lg-feats">
+
+            <li class="lg-feat">
+                <span class="lg-feat-icon">🩺</span>
+                <span>
+                    <strong>Expert Doctors</strong>
+                    <small>Connect with qualified specialists</small>
+                </span>
+            </li>
+
+            <li class="lg-feat">
+                <span class="lg-feat-icon">📅</span>
+                <span>
+                    <strong>Easy Appointments</strong>
+                    <small>Book slots in seconds</small>
+                </span>
+            </li>
+
+            <li class="lg-feat">
+                <span class="lg-feat-icon">💊</span>
+                <span>
+                    <strong>Online Pharmacy</strong>
+                    <small>Get medicines delivered</small>
+                </span>
+            </li>
+
+            <li class="lg-feat">
+                <span class="lg-feat-icon">🤖</span>
+                <span>
+                    <strong>AI Health Assistant</strong>
+                    <small>Get instant health guidance</small>
+                </span>
+            </li>
+
+        </ul>
+
+        <div class="lg-stats">
+
+            <div class="lg-stat">
+                <strong>10,000+</strong>
+                <span>Patients Trust Us</span>
+            </div>
+
+            <div class="lg-stat">
+                <strong>50+</strong>
+                <span>Expert Doctors</span>
+            </div>
+
+            <div class="lg-stat">
+                <strong>24/7</strong>
+                <span>AI Assistance</span>
+            </div>
+
+            <div class="lg-stat">
+                <strong>100%</strong>
+                <span>Secure &amp; Private</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- RIGHT: glass login card -->
+    <div class="lg-right">
+
+        <div class="lg-card glass">
+
+            <h2 class="lg-title">Login to Sanjeevani</h2>
+
+            <p class="lg-subtitle">
+                Access your personalised dashboard
+            </p>
+
+            <div class="role-tabs" id="roleTabs">
+                <button type="button" class="role-tab active" data-role="patient">
+                    🧑 Patient
+                </button>
+                <button type="button" class="role-tab" data-role="doctor">
+                    🩺 Doctor
+                </button>
+                <button type="button" class="role-tab" data-role="admin">
+                    🛡️ Admin
+                </button>
+                <button type="button" class="role-tab" data-role="superuser">
+                    👑 Superuser
+                </button>
+            </div>
+
+            
+
+            <form method="POST" action="/login">
+
+                <div class="lg-field">
+                    <label for="email">Email address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        required
+                    >
+                </div>
+
+                <div class="lg-field">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        required
+                    >
+                </div>
+
+                <div class="lg-row">
+                    <label class="lg-check">
+                        <input type="checkbox" name="remember"> Remember me
+                    </label>
+                    <a href="#">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="th-btn-primary lg-btn">
+                    Login →
+                </button>
+
+            </form>
+
+            <div class="lg-or">OR</div>
+
+            <div class="lg-social">
+                <button type="button">G&nbsp; Continue with Google</button>
+                <button type="button">🪟 Continue with Microsoft</button>
+            </div>
+
+            <p class="lg-foot">
+                New to Sanjeevani?
+                <a href="/signup">Create Account</a>
+            </p>
+
+            <!-- ======================================
+                 DEMO ACCOUNTS — click to auto-fill
+            ======================================= -->
+            <div class="lg-demo">
+                <div class="lg-demo-head">🧪 Demo accounts — click to auto-fill</div>
+
+                <button type="button" class="lg-demo-row" data-role="patient"
+                        data-email="patient@demo.com" data-password="Demo@1234">
+                    <span class="lg-demo-role">🧑 Patient</span>
+                    <span class="lg-demo-cred">patient@demo.com · Demo@1234</span>
+                </button>
+
+                <button type="button" class="lg-demo-row" data-role="doctor"
+                        data-email="doctor@demo.com" data-password="Doctor@1234">
+                    <span class="lg-demo-role">🩺 Doctor</span>
+                    <span class="lg-demo-cred">doctor@demo.com · Doctor@1234</span>
+                </button>
+
+                <button type="button" class="lg-demo-row" data-role="pharmacist"
+                        data-email="pharmacist@demo.com" data-password="Pharma@1234">
+                    <span class="lg-demo-role">💊 Pharmacist</span>
+                    <span class="lg-demo-cred">pharmacist@demo.com · Pharma@1234</span>
+                </button>
+
+                <button type="button" class="lg-demo-row" data-role="admin"
+                        data-email="admin@demo.com" data-password="Admin@1234">
+                    <span class="lg-demo-role">🛡️ Admin</span>
+                    <span class="lg-demo-cred">admin@demo.com · Admin@1234</span>
+                </button>
+
+                <button type="button" class="lg-demo-row" data-role="superuser"
+                        data-email="superuser@sanjeevani.com" data-password="Super@1234">
+                    <span class="lg-demo-role">👑 Superuser</span>
+                    <span class="lg-demo-cred">superuser@sanjeevani.com · Super@1234</span>
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    // The role tabs are a visual selector only - the role comes from the
+    // account itself, exactly like before.
+    (function () {
+        var tabs = document.querySelectorAll('#roleTabs .role-tab');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabs.forEach(function (t) { t.classList.remove('active'); });
+                tab.classList.add('active');
+            });
+        });
+
+        // Demo accounts: click a row to auto-fill the login form and
+        // highlight the matching role tab.
+        var email = document.getElementById('email');
+        var password = document.getElementById('password');
+        document.querySelectorAll('.lg-demo-row').forEach(function (row) {
+            row.addEventListener('click', function () {
+                email.value = row.getAttribute('data-email');
+                password.value = row.getAttribute('data-password');
+                var role = row.getAttribute('data-role');
+                if (role) {
+                    tabs.forEach(function (t) {
+                        t.classList.toggle('active', t.getAttribute('data-role') === role);
+                    });
+                }
+                row.classList.add('lg-demo-flash');
+                setTimeout(function () { row.classList.remove('lg-demo-flash'); }, 700);
+                email.focus();
+            });
+        });
+    })();
+</script>
+
+</body>
+
+</html>

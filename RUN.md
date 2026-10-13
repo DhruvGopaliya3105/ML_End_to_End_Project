@@ -198,7 +198,7 @@ One command after `pip install -r requirements.txt` — no new package is needed
 
 ```bash
 python seed_pharmacy.py           # 32 diseases, 111 medicines + photos, chemists, logins
-python test_pharmacy.py           # 173 checks (pharmacy + doctor desk), must say "0 failed"
+python test_pharmacy.py           # 214 checks (pharmacy + doctor desk), must say "0 failed"
 python check_all_features.py      # 319 checks across the WHOLE project
 python verify_all.py             # EVERYTHING in one go, with a summary table
                                  #   (original clinic + pharmacy + doctor desk + MySQL)

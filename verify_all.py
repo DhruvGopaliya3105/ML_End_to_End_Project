@@ -12,7 +12,7 @@ What each step proves
 2. test_schema.py            the original Pydantic user schema still validates
 3. test_db.py                the app can open the database your .env/config points at
 4. test_pharmacy.py          the NEW features: pharmacy + admin console + doctor desk
-                             (173 checks, end to end, on a throwaway database)
+                             (233 checks, end to end, on a throwaway database)
 5. check_all_features.py     EVERYTHING is connected: clinic pages per role, links,
                              foreign keys, the 319 integration checks - including the
                              original clinic flows (signup -> appointment -> cancel ->
@@ -156,7 +156,6 @@ def main() -> int:
         db_name = re.search(r"(?im)^\s*DB_NAME\s*=\s*(\S+)", text)
         env_note = (f"USE_SQLITE={use_sqlite.group(1) if use_sqlite else '?'}, "
                     f"DB_NAME={db_name.group(1) if db_name else '?'}")
-
     print(f"  .env    : {env_note}")
 
     results: list[tuple[str, str, str]] = []
@@ -195,6 +194,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-    
-    
-    

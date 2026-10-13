@@ -267,10 +267,30 @@ form.addEventListener(
 
             if (!response.ok) {
 
-                throw new Error(
+                let detail =
                     "Server error: HTTP "
-                    + response.status
-                );
+                    + response.status;
+
+                try {
+
+                    const errBody =
+                        await response.json();
+
+                    if (errBody
+                        && errBody.message) {
+
+                        detail =
+                            errBody.message;
+
+                    }
+
+                } catch (parseError) {
+
+                    // keep the default detail
+
+                }
+
+                throw new Error(detail);
 
             }
 
@@ -528,12 +548,28 @@ function selectDoctor(
     doctorId
 ) {
 
+    const now =
+        new Date();
+
+    const today =
+        now.getFullYear()
+        + "-"
+        + String(
+            now.getMonth() + 1
+        ).padStart(2, "0")
+        + "-"
+        + String(
+            now.getDate()
+        ).padStart(2, "0");
+
     const bookingUrl =
         "/book-appointment"
         + "?doctor_id="
         + encodeURIComponent(
             doctorId
-        );
+        )
+        + "&appointment_date="
+        + today;
 
 
     window.location.href =

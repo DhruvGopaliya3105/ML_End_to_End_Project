@@ -1047,6 +1047,23 @@ def pay_order(
     except orders.CheckoutError as error:
         return error_response(str(error), 409)
 
+    from src.services.workflow_recorder import record_workflow_event
+
+    record_workflow_event(
+        db,
+        workflow_type="PAYMENT",
+        resource_type="pharmacy_order",
+        resource_ref=f"pharmacy_orders#{order.id}",
+        event_type="STATE_TRANSITION",
+        payload={
+            "payment_status": order.payment_status,
+            "status": order.status,
+            "provider": provider,
+            "reference": reference
+        },
+        idempotency_key=f"pay-{order.order_no}-{reference}"
+    )
+
     return ok_response(
         status=order.status,
         payment_status=order.payment_status,

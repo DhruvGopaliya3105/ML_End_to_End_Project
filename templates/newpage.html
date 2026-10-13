@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanjeevani Intelligence Platform</title>
+  <link rel="stylesheet" href="/static/theme.css">
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; }
+    .mcp-head { display:flex; justify-content:space-between; align-items:center;
+      gap:12px; flex-wrap:wrap; padding:16px 22px;
+      border-bottom:1px solid rgba(255,255,255,.1); }
+    .mcp-sections { padding:22px; display:grid; gap:18px; }
+    .th-card h2 { font-size:17px; margin:0 0 8px; }
+    .sub { opacity:.7; font-size:12px; margin-bottom:14px; }
+    .mcp-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:12px 0; }
+    .mcp-row label { font-size:12px; opacity:.8; }
+    .mcp-row input, .mcp-row select {
+      padding:9px; border-radius:8px; border:1px solid #555;
+      background:#202329; color:inherit; min-width:130px; max-width:100%;
+    }
+    .mcp-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
+    .mcp-stat { border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:14px; }
+    .mcp-stat .n { font-size:24px; font-weight:700; overflow-wrap:anywhere; }
+    .mcp-stat .l { font-size:12px; opacity:.7; margin-top:5px; }
+    .mcp-table-wrap { overflow-x:auto; }
+    table.mcp-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .mcp-table th, .mcp-table td { padding:9px; text-align:left;
+      border-bottom:1px solid rgba(255,255,255,.09); vertical-align:top; }
+    .mcp-pre { white-space:pre-wrap; overflow-wrap:anywhere; padding:12px;
+      border-radius:8px; background:rgba(255,255,255,.05); font-size:12px; overflow:auto; }
+    .mcp-empty, .mcp-error, .mcp-denied, .mcp-loading {
+      padding:12px; border-radius:8px; font-size:13px; margin:6px 0;
+    }
+    .mcp-empty { opacity:.7; }
+    .mcp-error { color:#ffb4b4; background:rgba(220,70,70,.15); }
+    .mcp-denied { color:#ffd98a; background:rgba(240,180,60,.12); }
+    .mcp-loading { opacity:.7; }
+    .mcp-badge { display:inline-block; padding:4px 8px; border-radius:6px; font-size:11px; }
+    .mcp-badge.ok { color:#9be8b4; background:rgba(80,200,120,.18); }
+    .mcp-badge.bad { color:#ffb4b4; background:rgba(220,80,80,.18); }
+    .mcp-badge.warn { color:#ffd98a; background:rgba(240,180,60,.15); }
+    .mcp-timeline { padding-left:20px; }
+    .mcp-timeline li { padding:7px 0; overflow-wrap:anywhere; }
+    .mcp-ref { display:block; opacity:.6; font-size:11px; margin-top:4px; }
+    .hidden { display:none !important; }
+    .mcp-notice { position:fixed; z-index:99999; top:12px; right:12px;
+      max-width:min(450px,90vw); padding:12px 16px; border-radius:9px;
+      background:#222831; border:1px solid #555; box-shadow:0 8px 25px #0006; }
+    .mcp-notice.error { border-color:#e66; }
+    .mcp-notice.ok { border-color:#6c9; }
+    button { cursor:pointer; }
+    @media(max-width:600px) {
+      .mcp-sections { padding:12px; }
+      .mcp-head { padding:12px; }
+      .mcp-row input, .mcp-row select { min-width:110px; width:100%; }
+    }
+  </style>
+</head>
+
+<body class="theme-body">
+<div class="th-shell">
+  <aside class="th-sidebar">
+    <a class="th-logo" href="/mcp">
+      <span class="th-logo-icon">&#129658;</span>
+      Sanjeevani
+      <span class="th-logo-sub">Intelligence</span>
+    </a>
+
+    <nav class="th-nav" id="mcp-nav">
+      <a href="#sec-overview" data-roles="PATIENT,DOCTOR,PHARMACIST,STAFF,ADMIN,SUPERUSER">Overview</a>
+      <a href="#sec-registry" data-roles="ADMIN,SUPERUSER">MCP Registry</a>
+      <a href="#sec-safety" data-roles="ADMIN,SUPERUSER">AI Safety</a>
+      <a href="#sec-journey" data-roles="PATIENT,DOCTOR">Patient Journey</a>
+      <a href="#sec-simulator" data-roles="PATIENT,DOCTOR,ADMIN,SUPERUSER">What-If Simulator</a>
+      <a href="#sec-clinical" data-roles="DOCTOR,ADMIN,SUPERUSER">Clinical Safety</a>
+      <a href="#sec-access" data-roles="ADMIN,SUPERUSER">Access Control</a>
+      <a href="#sec-audit" data-roles="ADMIN,SUPERUSER">Audit Explorer</a>
+      <a href="#sec-change" data-roles="ADMIN,SUPERUSER">Change &amp; Approval</a>
+      <a href="#sec-recovery" data-roles="ADMIN,SUPERUSER">Recovery</a>
+    </nav>
+
+    <div class="th-side-foot">
+      <div class="th-side-name">{{ user.name }}</div>
+      <div class="th-side-role">{{ role }}</div>
+    </div>
+  </aside>
+
+  <main class="th-main">
+    <div class="mcp-head">
+      <h1>Sanjeevani Intelligence Platform</h1>
+      <div class="who">{{ user.email }} · {{ role }}</div>
+    </div>
+
+    <div class="mcp-sections">
+
+      <!-- 1. OVERVIEW -->
+      <section class="th-card" id="sec-overview"
+        data-roles="PATIENT,DOCTOR,PHARMACIST,STAFF,ADMIN,SUPERUSER">
+        <h2>Overview</h2>
+        <div class="sub">Live counts from the server.</div>
+        <div class="mcp-stats" id="ov-stats">
+          <div class="mcp-loading">Loading overview...</div>
+        </div>
+        <h3>Recent security events</h3>
+        <div id="ov-security"><div class="mcp-loading">Loading...</div></div>
+      </section>
+
+      <!-- 2. REGISTRY -->
+      <section class="th-card" id="sec-registry" data-roles="ADMIN,SUPERUSER">
+        <h2>MCP Server Registry</h2>
+        <div class="sub">Server status, tools, permissions and errors.</div>
+        <div id="reg-body"><div class="mcp-loading">Loading registry...</div></div>
+      </section>
+
+      <!-- 3. AI SAFETY -->
+      <section class="th-card" id="sec-safety" data-roles="ADMIN,SUPERUSER">
+        <h2>AI Safety Center</h2>
+        <div class="sub">Benchmark results. Passing benchmarks does not guarantee zero errors.</div>
+        <button class="th-btn th-btn-primary" id="bench-run"
+          data-super="{{ 'yes' if role == 'SUPERUSER' else 'no' }}">
+          Run safety benchmarks
+        </button>
+        <div id="safety-body"><div class="mcp-loading">Loading...</div></div>
+      </section>
+
+      <!-- 4. PATIENT JOURNEY -->
+      <section class="th-card" id="sec-journey" data-roles="PATIENT,DOCTOR">
+        <h2>Patient Journey Intelligence</h2>
+        <div class="sub">Patient timeline, care gaps and downloadable summary.</div>
+        <div class="mcp-row">
+          <label for="journey-patient">Patient ID</label>
+          <input id="journey-patient" type="number" min="1" value="{{ patient_id }}">
+          <button class="th-btn th-btn-primary" id="journey-load">Load journey</button>
+          <button class="th-btn th-btn-ghost" id="journey-download">Download summary</button>
+        </div>
+        <div id="journey-body"><div class="mcp-empty">Load a patient journey.</div></div>
+      </section>
+
+      <!-- 5. SIMULATOR -->
+      <section class="th-card" id="sec-simulator"
+        data-roles="PATIENT,DOCTOR,ADMIN,SUPERUSER">
+        <h2>What-If Workflow Simulator</h2>
+        <div class="sub">Simulated results only. These are not actual patient facts.</div>
+        <div class="mcp-row">
+          <label for="sim-type">Scenario</label>
+          <select id="sim-type">
+            <option value="doctor_unavailability">Doctor unavailable</option>
+            <option value="reschedule">Reschedule wave</option>
+            <option value="followup_disruption">Follow-up disruption</option>
+          </select>
+          <label id="sim-label" for="sim-days">Days</label>
+          <input id="sim-days" type="number" min="1" max="365" value="7">
+          <label id="sim-doc-label" class="hidden" for="sim-doctor">Doctor ID</label>
+          <input id="sim-doctor" class="hidden" type="number" min="1" value="1">
+          <button class="th-btn th-btn-primary" id="sim-run">Simulate</button>
+        </div>
+        <div id="sim-body"><div class="mcp-empty">Choose a scenario and simulate.</div></div>
+      </section>
+
+      <!-- 6. CLINICAL SAFETY -->
+      <section class="th-card" id="sec-clinical" data-roles="DOCTOR,ADMIN,SUPERUSER">
+        <h2>Clinical Safety Review</h2>
+        <div class="sub">Conflict alerts require appropriate clinical review.</div>
+        <div class="mcp-row">
+          <label for="clin-patient">Patient ID (optional)</label>
+          <input id="clin-patient" type="number" min="1" placeholder="All authorized patients">
+          <button class="th-btn th-btn-primary" id="clin-scan">Scan conflicts</button>
+        </div>
+        <div id="clin-body"><div class="mcp-empty">Run a scan to view conflicts.</div></div>
+      </section>
+
+      <!-- 7. ACCESS CONTROL -->
+      <section class="th-card" id="sec-access" data-roles="ADMIN,SUPERUSER">
+        <h2>Access Control</h2>
+        <div class="sub">Role-permission matrix and runtime overrides.</div>
+        <div id="access-body"><div class="mcp-loading">Loading...</div></div>
+      </section>
+
+      <!-- 8. AUDIT -->
+      <section class="th-card" id="sec-audit" data-roles="ADMIN,SUPERUSER">
+        <h2>Audit Explorer</h2>
+        <div class="mcp-row">
+          <label for="aud-hours">Hours</label>
+          <input id="aud-hours" type="number" min="1" value="24">
+          <label for="aud-actor">Actor</label>
+          <input id="aud-actor" placeholder="Email">
+          <label for="aud-server">Server</label>
+          <input id="aud-server" placeholder="Server">
+          <label for="aud-tool">Tool</label>
+          <input id="aud-tool" placeholder="Tool">
+          <label for="aud-result">Result</label>
+          <input id="aud-result" placeholder="success/denied/error">
+          <label for="aud-corr">Correlation ID</label>
+          <input id="aud-corr" placeholder="Correlation ID">
+          <button class="th-btn th-btn-primary" id="aud-load">Search</button>
+        </div>
+        <div id="aud-body"><div class="mcp-empty">Enter filters and search.</div></div>
+      </section>
+
+      <!-- 9. CHANGE APPROVAL -->
+      <section class="th-card" id="sec-change" data-roles="ADMIN,SUPERUSER">
+        <h2>Change Impact &amp; Approval</h2>
+        <div class="sub">Preview impact before requesting approval.</div>
+        <div class="mcp-row">
+          <label for="chg-type">Change</label>
+          <select id="chg-type">
+            <option value="doctor_deactivation">Doctor deactivation</option>
+            <option value="role_change">Role change</option>
+            <option value="custom">Custom</option>
+          </select>
+          <label id="chg-doc-label" class="hidden" for="chg-doctor">Doctor ID</label>
+          <input id="chg-doctor" class="hidden" type="number" min="1" value="1">
+          <button class="th-btn th-btn-primary" id="chg-preview">Preview impact</button>
+          <button class="th-btn th-btn-ghost" id="chg-request">Request approval</button>
+        </div>
+        <div id="chg-body"><div class="mcp-empty">Preview a change first.</div></div>
+        <h3>Recent change requests</h3>
+        <div id="chg-list"><div class="mcp-loading">Loading...</div></div>
+      </section>
+
+      <!-- 10. RECOVERY -->
+      <section class="th-card" id="sec-recovery" data-roles="ADMIN,SUPERUSER">
+        <h2>Flight Recorder &amp; Recovery</h2>
+        <div class="sub">Reconstruct workflow events and request reconciliation.</div>
+        <div class="mcp-row">
+          <label for="rec-corr">Correlation ID</label>
+          <input id="rec-corr" placeholder="Correlation ID">
+          <button class="th-btn th-btn-primary" id="rec-timeline">Reconstruct</button>
+          <button class="th-btn th-btn-ghost" id="rec-reconcile">Reconcile</button>
+        </div>
+        <div id="rec-body"><div class="mcp-empty">Enter a correlation ID.</div></div>
+        <h3>Recent incidents and events</h3>
+        <div id="rec-list"><div class="mcp-loading">Loading...</div></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="mcp-notice" class="mcp-notice hidden" role="status"></div>
+
+<script>
+"use strict";
+
+const ROLE = {{ role | tojson }};
+const PATIENT_ID = {{ patient_id | tojson }};
+
+function notice(message, type = "") {
+  const el = document.getElementById("mcp-notice");
+  el.textContent = String(message);
+  el.className = "mcp-notice" + (type ? " " + type : "");
+  el.classList.remove("hidden");
+  window.setTimeout(() => el.classList.add("hidden"), 5000);
+}
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, function (c) {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    };
+    return entities[c];
+  });
+}
+
+function show(el, kind, message) {
+  if (!el) return;
+  const allowed = ["empty", "error", "denied", "loading"];
+  const css = allowed.includes(kind) ? kind : "empty";
+  el.innerHTML = '<div class="mcp-' + css + '">' + esc(message) + '</div>';
+}
+
+function badge(status) {
+  const value = String(status ?? "unknown");
+  let cls = "warn";
+  if (["ONLINE", "success", "VERIFIED", "approved", "completed"].includes(value)) {
+    cls = "ok";
+  } else if (["OFFLINE", "denied", "error", "failed", "rejected"].includes(value)) {
+    cls = "bad";
+  }
+  return '<span class="mcp-badge ' + cls + '">' + esc(value) + '</span>';
+}
+
+function table(headers, rows) {
+  return '<div class="mcp-table-wrap"><table class="mcp-table"><thead><tr>' +
+    headers.map(h => '<th>' + esc(h) + '</th>').join("") +
+    '</tr></thead><tbody>' +
+    (rows.length
+      ? rows.map(row => '<tr>' + row.map(cell => '<td>' + cell + '</td>').join("") + '</tr>').join("")
+      : '<tr><td colspan="' + headers.length + '">No records found.</td></tr>') +
+    '</tbody></table></div>';
+}
+
+async function api(path, opts = {}) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 15000);
+
+  let response;
+  try {
+    response = await fetch(path, {
+      ...opts,
+      credentials: "same-origin",
+      signal: controller.signal,
+      headers: {
+        ...(opts.headers || {}),
+        ...(opts.body ? { "Content-Type": "application/json" } : {})
+      }
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Request timed out. Server aur MCP services check karo.");
+    }
+    throw new Error("Server se connection nahi hua. Server running hai?");
+  } finally {
+    window.clearTimeout(timer);
+  }
+
+  if (response.status === 401) throw new Error("Session expire hai. Dobara login karo.");
+  if (response.status === 403) throw new Error("DENIED");
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Server ne invalid response diya (HTTP " + response.status + ").");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || ("HTTP " + response.status));
+  }
+  return data;
+}
+
+async function callTool(server, tool, params = {}) {
+  return api("/mcp/api/call", {
+    method: "POST",
+    body: JSON.stringify({ server, tool, params })
+  });
+}
+
+function errorMessage(error) {
+  if (error.message === "DENIED") return "Aapke role ko is action ki permission nahi hai.";
+  return error.message || "Unknown error";
+}
+
+function runSafely(el, callback) {
+  return async function () {
+    try {
+      await callback();
+    } catch (error) {
+      show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+    }
+  };
+}
+
+// Role-based UI visibility. Backend permissions must still be enforced.
+(function gate() {
+  const role = String(ROLE || "").toUpperCase();
+  document.querySelectorAll("[data-roles]").forEach(el => {
+    const allowedRoles = el.dataset.roles.split(",").map(r => r.trim());
+    el.classList.toggle("hidden", !allowedRoles.includes(role));
+  });
+
+  const runBtn = document.getElementById("bench-run");
+  if (runBtn && runBtn.dataset.super !== "yes") {
+    runBtn.classList.add("hidden");
+  }
+})();
+
+// 1. OVERVIEW
+async function loadOverview() {
+  const stats = document.getElementById("ov-stats");
+  const events = document.getElementById("ov-security");
+
+  try {
+    const d = await api("/mcp/api/overview");
+    const cards = [
+      ["Registered users", d.users?.total],
+      ["MCP servers online", (d.mcp?.online ?? 0) + "/" + (d.mcp?.total ?? 0)],
+      ["Denied (24h)", d.security?.denied_last_24h],
+      ["Open care gaps", d.tasks?.open_care_gaps],
+      ["Review tasks", d.tasks?.pending_review_tasks],
+      ["Open conflicts", d.tasks?.open_conflicts]
+    ];
+
+    stats.innerHTML = cards.map(([label, value]) =>
+      '<div class="mcp-stat"><div class="n">' + esc(value ?? "—") +
+      '</div><div class="l">' + esc(label) + '</div></div>'
+    ).join("");
+
+    const rows = (d.security?.recent || []).map(e => [
+      esc(e.at), esc(e.action), esc(e.actor || "—"), badge(e.result)
+    ]);
+
+    events.innerHTML = table(["When", "Action", "Actor", "Result"], rows);
+  } catch (error) {
+    show(stats, "error", errorMessage(error));
+    show(events, "error", errorMessage(error));
+  }
+}
+
+// 2. MCP REGISTRY
+async function loadRegistry() {
+  const el = document.getElementById("reg-body");
+  try {
+    const d = await api("/mcp/api/registry");
+    const rows = (d.servers || []).map(s => [
+      esc(s.name) + '<div class="mcp-ref">' + esc(s.service_identity) +
+        " :" + esc(s.port) + "</div>",
+      esc(s.group),
+      esc(s.category),
+      esc((s.tools || []).length),
+      esc((s.required_roles || []).join(", ")),
+      badge(s.status),
+      esc(s.checked_at || "—"),
+      esc(s.last_error || "—")
+    ]);
+    el.innerHTML = table(
+      ["Server", "Group", "Category", "Tools", "Roles", "Status", "Last check", "Error"],
+      rows
+    );
+  } catch (error) {
+    show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+  }
+}
+
+// 3. AI SAFETY
+async function loadBenchmarks() {
+  const el = document.getElementById("safety-body");
+  try {
+    const d = await api("/mcp/api/benchmarks");
+    if (!d.latest) {
+      show(el, "empty", "No benchmark results yet. Run the suite if authorized.");
+      return;
+    }
+
+    const latest = d.latest;
+    const m = latest.metrics || {};
+    const cards = [
+      ["Tests passed", (latest.passed ?? 0) + "/" + (latest.total ?? 0)],
+      ["Pass rate", m.pass_rate],
+      ["Grounding accuracy", m.grounding_accuracy],
+      ["Refusal accuracy", m.refusal_accuracy],
+      ["Unsupported claim rate", m.unsupported_claim_rate]
+    ];
+
+    el.innerHTML = '<div class="mcp-stats">' +
+      cards.map(([label, value]) =>
+        '<div class="mcp-stat"><div class="n">' + esc(value ?? "—") +
+        '</div><div class="l">' + esc(label) + '</div></div>'
+      ).join("") + '</div>';
+
+    const rows = (latest.results || []).map(r => [
+      esc(r.test_id), esc(r.category), badge(r.passed ? "success" : "error")
+    ]);
+    el.innerHTML += table(["Test", "Category", "Result"], rows);
+  } catch (error) {
+    show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+  }
+}
+
+document.getElementById("bench-run").addEventListener("click", runSafely(
+  document.getElementById("safety-body"),
+  async () => {
+    if (ROLE !== "SUPERUSER") throw new Error("DENIED");
+    const el = document.getElementById("safety-body");
+    show(el, "loading", "Running benchmarks...");
+    await api("/mcp/api/benchmarks/run", { method: "POST", body: "{}" });
+    await loadBenchmarks();
+    notice("Benchmark request completed.", "ok");
+  }
+));
+
+// 4. PATIENT JOURNEY
+async function loadJourney() {
+  const pid = Number(document.getElementById("journey-patient").value);
+  const el = document.getElementById("journey-body");
+
+  if (!Number.isInteger(pid) || pid < 1) {
+    show(el, "empty", "Valid patient ID enter karo.");
+    return;
+  }
+
+  show(el, "loading", "Loading patient journey...");
+
+  const timeline = await callTool(
+    "health-timeline", "build_health_timeline", { patient_id: pid }
+  );
+
+  if (!timeline.success) {
+    throw new Error(timeline.error || timeline.status || "Timeline load failed.");
+  }
+
+  const gaps = await callTool(
+    "care-gap-intelligence", "detect_care_gaps", { patient_id: pid }
+  );
+
+  const items = (timeline.timeline || []).map(e =>
+    '<li><b>' + esc(e.kind) + '</b> — ' + esc(e.summary) +
+    '<span class="mcp-ref">' + esc(e.ref) + " · " + esc(e.at) + '</span></li>'
+  ).join("");
+
+  el.innerHTML =
+    '<h3>Timeline (' + esc(timeline.entries ?? 0) + ' events)</h3>' +
+    '<ul class="mcp-timeline">' + (items || "<li>No timeline entries.</li>") + '</ul>' +
+    '<h3>Care gaps (' + esc(gaps.gaps_found ?? 0) + ')</h3>' +
+    (gaps.success
+      ? '<div class="mcp-pre">' + esc(JSON.stringify(gaps.gaps ?? [], null, 2)) + '</div>'
+      : '<div class="mcp-empty">Care-gap data is unavailable.</div>');
+}
+
+document.getElementById("journey-load").addEventListener("click", runSafely(
+  document.getElementById("journey-body"), loadJourney
+));
+
+document.getElementById("journey-download").addEventListener("click", runSafely(
+  document.getElementById("journey-body"),
+  async () => {
+    const pid = Number(document.getElementById("journey-patient").value);
+    if (!Number.isInteger(pid) || pid < 1) throw new Error("Valid patient ID enter karo.");
+
+    const r = await callTool(
+      "health-timeline", "generate_verified_patient_summary", { patient_id: pid }
+    );
+    if (!r.success || !r.summary) {
+      throw new Error(r.error || "Summary generate nahi hui.");
+    }
+
+    const blob = new Blob([r.summary], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "patient-summary-" + pid + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    notice("Summary download request sent.", "ok");
+  }
+));
+
+// 5. WHAT-IF SIMULATOR
+document.getElementById("sim-type").addEventListener("change", e => {
+  const type = e.target.value;
+  const showDoctor = type === "doctor_unavailability";
+
+  document.getElementById("sim-doc-label").classList.toggle("hidden", !showDoctor);
+  document.getElementById("sim-doctor").classList.toggle("hidden", !showDoctor);
+  document.getElementById("sim-label").textContent =
+    type === "reschedule" ? "Shift days" : "Days";
+});
+
+document.getElementById("sim-run").addEventListener("click", runSafely(
+  document.getElementById("sim-body"),
+  async () => {
+    const el = document.getElementById("sim-body");
+    const type = document.getElementById("sim-type").value;
+    const days = Number(document.getElementById("sim-days").value);
+
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      throw new Error("Days 1 se 365 ke beech enter karo.");
+    }
+
+    const params = { days };
+    if (type === "reschedule") params.shift_days = days;
+
+    if (type === "doctor_unavailability") {
+      const doctorId = Number(document.getElementById("sim-doctor").value);
+      if (!Number.isInteger(doctorId) || doctorId < 1) {
+        throw new Error("Valid doctor ID enter karo.");
+      }
+      params.doctor_id = doctorId;
+    }
+
+    show(el, "loading", "Simulating scenario...");
+    const r = await callTool("workflow-simulator", "simulate_scenario", {
+      scenario: { scenario_type: type, params }
+    });
+
+    if (!r.success) throw new Error(r.error || "Simulation failed.");
+
+    const cards = Object.entries(r.affected_counts || {}).map(([k, v]) =>
+      '<div class="mcp-stat"><div class="n">' + esc(v) +
+      '</div><div class="l">' + esc(k) + '</div></div>'
+    ).join("");
+
+    el.innerHTML =
+      '<div class="mcp-badge warn">SIMULATION — not real patient facts</div>' +
+      '<div class="mcp-stats">' + cards + '</div>' +
+      '<h3>Assumptions</h3><div class="mcp-pre">' +
+      esc(JSON.stringify(r.assumptions ?? {}, null, 2)) + '</div>' +
+      '<h3>Outcomes</h3><div class="mcp-pre">' +
+      esc(JSON.stringify(r.outputs ?? {}, null, 2)) + '</div>';
+  }
+));
+
+// 6. CLINICAL SAFETY
+document.getElementById("clin-scan").addEventListener("click", runSafely(
+  document.getElementById("clin-body"),
+  async () => {
+    const el = document.getElementById("clin-body");
+    const raw = document.getElementById("clin-patient").value.trim();
+    const params = {};
+
+    if (raw) {
+      const pid = Number(raw);
+      if (!Number.isInteger(pid) || pid < 1) throw new Error("Invalid patient ID.");
+      params.patient_id = pid;
+    }
+
+    show(el, "loading", "Scanning clinical records...");
+
+    const det = await callTool("clinical-safety", "detect_record_conflicts", params);
+    if (!det.success) throw new Error(det.error || "Conflict scan failed.");
+
+    const hist = await callTool(
+      "clinical-safety", "get_conflict_resolution_history", {}
+    );
+
+    const conflicts = det.conflicts ?? [];
+    el.innerHTML = '<h3>Detected conflicts</h3><div class="mcp-pre">' +
+      esc(JSON.stringify(conflicts, null, 2)) + '</div>';
+
+    if (hist.success) {
+      const rows = (hist.conflicts || []).map(c => [
+        esc(c.ref), esc(c.type), esc(c.severity), badge(c.status), esc(c.detected_at)
+      ]);
+      el.innerHTML += '<h3>Conflict register</h3>' +
+        table(["Reference", "Type", "Severity", "Status", "Detected"], rows);
+    }
+  }
+));
+
+// 7. ACCESS CONTROL
+async function loadAccess() {
+  const el = document.getElementById("access-body");
+  try {
+    const d = await api("/mcp/api/roles");
+    const headers = ["Permission", ...(d.roles || [])];
+
+    const rows = (d.permissions || []).map(p => [
+      esc(p.key) + '<div class="mcp-ref">' + esc(p.description) + '</div>',
+      ...(d.roles || []).map(r => d.matrix?.[r]?.[p.key] ? "&#10003;" : "&#10007;")
+    ]);
+
+    el.innerHTML = table(headers, rows);
+    el.innerHTML += '<h3>Runtime overrides (' +
+      esc((d.overrides || []).length) + ')</h3>' +
+      '<div class="mcp-pre">' + esc(JSON.stringify(d.overrides || [], null, 2)) + '</div>';
+  } catch (error) {
+    show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+  }
+}
+
+// 8. AUDIT EXPLORER
+document.getElementById("aud-load").addEventListener("click", runSafely(
+  document.getElementById("aud-body"),
+  async () => {
+    const el = document.getElementById("aud-body");
+    const q = new URLSearchParams({
+      hours: document.getElementById("aud-hours").value || "24",
+      actor: document.getElementById("aud-actor").value.trim(),
+      server: document.getElementById("aud-server").value.trim(),
+      tool: document.getElementById("aud-tool").value.trim(),
+      result: document.getElementById("aud-result").value.trim(),
+      correlation_id: document.getElementById("aud-corr").value.trim()
+    });
+
+    show(el, "loading", "Searching audit events...");
+    const d = await api("/mcp/api/audit?" + q.toString());
+
+    const rows = (d.events || []).map(e => [
+      esc(e.at), esc(e.actor || "—"), esc(e.role || "—"),
+      esc((e.server || "") + "." + (e.tool || "")),
+      esc(e.action || "—"), badge(e.result),
+      esc(e.correlation_id || "—")
+    ]);
+
+    el.innerHTML = '<p>Matching events: ' + esc(d.count ?? rows.length) + '</p>' +
+      table(["When", "Actor", "Role", "Server/Tool", "Action", "Result", "Correlation"], rows);
+  }
+));
+
+// 9. CHANGE IMPACT & APPROVAL
+document.getElementById("chg-type").addEventListener("change", e => {
+  const visible = e.target.value === "doctor_deactivation";
+  document.getElementById("chg-doc-label").classList.toggle("hidden", !visible);
+  document.getElementById("chg-doctor").classList.toggle("hidden", !visible);
+});
+
+function getChange() {
+  const type = document.getElementById("chg-type").value;
+  const change = {
+    change_type: type,
+    description: "Requested from the Sanjeevani Intelligence Platform"
+  };
+
+  if (type === "doctor_deactivation") {
+    const id = Number(document.getElementById("chg-doctor").value);
+    if (!Number.isInteger(id) || id < 1) throw new Error("Valid doctor ID enter karo.");
+    change.doctor_id = id;
+  }
+  return change;
+}
+
+async function previewChange() {
+  const el = document.getElementById("chg-body");
+  show(el, "loading", "Previewing change impact...");
+
+  const r = await api("/mcp/api/change-requests/preview", {
+    method: "POST",
+    body: JSON.stringify({ change: getChange() })
+  });
+
+  if (!r.success) throw new Error(r.error || "Preview failed.");
+
+  el.innerHTML = '<div class="mcp-pre">' +
+    esc(JSON.stringify(r.impact, null, 2)) + '</div>' +
+    '<div class="mcp-empty">Preview only. This does not itself apply the change.</div>';
+}
+
+document.getElementById("chg-preview").addEventListener("click", runSafely(
+  document.getElementById("chg-body"), previewChange
+));
+
+async function loadChangeRequests() {
+  const el = document.getElementById("chg-list");
+  try {
+    const d = await api("/mcp/api/change-requests");
+    const rows = (d.change_requests || []).map(c => [
+      "#" + esc(c.id), esc(c.change_type), badge(c.status),
+      esc(c.proposed_by || "—"), esc(c.created_at || "—")
+    ]);
+    el.innerHTML = table(["ID", "Type", "Status", "Proposed by", "Created"], rows);
+  } catch (error) {
+    show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+  }
+}
+
+document.getElementById("chg-request").addEventListener("click", runSafely(
+  document.getElementById("chg-body"),
+  async () => {
+    if (!["ADMIN", "SUPERUSER"].includes(ROLE)) throw new Error("DENIED");
+
+    const el = document.getElementById("chg-body");
+    show(el, "loading", "Submitting approval request...");
+
+    const r = await callTool("change-approval", "request_approval", {
+      change: getChange()
+    });
+
+    if (!r.success) throw new Error(r.error || "Approval request failed.");
+
+    el.innerHTML = '<div class="mcp-badge ok">Change request #' +
+      esc(r.change_request_id ?? "created") + " — " + esc(r.status || "submitted") +
+      '</div>';
+
+    await loadChangeRequests();
+    notice("Approval request submitted.", "ok");
+  }
+));
+
+// 10. FLIGHT RECORDER & RECOVERY
+async function loadRecoveryList() {
+  const el = document.getElementById("rec-list");
+  try {
+    const d = await api("/mcp/api/recovery");
+
+    const attempts = (d.attempts || []).map(a => [
+      "#" + esc(a.id), esc(a.incident_type), badge(a.status),
+      esc(a.attempts), esc(a.correlation_id || "—")
+    ]);
+
+    const events = (d.recent_events || []).map(e => [
+      esc(e.at), esc(e.workflow), esc(e.type), esc(e.resource || "—"),
+      esc(e.correlation_id || "—")
+    ]);
+
+    el.innerHTML = '<h3>Recovery attempts (' + attempts.length + ')</h3>' +
+      table(["ID", "Type", "Status", "Attempts", "Correlation"], attempts) +
+      '<h3>Recent workflow events (' + events.length + ')</h3>' +
+      table(["When", "Workflow", "Type", "Resource", "Correlation"], events);
+  } catch (error) {
+    show(el, error.message === "DENIED" ? "denied" : "error", errorMessage(error));
+  }
+}
+
+async function reconstruct() {
+  const corr = document.getElementById("rec-corr").value.trim();
+  const el = document.getElementById("rec-body");
+  if (!corr) throw new Error("Correlation ID enter karo.");
+
+  show(el, "loading", "Reconstructing workflow history...");
+  const r = await callTool("flight-recorder", "reconstruct_event_history", {
+    correlation_id: corr
+  });
+
+  if (!r.success) throw new Error(r.error || "Reconstruction failed.");
+
+  if (!r.found) {
+    show(el, "empty", "Is correlation ID ke liye events nahi mile.");
+    return;
+  }
+
+  const items = (r.events || []).map(e =>
+    '<li><b>' + esc(e.type) + '</b> — ' + esc(e.workflow) +
+    '<div>' + esc(e.resource || "") + '</div>' +
+    '<span class="mcp-ref">' + esc(e.ref) + " · " + esc(e.at) + '</span></li>'
+  ).join("");
+
+  el.innerHTML = '<ul class="mcp-timeline">' + items + '</ul>';
+}
+
+async function reconcile() {
+  const corr = document.getElementById("rec-corr").value.trim();
+  const el = document.getElementById("rec-body");
+  if (!corr) throw new Error("Correlation ID enter karo.");
+
+  show(el, "loading", "Reconciling workflow...");
+  const r = await callTool("flight-recorder", "reconcile_failed_workflow", {
+    correlation_id: corr
+  });
+
+  if (!r.success) throw new Error(r.error || "Reconciliation failed.");
+
+  el.innerHTML = '<h3>Reconciliation result</h3><div class="mcp-pre">' +
+    esc(JSON.stringify(r.recovered ?? r, null, 2)) + '</div>';
+
+  await loadRecoveryList();
+}
+
+document.getElementById("rec-timeline").addEventListener("click", runSafely(
+  document.getElementById("rec-body"), reconstruct
+));
+
+document.getElementById("rec-reconcile").addEventListener("click", runSafely(
+  document.getElementById("rec-body"), reconcile
+));
+
+// Load initial data. Each panel handles its own errors.
+loadOverview();
+loadRegistry();
+loadBenchmarks();
+loadAccess();
+loadChangeRequests();
+loadRecoveryList();
+</script>
+</body>
+</html>

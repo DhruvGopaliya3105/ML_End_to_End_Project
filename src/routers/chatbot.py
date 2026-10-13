@@ -58,6 +58,7 @@ from src.database.connection import get_db
 
 from src.models.doctor import Doctor
 
+
 from src.models.visit_type import VisitType
 
 from src.models.appointment import Appointment
@@ -78,6 +79,8 @@ from src.services.appointment_service import (
 )
 
 from src.services import clinic_knowledge_service as clinic_knowledge
+from src.services.evidence_service import evidence_gate
+from src.models.user import User
 
 from src.config import TEMPLATES_DIR
 
@@ -113,6 +116,7 @@ GROQ_API_KEY = os.getenv(
 GROQ_MODEL = os.getenv(
     "GROQ_MODEL"
 )
+
 
 groq_client = None
 
@@ -1203,7 +1207,7 @@ def handle_slot_booking(
             f"Time: "
             f"{format_time(appointment.start_time)}"
             f" - "
-            f"{format_time(appointment.end_time)}\\n"
+            f"{format_time(appointment.end_time)}\n"
 
             f"Status: "
             f"{appointment.status}\n\n"
@@ -1293,7 +1297,7 @@ def handle_confirmation(
                         f"Time: "
                         f"{format_time(appointment.start_time)}"
                         f" - "
-                        f"{format_time(appointment.end_time)}\\n"
+                        f"{format_time(appointment.end_time)}\n"
 
                         "Status: CONFIRMED"
 
@@ -1382,7 +1386,7 @@ def handle_confirmation(
             f"Time: "
             f"{format_time(confirmed_appointment.start_time)}"
             f" - "
-            f"{format_time(confirmed_appointment.end_time)}\\n"
+            f"{format_time(confirmed_appointment.end_time)}\n"
 
             "Status: CONFIRMED\n\n"
 
@@ -1889,7 +1893,7 @@ def chatbot_message(
                 f"Time: "
                 f"{format_time(appointment.start_time)}"
                 f" - "
-                f"{format_time(appointment.end_time)}\\n"
+                f"{format_time(appointment.end_time)}\n"
 
                 f"Status: "
                 f"{appointment.status}"
@@ -2153,7 +2157,12 @@ def chatbot_message(
 
                 "success": True,
 
-                "reply": reply
+                "reply": evidence_gate(
+                    db,
+                    db.get(User, user_id),
+                    user_message,
+                    reply
+                )
 
             }
 
@@ -2178,7 +2187,12 @@ def chatbot_message(
 
             "success": True,
 
-            "reply": symptom
+            "reply": evidence_gate(
+                db,
+                db.get(User, user_id),
+                user_message,
+                symptom
+            )
 
         }
 
@@ -2193,7 +2207,12 @@ def chatbot_message(
 
             "success": True,
 
-            "reply": clinic_knowledge.general_reply()
+            "reply": evidence_gate(
+                db,
+                db.get(User, user_id),
+                user_message,
+                clinic_knowledge.general_reply()
+            )
 
         }
 

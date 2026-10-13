@@ -6,7 +6,7 @@ out-of-stock ho to **nearby chemist (Google Maps + SQL)** → aur upar
 **Super User** console with role based access, audit log aur rollback/restore.
 Upar se ek **Doctor Desk** (`/doctor-desk`) bhi add hua - doctor ko har enrolled
 patient ka pura file dikhta hai, aur wo usme likh bhi sakta hai. Detail:
-`DOCTOR_DESK.md`. (That is why the test count below is 173, not 103.)
+`DOCTOR_DESK.md`. (That is why the test count below is 216, not 103.)
 
 Neeche exactly kaunsi files/folders add hui, kaunsi 4 files edit huwi, kaunse
 commands chalane hain — sab verified hai (`python test_pharmacy.py` → **103
@@ -33,7 +33,7 @@ source .venv/bin/activate
 
 pip install -r requirements.txt             # no new package needed
 python seed_pharmacy.py                     # diseases + 111 medicines + shops + logins
-python test_pharmacy.py                     # 173 checks, must end with "0 failed"
+python test_pharmacy.py                     # 233 checks, must end with "0 failed"
 uvicorn main:app --reload                   # or ./start.sh  /  start.bat
 ```
 
@@ -78,7 +78,7 @@ refreshed, passwords are unchanged.)
 │                                          guarded treatment_reviews.updated_at + SUPERUSER
 ├── pharmacy_seed.sql                     ← only the pharmacy INSERTs
 ├── build_workbench_sql.py                ← regenerates the 5 .sql files above
-├── test_pharmacy_mysql.py                ← 52 checks against your REAL MySQL
+├── test_pharmacy_mysql.py                ← 58 checks against your REAL MySQL
 ├── pharmacy_schema_export.py             ← regenerates pharmacy_setup.sql
 ├── PHARMACY.md                           ← ye file
 
@@ -168,7 +168,7 @@ through `urllib`, HMAC through `hashlib`).
 | Super user, saari permission | `src/security/rbac.py`: `SUPERUSER = *`; 24 named permissions (17 pharmacy + 7 doctor desk); `/pharmacy/admin?tab=access` matrix |
 | Role based access | 6 roles (`PATIENT/DOCTOR/PHARMACIST/STAFF/ADMIN/SUPERUSER`) checked in **every** route + `role_permissions` table for live overrides (no redeploy) - 24 permission keys, 7 of them for the doctor desk |
 | Audit logs | `pharmacy_audit_logs`: who/what/when/IP/UA/path + **before/after JSON**; viewer at `?tab=audit`; CSV export; append-only (no edit/delete API) |
-| Controlled rollback / restore | `pharmacy_snapshots`: snapshot → `preview` (row-level diff, writes nothing) → restore **only with matching sha256 checksum**; automatic `PRE_RESTORE` undo point; auto snapshots before bulk price change / stock import / delete; pinned snapshots survive prune |
+| Controlled rollback / restore | `pharmacy_snapshots`: snapshot → `preview` (row-level diff, writes nothing) → restore **only with matching sha258 checksum**; automatic `PRE_RESTORE` undo point; auto snapshots before bulk price change / stock import / delete; pinned snapshots survive prune |
 
 ---
 
@@ -287,7 +287,7 @@ Ran on this build:
   orphan-row queries over every foreign key, and two end-to-end flows. It runs on
   its own throwaway database, so it never touches your data (`--live` = read-only
   on your real DB, `--html report.html` = printable)
-* `python test_pharmacy.py` → **173 checks passed, 0 failed** (real HTTP + real
+* `python test_pharmacy.py` → **233 checks passed, 0 failed** (real HTTP + real
   SQL: catalog, cart, Rx rejection, cash + online checkout, stock moves,
   cancel/refund restore, prescription tab, nearby search, patient-blocked-from-
   admin, per-tab admin access, catalog CRUD, stock adjust, audit read/filter/CSV,
@@ -297,7 +297,7 @@ Ran on this build:
 * Every pre-existing page (`/`, `/dashboard`, `/doctors`, `/appointments`,
   `/prescription`, `/chatbot`, …) still returns 200 — no route collisions.
 * `test_password.py`, `test_schema.py`, `test_user_service.py` still pass.
-* `python test_pharmacy_mysql.py` → 52 checks passed, 0 failed (needs MySQL;
+* `python test_pharmacy_mysql.py` → 58 checks passed, 0 failed (needs MySQL;
   prints SKIP and exits 0 when it is not reachable, so it is safe to leave in
   the repo).
 * `pharmacy_setup.sql` parses under a MySQL-dialect SQL parser (11 CREATE
@@ -306,7 +306,7 @@ Ran on this build:
 **MySQL, for real.** A MariaDB/MySQL server was started in the sandbox and the
 whole stack was run against it: `database_setup_with_pharmacy.sql` executed
 three times in a row (0 errors, identical row counts — idempotent), then
-`python test_pharmacy_mysql.py` → **52 checks passed, 0 failed** on MySQL
+`python test_pharmacy_mysql.py` → **58 checks passed, 0 failed** on MySQL
 (catalog read, purchase, stock move, cancel + stock back, all 6 admin tabs,
 audit rows, snapshot → bulk price → preview → **rollback**). `seed_pharmacy.py`
 was also run twice on MySQL (`0 added, 111 refreshed`).

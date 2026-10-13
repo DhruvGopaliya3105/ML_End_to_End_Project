@@ -782,7 +782,7 @@
 
                 {% if appointment.doctor %}
 
-                    Dr. {{ appointment.doctor.name }}
+                    {{ appointment.doctor.name if appointment.doctor.name.lower().startswith('dr.') else 'Dr. ' ~ appointment.doctor.name }}
 
                 {% else %}
 

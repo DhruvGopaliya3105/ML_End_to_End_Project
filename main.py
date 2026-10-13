@@ -125,6 +125,19 @@ async def lifespan(
 
         app.state.database_ready = True
 
+        # register the 10 MCP servers (idempotent - safe on every boot)
+        try:
+            from src.database.connection import SessionLocal
+            from src.services.mcp_rbac import seed_mcp_registry
+
+            _db = SessionLocal()
+            try:
+                seed_mcp_registry(_db)
+            finally:
+                _db.close()
+        except Exception:
+            logger.exception("MCP registry seed failed")
+
     yield
 
 
@@ -168,6 +181,18 @@ app.add_middleware(
     max_age=60 * 60 * 24 * 7
 
 )
+
+
+# ============================================================
+# AUDIT CONTEXT MIDDLEWARE (MCP platform)
+# ============================================================
+# Fresh correlation + request IDs per request, echoed back as
+# X-Correlation-ID. The principal is attached only after server-side
+# authentication - never trusted from the browser.
+
+from src.services.audit_context import AuditContextMiddleware
+
+app.add_middleware(AuditContextMiddleware)
 
 
 # ============================================================
@@ -289,6 +314,32 @@ from src.routers.follow_up import (
     router as follow_up_router
 )
 
+# ============================================================
+# MCP INTELLIGENCE PLATFORM ROUTER
+# ============================================================
+
+from src.routers.mcp_platform import (
+    router as mcp_platform_router
+)
+
+# ============================================================
+# MCP PLATFORM MODELS
+# ============================================================
+# Imported so Base.metadata.create_all() in lifespan also creates the MCP
+# platform tables: registry, audit + security events, AI evidence, care
+# gaps, clinical conflicts, scenario runs, change requests, workflow
+# events, recovery attempts and AI benchmark runs.
+
+from src.models.mcp_registry import McpServer  # noqa: F401
+from src.models.audit_event import AuditEvent, SecurityEvent  # noqa: F401
+from src.models.ai_evidence import AiRequest, AiEvidence, AiClaim  # noqa: F401
+from src.models.care_gap import CareGap, CareReviewTask  # noqa: F401
+from src.models.clinical_conflict import ClinicalConflict  # noqa: F401
+from src.models.scenario_run import ScenarioRun  # noqa: F401
+from src.models.change_request import ChangeRequest, ChangeApproval  # noqa: F401
+from src.models.workflow_event import WorkflowEvent, RecoveryAttempt  # noqa: F401
+from src.models.ai_benchmark import AiBenchmarkRun, AiBenchmarkResult  # noqa: F401
+
 
 # ============================================================
 # REGISTER ROUTERS
@@ -371,6 +422,15 @@ app.include_router(
 
 app.include_router(
     follow_up_router
+)
+
+# ============================================================
+# MCP INTELLIGENCE PLATFORM REGISTER
+# ============================================================
+# The /mcp intelligence console + the gateway APIs to the 10 MCP servers.
+
+app.include_router(
+    mcp_platform_router
 )
 
 

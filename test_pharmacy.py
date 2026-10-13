@@ -3,7 +3,8 @@
     python test_pharmacy.py
 
 What it does
-------------\nBuilds a throwaway SQLite database (``pharmacy_test.db`` next to this file,
+------------
+Builds a throwaway SQLite database (``pharmacy_test.db`` next to this file,
 via the new ``SQLITE_DB_PATH`` setting), seeds the pharmacy into it, boots the
 real FastAPI app on it, then walks the whole feature: browse -> cart -> cash
 checkout -> confirmed -> online payment -> cancel + stock restored -> doctor
@@ -121,12 +122,19 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
 
     db = SessionLocal()
 
+    def refresh_db():
+        # MySQL InnoDB REPEATABLE READ would otherwise keep serving the
+        # snapshot from this session's first read; rollback ends the
+        # transaction so the next query sees everything the API committed.
+        db.rollback()
+        db.expire_all()
+
     # ---------------------------------------------------------
     section("1. Public catalog (no login needed)")
 
     page = client.get("/pharmacy")
     check("GET /pharmacy renders", page.status_code == 200, str(page.status_code))
-    check("catalog shows product cards", "data-ph=\\\"add\\\"" in page.text or "ph-card" in page.text)
+    check("catalog shows product cards", "data-ph=\"add\"" in page.text or "ph-card" in page.text)
     check("catalog shows a price", "Rs " in page.text, "price formatting")
 
     searched = client.get("/pharmacy?q=dolo")
@@ -206,7 +214,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     check("order says pay at the counter", "pay" in order_page.text.lower())
     check("order page links the printable receipt", "/receipt" in order_page.text)
 
-    db.expire_all()
+    refresh_db()
     after = stock_of(db, "Dolo 650 Tablet")
     check("stock went down by 2", after == before - 2, f"{before} -> {after}")
 
@@ -247,7 +255,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         str(paid.json().get("transaction_id"))
     )
 
-    db.expire_all()
+    refresh_db()
     check("stock reserved for online order", stock_of(db, "Gelusil MPS Suspension 100ml") == gel_before - 1)
 
     # ---------------------------------------------------------
@@ -262,7 +270,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         data={"payment_method": "ONLINE", "delivery_type": "PICKUP"}
     ).json()
 
-    db.expire_all()
+    refresh_db()
     check("stock dropped by 3", stock_of(db, "Crocin Advance Tablet") == crocin_before - 3)
 
     cancelled = client.post(
@@ -271,7 +279,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("cancel accepted", cancelled.status_code == 200, cancelled.text[:160])
 
-    db.expire_all()
+    refresh_db()
     check(
         "stock restored after cancel",
         stock_of(db, "Crocin Advance Tablet") == crocin_before
@@ -428,7 +436,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         data={"price": "39.90"}
     )
     check("price edit works", priced.status_code == 200, priced.text[:160])
-    db.expire_all()
+    refresh_db()
     check("new price is in the DB", stock_and_price(db, new_id) == 39.90)
 
     toggled = client.post(f"/pharmacy/admin/api/medicines/{new_id}/toggle", data={})
@@ -478,13 +486,13 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     snapshot_id = snap.json()["snapshot"]["id"]
     checksum = snap.json()["snapshot"]["checksum"]
 
-    db.expire_all()
+    refresh_db()
     price_before = stock_and_price(db, new_id)
 
     bulk = client.post("/pharmacy/admin/api/catalog/bulk-price", data={"percent": "10"})
     check("bulk price update runs", bulk.status_code == 200, bulk.text[:200])
 
-    db.expire_all()
+    refresh_db()
     price_after = stock_and_price(db, new_id)
     check("bulk price actually changed it", abs(price_after - round(price_before * 1.1, 2)) < 0.01, f"{price_before} -> {price_after}")
 
@@ -503,7 +511,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("restore accepted", restored.status_code == 200, restored.text[:240])
 
-    db.expire_all()
+    refresh_db()
     back = stock_and_price(db, new_id)
     check("price is back after rollback", abs(back - price_before) < 0.005, f"{price_after} -> {back}")
     check("an undo point was created first", restored.json().get("undo_snapshot_id"))
@@ -608,7 +616,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         data={"action": "refund", "reason": "smoke test refund"}
     )
     check("counter can refund a paid order", refund.json().get("status") == "REFUNDED", refund.text[:160])
-    db.expire_all()
+    refresh_db()
     check(
         "refund put the stock back",
         stock_of(db, "Gelusil MPS Suspension 100ml") == gel_before
@@ -740,7 +748,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("doctor can add a note", note.status_code == 303, str(note.status_code))
 
-    db.expire_all()
+    refresh_db()
     saved = (
         db.query(DoctorPatientNote)
         .filter(DoctorPatientNote.patient_id == demo_patient.id)
@@ -757,7 +765,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
           and saved.note_type == "ALLERGY")
     check("note is visible in the file",
           "Smoke test allergy note" in client.get(
-             f"/doctor-desk/patient/{demo_patient.id}?tab=notes").text)
+              f"/doctor-desk/patient/{demo_patient.id}?tab=notes").text)
 
     empty_note = client.post(
         f"/doctor-desk/patient/{demo_patient.id}/notes",
@@ -790,7 +798,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         data={"field": "archive"},
         headers={"Accept": "application/json"}
     )
-    db.expire_all()
+    refresh_db()
     check("archiving keeps the row and hides it",
           archived.status_code == 200
           and db.get(DoctorPatientNote, saved.id).status == "ARCHIVED"
@@ -799,7 +807,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
 
     restored = client.post(f"/doctor-desk/notes/{saved.id}/restore",
                            follow_redirects=False)
-    db.expire_all()
+    refresh_db()
     check("restore brings it back",
           restored.status_code == 303
           and db.get(DoctorPatientNote, saved.id).status == "ACTIVE")
@@ -818,7 +826,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("doctor can write a consultation record", record.status_code == 303)
 
-    db.expire_all()
+    refresh_db()
     written_record = (
         db.query(MedicalRecord)
         .filter(MedicalRecord.chief_complaint == "Smoke test complaint")
@@ -852,7 +860,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("follow-up can be booked from the file", follow_up.status_code == 303)
 
-    db.expire_all()
+    refresh_db()
     booked = (
         db.query(FollowUp)
         .filter(FollowUp.reason == "Smoke test recheck")
@@ -872,7 +880,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         f"/doctor-desk/follow-up/{booked.id}/complete",
         headers={"Accept": "application/json"}
     )
-    db.expire_all()
+    refresh_db()
     check("follow-up can be marked done",
           closed.status_code == 200 and db.get(FollowUp, booked.id).status == "COMPLETED")
 
@@ -888,7 +896,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     )
     check("doctor can issue a prescription", rx.status_code == 303)
 
-    db.expire_all()
+    refresh_db()
     written_rx = (
         db.query(Prescription)
         .filter(Prescription.diagnosis == "Smoke test fever")
@@ -933,7 +941,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     check("doctor can push an Rx into the patient's cart",
           push.status_code == 200 and push.json()["success"], push.text[:200])
 
-    db.expire_all()
+    refresh_db()
     cart_after = (
         db.query(PharmacyCartItem)
         .filter(PharmacyCartItem.user_id == demo_patient.id)
@@ -965,7 +973,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
           paid.status_code == 200 and paid.json()["payment_status"] == "PAID",
           paid.text[:200])
 
-    db.expire_all()
+    refresh_db()
     row_after = db.get(Appointment, pending_visit.id)
     check("the appointment row itself was updated",
           row_after.payment_status == "PAID" and float(row_after.payment_amount) == 600.0
@@ -984,7 +992,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
         data={"payment_status": "REFUNDED", "note": "smoke test refund"},
         headers={"Accept": "application/json"}
     )
-    db.expire_all()
+    refresh_db()
     check("a refund is recorded on the same row",
           refunded.status_code == 200
           and db.get(Appointment, pending_visit.id).refund_status == "REFUNDED")
@@ -1063,7 +1071,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
               "age": 44, "gender": "Male"},
         follow_redirects=False
     )
-    db.expire_all()
+    refresh_db()
     stranger = db.query(User).filter(User.email == "norelation@demo.com").first()
     check("the unrelated patient exists for this check", stranger is not None)
 
@@ -1168,6 +1176,81 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     check("disease query lists stocked medicines",
           "Diabetes" in reply and "Rs" in reply, reply[:200])
 
+    reply = ask("medicines for a disease")
+    check("generic disease phrase asks which disease",
+          "Which disease" in reply, reply[:200])
+
+    reply = ask("medicines for diabetes")
+    check("plural medicine-for-disease query works",
+          "Diabetes" in reply and "Rs" in reply, reply[:200])
+
+    reply = ask("medicine for diabetes")
+    check("disease reply opens with empathy",
+          "Sorry to hear" in reply, reply[:200])
+    check("disease reply warns about skipping medicines",
+          "complete the full course" in reply.lower(), reply[:200])
+    check("disease reply lists precautions",
+          "Precautions" in reply and "side effects" in reply, reply[:200])
+    check("disease reply names specialist doctors with fees",
+          "Dr." in reply and "consultation" in reply.lower(), reply[:200])
+    check("disease reply explains which medicine to take",
+          "Which one to take" in reply, reply[:200])
+    check("disease reply urges a doctor for severe symptoms",
+          "severe" in reply.lower() and "doctor" in reply.lower(), reply[:200])
+
+    check("disease reply gives normal-stage self-care",
+          "starting stage" in reply.lower(), reply[:200])
+    check("disease reply marks the serious stage",
+          "serious condition" in reply.lower(), reply[:200])
+    check("disease reply shows doctor slots",
+          "Slots:" in reply, reply[:200])
+
+    from src.models.disease import Disease
+    from src.models.medicine import Medicine
+    from src.models.medicine_disease import MedicineDisease
+
+    linked_rows = (
+        db.query(Medicine)
+        .join(MedicineDisease, MedicineDisease.medicine_id == Medicine.id)
+        .join(Disease, Disease.id == MedicineDisease.disease_id)
+        .filter(Disease.slug == "diabetes", Medicine.is_active.is_(True))
+        .all()
+    )
+    reply = ask("medicine for diabetes")
+    check("disease reply lists every stocked medicine",
+          bool(linked_rows) and all(m.name in reply for m in linked_rows),
+          f"{len(linked_rows)} linked")
+    with_dosage = sum(1 for m in linked_rows if m.dosage_info)
+    check("disease reply shows per-medicine how-to-take",
+          ("How to take:" in reply) == (with_dosage > 0),
+          f"{with_dosage} with dosage info")
+
+    all_names = [row[0] for row in db.query(Disease.name).all()]
+    reply = ask("medicines for a disease")
+    check("disease picker lists every recorded disease",
+          all(name in reply for name in all_names), f"{len(all_names)} diseases")
+
+    total = db.query(Medicine).filter(Medicine.is_active.is_(True)).count()
+    reply = ask("all medicines")
+    check("all-medicines query lists the whole catalog",
+          f"All {total} medicines in our pharmacy" in reply
+          and "Dolo 650 Tablet" in reply, reply[:120])
+    reply = ask("sari dawai batao")
+    check("Hinglish all-medicines query works",
+          "medicines in our pharmacy" in reply, reply[:120])
+
+    svc_src = (BASE_DIR / "src" / "services" /
+               "clinic_knowledge_service.py").read_text(encoding="utf-8")
+    missing = [
+        name for name in (
+            "DISEASE_ALIASES", "DISEASE_SPECIALIST", "EMERGENCY_SYMPTOMS",
+            "SYMPTOM_SPECIALISTS", "_MEDICINE_STOPWORDS", "_ALL_SYMPTOM_KEYWORDS",
+        )
+        if f"\n{name} = " not in svc_src
+    ]
+    check("service source defines all lookup tables (paste not mangled)",
+          not missing, f"missing: {missing}")
+
     reply = ask("bukhar ke liye dawai")
     check("Hinglish disease query works",
           "Fever" in reply or "Dolo" in reply, reply[:200])
@@ -1187,6 +1270,36 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
     check("symptom guidance carries a safety disclaimer",
           "not a doctor" in reply.lower() and "General Medicine" in reply,
           reply[:200])
+
+    # Regression: MySQL/MariaDB have no ORDER BY ... NULLS LAST syntax
+    # (error 1064 crashed symptom_reply on a real MySQL database while
+    # the SQLite test database happily accepted it). The doctor ordering
+    # must stay portable, and no null-ordering keyword may creep back
+    # into src/.
+    from sqlalchemy import select as _select
+    from sqlalchemy.dialects import mysql as _mysql_dialect
+    from src.models.doctor import Doctor as _DoctorModel
+    from src.services.clinic_knowledge_service import doctor_fee_order
+
+    _symptom_sql = str(
+        _select(_DoctorModel)
+        .order_by(*doctor_fee_order())
+        .compile(dialect=_mysql_dialect.dialect())
+    )
+    check("symptom doctor query compiles to valid MySQL (no NULLS LAST)",
+          "NULLS LAST" not in _symptom_sql.upper()
+          and "IS NULL" in _symptom_sql.upper(),
+          _symptom_sql[-220:])
+
+    _bad_tokens = ("nullslast", "nullsfirst", "nulls_last", "nulls_first",
+                   "nulls last", "nulls first")
+    _offenders = []
+    for _py in sorted((BASE_DIR / "src").rglob("*.py")):
+        _src_text = _py.read_text(encoding="utf-8", errors="ignore").lower()
+        if any(_token in _src_text for _token in _bad_tokens):
+            _offenders.append(str(_py.relative_to(BASE_DIR)))
+    check("no NULLS FIRST/LAST syntax anywhere in src/",
+          not _offenders, str(_offenders))
 
     reply = ask("asdfgh qwerty")
     check("unknown input gets a helpful fallback",
@@ -1366,8 +1479,9 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
           "Dolo" in reply and "Price:" in reply, reply[:200])
 
     reply = ask("fever")
-    check("bare fever shows the disease card, not a thermometer",
-          "Fever" in reply and "Thermometer" not in reply, reply[:200])
+    check("bare fever routes to the disease card, not a product card",
+          "Fever" in reply and "Medicines we stock for it" in reply
+          and "Salt: Fever thermometer" not in reply, reply[:200])
 
     # ---------------------------------------------------------
     section("22. Doctor names never render as 'Dr. Dr.'")
@@ -1441,6 +1555,7 @@ def run(client) -> None:  # noqa: C901 - one long linear script is easiest to re
           and "lg-demo-row" in login_page.text)
 
     db.close()
+
 
 def stock_and_price(db, medicine_id):
     from src.models.medicine import Medicine

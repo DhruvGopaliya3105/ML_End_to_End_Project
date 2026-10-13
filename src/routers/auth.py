@@ -150,6 +150,39 @@ def login(
 
 ):
 
+    # ---- rate limit (per IP + email) ----
+    from src.services.rate_limit import check_limit
+
+    allowed, retry_after = check_limit(
+        "login",
+        f"{request.client.host}:{email.lower()}"
+    )
+
+    if not allowed:
+
+        from src.services.mcp_rbac import record_security_event
+
+        record_security_event(
+            db,
+            action="rate_limited",
+            actor=email,
+            resource_type="auth",
+            resource_ref="login",
+            details={"retry_after_seconds": retry_after},
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent")
+        )
+
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {
+                "error":
+                f"Too many login attempts. Try again in {retry_after} seconds."
+            },
+            status_code=429
+        )
+
     # Find user
     user = (
         db.query(User)
@@ -159,6 +192,19 @@ def login(
 
     # User doesn't exist
     if user is None:
+
+        from src.services.mcp_rbac import record_security_event
+
+        record_security_event(
+            db,
+            action="login_failure",
+            actor=email,
+            resource_type="auth",
+            resource_ref="login",
+            details={"reason": "unknown email"},
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent")
+        )
 
         return templates.TemplateResponse(
             request,
@@ -177,6 +223,19 @@ def login(
     )
 
     if not password_correct:
+
+        from src.services.mcp_rbac import record_security_event
+
+        record_security_event(
+            db,
+            action="login_failure",
+            actor=email,
+            resource_type="auth",
+            resource_ref="login",
+            details={"reason": "wrong password"},
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent")
+        )
 
         return templates.TemplateResponse(
             request,

@@ -200,7 +200,7 @@ MEDICINES = [
     # ---- Nervous system, sleep, vitamins ----
     ("Alprax Tablet", "Alprazolam 0.25 mg", "Cipla", "TABLET", "0.25 mg", "Strip of 15 tablets", 68.00, 75.00, 40, 1, "anxiety", "Short term only. Habit forming."),
     ("Zolfresh Tablet", "Zolpidem 10 mg", "Sun Pharma", "TABLET", "10 mg", "Strip of 10 tablets", 98.00, 108.00, 30, 1, "anxiety", "Just before bed."),
-    ("Serta 50 Tablet", "Sertraline 50 mg", "Sun Pharma", "TABLET", "50 mg", "Strip of 15 tablets", 165.00, 180.00, 35, 1, "anxiety", ""),
+    ("Serta 50 Tablet", "Sertraline 50 mg", "Sun Pharma", "TABLET", "50 mg", "Strip of 10 tablets", 165.00, 180.00, 35, 1, "anxiety", ""),
     ("Neurobion Forte Tablet", "Vitamin B-complex", "Merck", "TABLET", "-", "Strip of 20 tablets", 42.00, 46.00, 190, 0, "nerve,vitamins", ""),
     ("Methobalt Injection", "Methylcobalamin 500 mcg", "Aristo", "INJECTION", "500 mcg", "Ampoule", 32.00, 35.00, 80, 1, "nerve,anemia", ""),
     ("Succimax 50 Capsule", "Paracetamol + Caffeine + Domperidone", "Succi", "CAPSULE", "-", "Strip of 10 capsules", 58.00, 64.00, 0, 0, "headache", ""),
@@ -235,7 +235,7 @@ MEDICINES = [
 
     # ---- First aid & hygiene ----
     ("Savlon Liquid 125ml", "Chlorhexidine + Cetrimide", "Johnson", "LIQUID", "-", "125 ml bottle", 118.00, 129.00, 120, 0, "first-aid,hygiene", "Dilute for wound cleaning."),
-    ("Dettol Antiseptic Liquid 250ml", "Chloroxylenol 4.8%", "Reckitt", "LIQUID", "4.8%", "250 ml bottle", 155.00, 170.00, 130, 0, "first-aid,hygiene", ""),
+    ("Dettol Antiseptic Liquid 250ml", "Chloroxylenol 4.8%", "Reckitt", "LIQUID", "-", "250 ml bottle", 155.00, 170.00, 130, 0, "first-aid,hygiene", ""),
     ("Betadine Solution 100ml", "Povidone Iodine 5%", "Win-Medicare", "LIQUID", "5%", "100 ml bottle", 185.00, 203.00, 75, 0, "first-aid", ""),
     ("Hand Sanitizer 500ml", "Isopropyl Alcohol 70%", "Lifebuoy", "LIQUID", "70%", "500 ml bottle", 165.00, 199.00, 90, 0, "hygiene", ""),
     ("Crepe Bandage 10cm", "Elastic compression bandage", "Bolin", "DEVICE", "10 cm x 4.5 m", "1 roll", 85.00, 99.00, 60, 0, "first-aid,pain", ""),
@@ -971,7 +971,7 @@ def seed_doctor_desk_demo(db) -> dict:
                 change_reason="Head gone, BP steady at 130/85",
                 rating=5,
                 comment=("Tablet mil gaya pharmacy se, 5 minute me. Doctor ne "
-                         "samajh ke samajhaya, ek hi visit me tension kam ho gayi."),
+                         "samajh ke samjhaya, ek hi visit me tension kam ho gayi."),
             ))
             db.flush()
             made["reviews"] += 1
@@ -1039,6 +1039,7 @@ def seed_doctor_desk_demo(db) -> dict:
 
     db.commit()
     return made
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Seed the pharmacy module")

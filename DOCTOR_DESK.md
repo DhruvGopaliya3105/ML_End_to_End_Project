@@ -156,7 +156,7 @@ ek jagah dikhta hai.
 | `src/routers/medical_history.py` + `templates/medical_history.html` | `PATIENT_VISIBLE` notes share hote hain |
 | `templates/dashboard.html` | Doctor Desk quick card (DOCTOR / ADMIN / SUPERUSER) |
 | `seed_pharmacy.py` | demo OPD history + notes (guarded, idempotent) |
-| `test_pharmacy.py` §15–17 | the desk checks inside the 173 (pages, 10 tabs, every POST, RBAC) |
+| `test_pharmacy.py` §15–17 | the desk checks inside the 214 (pages, 10 tabs, every POST, RBAC) |
 | `check_all_features.py` | 319 cross-feature checks - desk links, tabs, orphan rows, the doctor → Rx → cart → order flow |
 | `test_pharmacy_mysql.py` | desk checks on MySQL (52 checks) |
 

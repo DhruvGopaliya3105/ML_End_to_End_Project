@@ -860,7 +860,7 @@
 
                             {% else %}
 
-                                Dr. {{ doctor.name }}
+                                {{ doctor.name if doctor.name.lower().startswith('dr.') else 'Dr. ' ~ doctor.name }}
 
                             {% endif %}
 

@@ -329,6 +329,44 @@ def main() -> int:
         finally:
             db.close()
 
+        # --- the AI chatbot, over the same MySQL connection ---------------
+        # Regression: symptom_reply once crashed on MySQL with error 1064
+        # (ORDER BY ... NULLS LAST is PostgreSQL/SQLite-only syntax), so
+        # the chatbot's database-backed answers are checked here too.
+        client.post("/login", data={"email": "patient@demo.com",
+                                    "password": "Demo@1234"},
+                    follow_redirects=False)
+
+        def ask(text):
+            res = client.post("/chatbot/message", params={"message": text})
+            assert res.status_code == 200, res.text[:200]
+            return res.json()["reply"]
+
+        reply = ask("i have fever")
+        check("chatbot symptom guidance works on MySQL",
+              "not a doctor" in reply.lower() and "General Medicine" in reply,
+              reply[:200])
+
+        reply = ask("clinic timings")
+        check("chatbot clinic timings work on MySQL",
+              "Clinic timings" in reply and "10:00" in reply, reply[:200])
+
+        reply = ask("price of dolo 650")
+        check("chatbot medicine prices work on MySQL",
+              "Dolo 650 Tablet" in reply and "Rs 32" in reply, reply[:200])
+
+        reply = ask("medicines for a disease")
+        check("chatbot disease picker works on MySQL",
+              "Which disease" in reply, reply[:200])
+
+        reply = ask("medicine for diabetes")
+        check("chatbot disease advice works on MySQL",
+              "Sorry to hear" in reply and "Rs" in reply, reply[:200])
+
+        reply = ask("all medicines")
+        check("chatbot all-medicines query works on MySQL",
+              "medicines in our pharmacy" in reply, reply[:120])
+
     print("\n" + "-" * 62)
     print(f"{len(PASSED)} checks passed, {len(FAILED)} failed   [{DATABASE_LABEL}]")
     if FAILED:

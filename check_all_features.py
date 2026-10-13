@@ -350,6 +350,7 @@ def check_schema_parity(db) -> None:
           f"{engine.dialect.name} / {len(live_tables)} tables found")
 
 
+
 # =====================================================================
 # 8. the original clinic features, end to end
 # =====================================================================

@@ -859,4 +859,3 @@ def general_reply() -> str:
         "\"I have a fever\"\n"
         "\"clinic timings\""
     )
-    

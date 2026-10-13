@@ -6,11 +6,54 @@
     {% include "partials/pharmacy_head.html" %}
 </head>
 
-<body class="dd-body">
+<body class="dd-body theme-body">
 
-{% include "partials/doctor_nav.html" %}
+<div class="th-shell">
 
-<main class="ph-wrap dd-wrap">
+<aside class="th-sidebar">
+
+    <a class="th-logo" href="/doctor-desk">
+        <span class="th-logo-icon">&#129658;</span>
+        Sanjeevani
+        <span class="th-logo-sub">Doctor Desk</span>
+    </a>
+
+    <nav class="th-nav">
+        <a href="/doctor-desk" class="active">&#129489; Patients</a>
+        <a href="/doctor-desk?scope=followup">&#128197; Follow-ups</a>
+        <a href="/doctor-desk?scope=unpaid">&#128176; Dues</a>
+        {% if can('pharmacy.view') %}
+        <a href="/pharmacy">&#128138; Pharmacy shop</a>
+        {% endif %}
+        {% if can('pharmacy.order.read.all') or can('pharmacy.catalog.write') %}
+        <a href="/pharmacy/admin">&#128736;&#65039; Pharmacy admin</a>
+        {% endif %}
+        <a href="/dashboard">&#9638; Dashboard</a>
+    </nav>
+
+    <div class="th-side-foot">
+        <div class="th-avatar">{{ (me.user_name or "D")[0] | upper }}</div>
+        <div>
+            <div class="th-side-name">{{ me.user_name or "Doctor" }}</div>
+            <div class="th-side-role">Doctor Desk</div>
+        </div>
+    </div>
+
+    <a class="th-side-logout" href="/logout">&#9099; Logout</a>
+
+</aside>
+
+<div class="th-main">
+
+<header class="th-topbar">
+    <div class="th-search">&#128269; Search patients, appointments...</div>
+    <div class="th-top-actions">
+        <a class="th-icon-btn" href="/doctor-desk?scope=followup" title="Follow-ups">&#128197;</a>
+    </div>
+</header>
+
+
+<div class="ph-wrap dd-wrap th-content">
 
     <!-- =========================================================
          Header: who is signed in, which list they are looking at
@@ -19,7 +62,7 @@
 
         <div>
             <p class="dd-kicker">Doctor Desk &middot; {{ today }}</p>
-            <h1>{{ tiles.doctor.name if tiles.doctor else me.user_name }}</h1>
+            <h1>{{ greeting }}, {{ tiles.doctor.name if tiles.doctor else me.user_name }}</h1>
             <p class="dd-hero-sub">
                 {% if tiles.doctor and tiles.doctor.specialization %}
                     {{ tiles.doctor.specialization }}
@@ -326,7 +369,11 @@
         and the pharmacy order tables on every load.
     </p>
 
-</main>
+</div>
+
+</div>
+
+</div>
 
 <script>
     // Instant filtering of the rows already on the page (the server-side
